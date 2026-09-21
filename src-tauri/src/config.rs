@@ -900,8 +900,8 @@ mod tests {
         assert!(cfg.rules.redact_suggestions);
         assert!(cfg.rules.forbid_praise);
         assert!(cfg.rules.blind_judge);
-        assert_eq!(cfg.appearance.font, "ui-serif");
-        assert_eq!(cfg.appearance.font_size, 19);
+        assert_eq!(cfg.appearance.font, default_font());
+        assert_eq!(cfg.appearance.font_size, default_font_size());
         assert_eq!(cfg.appearance.measure, 68);
         assert_eq!(cfg.appearance.theme, "light");
         assert!(cfg.providers.is_empty());
