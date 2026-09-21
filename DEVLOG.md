@@ -213,3 +213,49 @@ findings array always starts with `{`.
 **NOTE — a stray unclosed `[` in prose reads as truncation.** `I looked at
 paragraph [3` reports "probably cut off". Weighing where the bracket sits is
 more machinery than the case deserves, which is why the wording hedges.
+
+## 2026-09-22 — the app builds, and a real limit found
+
+**FIXED — the app did not build for release.** `tauri build` failed on
+`zerofrom`, then `phf`, then `serde`: every proc-macro dependent, each unable
+to find its own derive crate. Proc macros and build scripts run on the host at
+compile time and inherit the release profile, and `strip` and `opt-level` leave
+them in a form rustc cannot load. `[profile.release.build-override]` builds
+them plainly while the app keeps `lto`, `opt-level = "s"` and `strip`. This had
+been broken since the first commit and would only have shown up the day you
+tried to ship.
+
+**FIXED — `bun run app:build` exited non-zero.** The DMG step needs `hdiutil`,
+which fails outside an interactive session. Bundle targets are now `["app"]`
+only. Re-add `"dmg"` when you want something to hand to other people.
+
+**REMOVED — `macOSPrivateApi`.** Switched on for a transparency effect the app
+does not use.
+
+**ADDED — a log file.** `~/.writegood/writegood.log`, trimmed at half a
+megabyte. The pass runner records every call, its size, its ceiling and its
+answer; boot records what it loaded; uncaught errors and unhandled rejections
+land there too. A built app has no visible console, so without this a pass that
+dies takes its explanation with it. Adding it should have been the first move
+rather than the last: it answered in one run what four rounds of inference
+about `lsof` output and CPU readings had got wrong.
+
+**OPEN — a pass stops when the window is not visible.** The evidence, from the
+built app: call one answers in two seconds, call two is logged as starting and
+nothing follows. No TCP connection, no CPU, and the `setTimeout` that enforces
+the per-call ceiling never fires either. A timer that does not run is the
+signature of a suspended WebKit process, which is what macOS does to an
+occluded window under App Nap. It reproduces in `tauri dev` and in the built
+bundle alike, and only while the window is not in front.
+
+That makes it an artifact of running the app unattended — a real user has the
+window open — but it is still a genuine limit: start nine passes, switch to
+your browser, and the run may freeze. The honest fix is to move provider calls
+out of the webview into Rust, where nothing suspends them. That is a real
+architectural change and wants your agreement first, so it is not done.
+
+**NOTE — a launched app finds no `.env` in a repository.** Double-clicked or
+opened with `open`, the app inherits no environment and starts in `/`, so the
+key must live in `~/.writegood/.env` or the keychain. Launched from the project
+directory it finds the repository's `.env` and works, which is what masked
+this. The error now says exactly what to do.

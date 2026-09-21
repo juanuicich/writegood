@@ -4,11 +4,12 @@
  *  are written to the database as each pass completes so a later failure never
  *  loses earlier work. */
 import { generateText } from "ai";
-import { store, type NewFinding, type Pass } from "../ipc";
+import { log, store, type NewFinding, type Pass } from "../ipc";
 import { app } from "../state.svelte";
 import { resolve, providerFor, ProviderError, type Resolved } from "../providers";
 import { preamble } from "./schema";
 import { buildPrompt, paragraphs, parseFindings } from "./parse";
+import { deadline } from "./deadline";
 
 const MAX_PARALLEL = 4;
 
@@ -27,16 +28,33 @@ async function collect(
   prompt: string,
   signal: AbortSignal,
 ): Promise<NewFinding[]> {
-  const text = resolved.runCli
-    ? await resolved.runCli(`${system}\n\n${prompt}`)
-    : (
-        await generateText({
-          model: resolved.model!,
-          system,
-          prompt,
-          abortSignal: signal,
-        })
-      ).text;
+  // A call with no ceiling can hang a pass for ever: the run row sits at
+  // `running`, nothing is reported, and the only way out is to quit the app.
+  // The CLI backend has always had `timeout_secs`; the API backend now shares
+  // it. The SDK's own `timeout` is passed as well, but it cannot be relied on
+  // alone: it works by aborting the request, and a fetch that ignores its
+  // abort signal leaves the promise pending for ever. The deadline below
+  // settles regardless of what the request does.
+  const totalMs = Math.max(resolved.provider.timeoutSecs, 30) * 1000;
+
+  void log.write(
+    "info",
+    `asking ${resolved.name} (${resolved.provider.model ?? resolved.provider.kind}), ` +
+      `${prompt.length} characters, ceiling ${totalMs / 1000}s`,
+  );
+
+  const call = resolved.runCli
+    ? resolved.runCli(`${system}\n\n${prompt}`)
+    : generateText({
+        model: resolved.model!,
+        system,
+        prompt,
+        abortSignal: signal,
+        timeout: { totalMs },
+      }).then((r) => r.text);
+
+  const text = await deadline(call, totalMs, resolved.name);
+  void log.write("info", `${resolved.name} answered with ${text.length} characters`);
 
   return parseFindings(text, resolved.name);
 }
@@ -115,6 +133,7 @@ export async function runPasses(
 
     try {
       const chunks = pass.scope === "paragraph" ? paragraphs(draft) : [null];
+      void log.write("info", `${pass.name}: ${chunks.length} call(s), ${pass.scope} scope`);
       for (const chunk of chunks) {
         const found = await collect(resolved, system, buildPrompt(pass, draft, chunk), signal);
         collected.push(...found);
@@ -123,12 +142,14 @@ export async function runPasses(
         await store.addFindings(run.id, docId, collected);
       }
       await store.finishRun(run.id, "done", null);
+      void log.write("info", `${pass.name}: done, ${collected.length} finding(s)`);
       return { pass: pass.name, findings: collected.length };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       // Keep whatever arrived before the failure.
       if (collected.length > 0) await store.addFindings(run.id, docId, collected);
       await store.finishRun(run.id, "error", message);
+      void log.write("error", `${pass.name}: ${message}`);
       return { pass: pass.name, findings: collected.length, error: message };
     }
   });

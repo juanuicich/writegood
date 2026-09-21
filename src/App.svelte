@@ -8,15 +8,22 @@
   import Duel from "./lib/duel/Duel.svelte";
   import History from "./lib/history/History.svelte";
   import { runPasses, summarise } from "./lib/passes/run";
-  import { cfg, store } from "./lib/ipc";
+  import { cfg, log, store } from "./lib/ipc";
 
   let booted = $state(false);
   let override = $state<string | null>(null);
 
   onMount(async () => {
+    void log.write("info", "boot: starting");
     try {
       await app.boot();
+      void log.write(
+        "info",
+        `boot: ${app.passes.length} pass(es), ${app.docs.length} document(s), ` +
+          `open ${app.doc?.title ?? "none"}`,
+      );
     } catch (e) {
+      void log.write("error", `boot failed: ${String(e)}`);
       app.say(String(e));
     }
     booted = true;
@@ -26,7 +33,11 @@
     // in-app path — including Tauri's HTTP plugin — without a human at the
     // keyboard. VITE_WRITEGOOD_AUTORUN names a pass slug, or "all".
     const auto = import.meta.env.VITE_WRITEGOOD_AUTORUN;
-    if (auto) await run(auto === "all" ? undefined : auto);
+    if (auto) {
+      void log.write("info", `autorun: ${auto}`);
+      await run(auto === "all" ? undefined : auto);
+      void log.write("info", "autorun: returned");
+    }
 
     // Design review: open the app already showing the state being reviewed.
     const show = new URLSearchParams(location.search).get("show");

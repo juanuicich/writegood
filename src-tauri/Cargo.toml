@@ -14,7 +14,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.11", features = ["macos-private-api"] }
+tauri = { version = "2.11", features = [] }
 tauri-plugin-http = "~2.6"
 tauri-plugin-opener = "2.5"
 tauri-plugin-dialog = "2.7"
@@ -32,5 +32,13 @@ tokio = { version = "1", features = ["process", "io-util", "time", "macros"] }
 codegen-units = 1
 lto = true
 opt-level = "s"
-panic = "abort"
 strip = true
+
+# Proc macros and build scripts run on the host at compile time, and they
+# inherit the release profile unless told otherwise. Stripping and optimising
+# them breaks the dependency tree: zerofrom, phf and serde all fail to find
+# their own derive crates. Build them plainly.
+[profile.release.build-override]
+opt-level = 0
+codegen-units = 16
+strip = false

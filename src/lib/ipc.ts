@@ -250,6 +250,14 @@ export const anchors = {
     invoke<Anchor[]>("anchors_resolve", { text, selectors }),
 };
 
+/** A line in `~/.writegood/writegood.log`. The webview console is invisible
+ *  in a built app, so this is the only record of what a pass actually did. */
+export const log = {
+  write: (level: "info" | "warn" | "error", message: string) =>
+    invoke<void>("app_log", { level, message }).catch(() => {}),
+  path: () => invoke<string>("log_path"),
+};
+
 export const diff = {
   words: (before: string, after: string) => invoke<Chunk[]>("diff_words", { before, after }),
 };

@@ -7,6 +7,7 @@ pub mod db;
 pub mod diff;
 pub mod documents;
 pub mod error;
+pub mod log;
 pub mod runner;
 pub mod secrets;
 
@@ -173,7 +174,12 @@ pub fn run() {
         .setup(|app| {
             config::ensure_scaffold()?;
             let conn = db::open(&config::db_path())?;
+            let recovered = db::recover_orphaned_runs(&conn)?;
             app.manage(db::Db(std::sync::Mutex::new(conn)));
+            let _ = log::write("info", "app started");
+            if recovered > 0 {
+                let _ = log::write("warn", &format!("closed {recovered} run(s) left open by a previous session"));
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -208,6 +214,8 @@ pub fn run() {
             duel_record,
             duel_list,
             anchors_resolve,
+            log::app_log,
+            log::log_path,
             diff::diff_words,
         ])
         .run(tauri::generate_context!())

@@ -87,7 +87,24 @@ pub fn open(path: &Path) -> AppResult<Connection> {
     }
     let conn = Connection::open(path)?;
     conn.execute_batch(SCHEMA)?;
+    recover_orphaned_runs(&conn)?;
     Ok(conn)
+}
+
+/// A run is marked finished by the frontend. If the app stops first — a crash,
+/// a quit, a reload during development — the row is left at `running` and
+/// nothing will ever close it. Close them at startup so the history says what
+/// happened instead of lying about work still in progress.
+pub fn recover_orphaned_runs(conn: &Connection) -> AppResult<usize> {
+    let n = conn.execute(
+        "update runs
+            set status = 'interrupted',
+                finished_at = datetime('now'),
+                error = 'the app stopped before this run finished'
+          where status = 'running'",
+        [],
+    )?;
+    Ok(n)
 }
 
 // ---------------------------------------------------------------- documents
@@ -648,6 +665,29 @@ mod tests {
         assert_eq!(d3.original_won, None);
 
         assert_eq!(list_duels(&conn, doc.id).unwrap().len(), 3);
+    }
+
+    #[test]
+    fn a_run_left_open_is_closed_at_startup() {
+        let conn = mem();
+        let doc = upsert_document(&conn, "/tmp/orphan.md", "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let open = start_run(&conn, doc.id, rev.id, "p", "P", "anthropic", None).unwrap();
+        let closed = start_run(&conn, doc.id, rev.id, "q", "Q", "anthropic", None).unwrap();
+        finish_run(&conn, closed.id, "done", None).unwrap();
+
+        assert_eq!(recover_orphaned_runs(&conn).unwrap(), 1, "only the open one");
+
+        let runs = list_runs(&conn, doc.id, 10).unwrap();
+        let open_now = runs.iter().find(|r| r.id == open.id).unwrap();
+        assert_eq!(open_now.status, "interrupted");
+        assert!(open_now.finished_at.is_some());
+        assert!(open_now.error.is_some());
+
+        let closed_now = runs.iter().find(|r| r.id == closed.id).unwrap();
+        assert_eq!(closed_now.status, "done", "a finished run is left alone");
+
+        assert_eq!(recover_orphaned_runs(&conn).unwrap(), 0, "and it is idempotent");
     }
 
     #[test]
