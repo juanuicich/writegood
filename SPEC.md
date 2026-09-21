@@ -137,9 +137,9 @@ markdown-it            14.1.0
 ```
 
 Two notes. The AI SDK is at v7, not v6 — `streamObject` still exists but the
-current API is `streamText` with `Output.array({ element })`, consumed through
-`elementStream`, where each element arrives complete and schema-validated. That
-maps exactly onto findings appearing in the sidebar one at a time. And
+current API is `streamText` with `Output.array({ element })`. The app does not
+use it — see 8.3 for why provider switching rules it out — and reads the reply
+text itself instead. And
 `serde_yaml` is deprecated, so pass files use TOML frontmatter (§8.1) rather
 than YAML, which also means one config language across the project.
 
@@ -211,7 +211,8 @@ horizontal rules, links and hard breaks. `markdown.ts` wraps
 round-trips as literal text rather than being dropped.
 
 Saving writes the file first and the revision row second. A failed write is
-reported and does not advance the revision history.
+reported and does not advance the revision history. Files are written through a
+temporary file and a rename, and always end with a newline.
 
 ### 6.2 Database
 
@@ -340,9 +341,25 @@ are doing no work).
 
 ### 8.3 Running
 
-The runner fans out across enabled passes with `Promise.all`, capped at a small
-concurrency limit. Findings stream into the sidebar as `elementStream` yields
-them. A pass that fails marks its run `error` and leaves the others alone.
+The runner fans out across enabled passes with a small worker pool. A pass that
+fails marks its run `error`, keeps whatever arrived before the failure, and
+leaves the other passes alone.
+
+Findings arrive one pass at a time rather than one finding at a time. Both
+backends end at the same place — a block of text that should contain a JSON
+array — and `parse.ts` reads it. The AI SDK's `Output.array` streams per
+element and does not survive provider switching: an endpoint without
+structured-output support returns a bare array where the SDK expects a wrapper,
+and the result is silently zero findings. One code path with one failure mode
+is worth more here than per-element streaming.
+
+An item that fails the schema is dropped. One malformed entry must not discard
+the nine good ones beside it.
+
+Every pass prompt contains the word "json". DeepSeek, and other
+OpenAI-compatible endpoints, return a 400 for a structured-output request whose
+prompt lacks it. Saying so costs nothing elsewhere, and `parse.test.ts` asserts
+it so it cannot be edited away.
 
 Every run records which revision it ran against. Findings from an older revision
 stay visible, marked with the revision they came from.
@@ -353,7 +370,13 @@ stay visible, marked with the revision they came from.
 
 ### 9.1 Configuration
 
-`~/.writegood/config.toml`. Editable by hand; the app also has a settings pane.
+`~/.writegood/config.toml`. Editable by hand; the palette opens it.
+
+Keys resolve from the keychain (`keychain:service/account`) or the environment
+(`env:NAME`). An `env:` reference also falls back to a `.env` file, looked for
+in `$WRITEGOOD_HOME` and then the working directory and its parents. An app
+launched from Finder inherits almost nothing from a shell, so a `.env` is the
+only reliable way to hand a key to a desktop build.
 
 ```toml
 default_provider = "anthropic"
@@ -411,8 +434,9 @@ bar also has a provider override for the current session, which wins over both.
 
 ### 9.2 API backend
 
-AI SDK v7. `createAnthropic`, `createOpenAI`, `createGoogleGenerativeAI`, and
-`createOpenAICompatible` for OpenRouter, Ollama and LM Studio. Every provider is
+AI SDK v7, used to reach the provider and return text. `createAnthropic`,
+`createOpenAI`, `createGoogleGenerativeAI`, and `createOpenAICompatible` for
+DeepSeek, OpenRouter, Ollama and LM Studio. Every provider is
 constructed with `fetch` from `@tauri-apps/plugin-http`, so requests go through
 Rust's HTTP client and CORS never applies.
 
@@ -636,9 +660,6 @@ top of it will.
 - **Paragraph-scope context.** Sending the whole draft with every paragraph call
   is the accurate option and the expensive one. Prompt caching makes it cheap on
   the API backend and does nothing for the CLI backend. Measure before deciding.
-- **Streaming vs. batching into the sidebar.** Findings arriving one at a time
-  while you read is possibly distracting. A per-pass "N findings" pill that
-  expands when the pass completes may be calmer. Try both.
 - **Sidebar collision.** Many findings on adjacent lines will fight for vertical
   space. Genius solves this by stacking and offsetting. Needs a layout pass.
 - **Does the redaction guard annoy more than it protects?** Unknown until it is
