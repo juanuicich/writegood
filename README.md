@@ -2,8 +2,10 @@
 
 A local desktop app for workshopping your own prose.
 
-**Status: specification only.** Nothing is built yet. The design is in
-[`SPEC.md`](./SPEC.md).
+**Status: early, and usable.** You can write in it, run your editing passes
+over a draft, and step through what they found. The A/B duel and the revision
+viewer are not built yet. The design is in [`SPEC.md`](./SPEC.md); the
+assumptions and gaps are in [`DEVLOG.md`](./DEVLOG.md).
 
 ## The idea
 
@@ -42,14 +44,28 @@ assessment, no strengths, no summary. An empty result says "no findings".
 Over time that last table answers a real question: does your rewriting actually
 beat your first draft?
 
+## Running it
+
+```
+bun install
+bun run app
+```
+
+On first launch it creates `~/.writegood` with a `config.toml` and nine starter
+passes. Put an API key where `config.toml` points — the macOS keychain, an
+environment variable, or a `.env` file — and press `⌘⏎`.
+
+Everything is `⌘K`. There are no menus.
+
 ## Stack
 
 Tauri v2 · Svelte 5 · TipTap 3 · Rust · SQLite · Vercel AI SDK v7 · Bun.
 
 Roughly a 10 MB app on the system WebView. Providers are configured in
-`~/.writegood/config.toml` and switch by editing one line. Passes can also run
-through the `claude` or `codex` CLIs, which bills against a subscription instead
-of API credits.
+`~/.writegood/config.toml` and switch by editing one line: Anthropic, OpenAI,
+Google, or anything OpenAI-compatible, which covers DeepSeek, OpenRouter,
+Ollama and LM Studio. Passes can also run through the `claude` or `codex` CLIs,
+which bills against a subscription instead of API credits.
 
 See [`SPEC.md` §4](./SPEC.md#4-stack) for why, including why not Elixir.
 

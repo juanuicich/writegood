@@ -86,3 +86,20 @@ hand the app a key. `resolve_key` now falls back to a `.env` in
 `bun dev/probe.ts <pass-slug> [provider]`, `--raw` to see the unparsed reply.
 It uses the app's own preamble, prompt builder and parser, so it tests the code
 that ships. It found both bugs above.
+
+**VERIFIED — the whole in-app loop works.** `1c88a88` onward, checked at
+`2026-09-22`. One paragraph-scope pass run from inside the app against
+DeepSeek: key resolved from `.env`, three paragraph calls went out through
+Tauri's HTTP plugin, the replies parsed, and three findings landed in SQLite
+with the run marked done. The probe alone could not have shown this, because it
+uses the platform's own fetch rather than the plugin's.
+
+**NOTE — `VITE_WRITEGOOD_AUTORUN` is a development hook in `App.svelte`.** It
+runs a pass on boot. It exists because driving the window from a script needs
+accessibility permission a terminal does not have, and `screencapture` fails
+for the same reason, so there is no other way to exercise the in-app path
+unattended. Harmless when unset. Remove it if it offends.
+
+**DECISION — `tauri-plugin-http` pinned to `~2.6` to match the npm package.**
+The Rust crate had moved to 2.7.0 while `@tauri-apps/plugin-http` has no 2.7.x
+release, and Tauri warns on every launch about the mismatch.

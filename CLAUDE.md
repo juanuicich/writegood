@@ -4,7 +4,10 @@ Read `SPEC.md` before doing anything. It is the design of record.
 
 ## Status
 
-Specification only. No code exists yet. `SPEC.md` §14 has the build order.
+The bones are up: editor, Markdown storage, anchoring, the pass runner and the
+provider layer all work, and one pass has been run against a real provider end
+to end. `SPEC.md` §14 has the build order; the duel and the revision viewer are
+not built. `DEVLOG.md` records the assumptions and gaps.
 
 ## Working agreement
 
@@ -62,14 +65,36 @@ This applies to commit messages, comments and documentation too.
 
 ## Commands
 
-None yet. Once §14 step 1 is done they will be:
-
 ```
 bun run app          # tauri dev
 bun run app:build    # tauri build
-bun run check        # svelte-check
-cargo test           # from src-tauri/, the anchoring suite lives here
+bun test src/lib     # frontend unit tests
+bunx svelte-check --tsconfig ./tsconfig.json
+cd src-tauri && cargo test && cargo clippy --all-targets
 ```
+
+Both suites must pass before a commit. Neither needs a network or an API key.
+
+## Checking work against a real model
+
+`bun dev/probe.ts <pass-slug> [provider]` runs one pass against a real provider
+without launching the app, using the app's own preamble, prompt builder and
+parser. `--raw` prints the unparsed reply. It found two real bugs on its first
+outing, so reach for it before assuming a pass prompt is the problem.
+
+To exercise the whole in-app path, including Tauri's HTTP plugin, set
+`VITE_WRITEGOOD_AUTORUN` to a pass slug or `all` and launch:
+
+```
+VITE_WRITEGOOD_AUTORUN=nominalization bun run app
+```
+
+That hook exists because driving the window from a script needs accessibility
+permission a terminal does not have. Screenshots are unavailable for the same
+reason: `screencapture` fails with "could not create image from display".
+
+Keys come from the macOS keychain or from `env:NAME`, which falls back to a
+`.env` file. `.env` is in `.gitignore` and must stay there.
 
 ## Where the risk is
 
