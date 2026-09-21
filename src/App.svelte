@@ -5,6 +5,8 @@
   import Editor from "./lib/editor/Editor.svelte";
   import Sidebar from "./lib/sidebar/Sidebar.svelte";
   import Palette, { type Command } from "./lib/palette/Palette.svelte";
+  import Duel from "./lib/duel/Duel.svelte";
+  import History from "./lib/history/History.svelte";
   import { runPasses, summarise } from "./lib/passes/run";
   import { cfg, store } from "./lib/ipc";
 
@@ -70,6 +72,18 @@
       run: (slug) => run(slug),
     },
     { id: "save", label: "save", hint: "⌘S", run: () => app.save(false) },
+    {
+      id: "history",
+      label: "revisions",
+      hint: "⌘Y",
+      run: () => app.openHistory(),
+    },
+    {
+      id: "duel",
+      label: "compare a rewrite of this paragraph",
+      hint: "⌘D",
+      run: () => app.openDuel(),
+    },
     {
       id: "major",
       label: "flag a major revision",
@@ -158,6 +172,20 @@
       return;
     }
     if (app.paletteOpen) return;
+    // The sheets cover everything and handle their own keys.
+    if (app.duel || app.history) return;
+
+    if (meta && e.key === "y") {
+      e.preventDefault();
+      void app.openHistory();
+      return;
+    }
+
+    if (meta && e.key === "d") {
+      e.preventDefault();
+      app.openDuel();
+      return;
+    }
 
     if (meta && e.key === "o") {
       e.preventDefault();
@@ -245,6 +273,9 @@
     {#if app.dirty}·{/if}
   </span>
 </footer>
+
+<Duel />
+<History />
 
 {#if booted}<Palette {commands} />{/if}
 

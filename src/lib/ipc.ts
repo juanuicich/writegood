@@ -131,6 +131,11 @@ export interface Duel {
   createdAt: string;
 }
 
+export interface Chunk {
+  kind: "equal" | "insert" | "delete";
+  text: string;
+}
+
 export interface Selector {
   id: number;
   quote: string;
@@ -243,6 +248,10 @@ export const store = {
 export const anchors = {
   resolve: (text: string, selectors: Selector[]) =>
     invoke<Anchor[]>("anchors_resolve", { text, selectors }),
+};
+
+export const diff = {
+  words: (before: string, after: string) => invoke<Chunk[]>("diff_words", { before, after }),
 };
 
 export const cli = {

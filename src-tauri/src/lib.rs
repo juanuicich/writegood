@@ -4,6 +4,7 @@
 pub mod anchors;
 pub mod config;
 pub mod db;
+pub mod diff;
 pub mod documents;
 pub mod error;
 pub mod runner;
@@ -207,6 +208,7 @@ pub fn run() {
             duel_record,
             duel_list,
             anchors_resolve,
+            diff::diff_words,
         ])
         .run(tauri::generate_context!())
         .expect("error while running writegood");

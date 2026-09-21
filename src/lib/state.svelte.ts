@@ -6,15 +6,34 @@ import {
   files,
   store,
   anchors as anchorApi,
+  diff as diffApi,
   type Config,
   type DocSummary,
   type DocumentRow,
   type Finding,
   type Pass,
+  type Chunk,
   type Paths,
+  type Revision,
 } from "./ipc";
 import { buildTextIndex, codePointRangeToPM, type TextIndex } from "./text";
+import type { DuelOutcome } from "./duel/run";
 import { markdownToJSON, jsonToMarkdown } from "./markdown";
+
+export interface HistoryState {
+  revisions: Revision[];
+  index: number;
+  chunks: Chunk[];
+}
+
+export interface DuelState {
+  original: string;
+  rewrite: string;
+  findingId: number | null;
+  result: DuelOutcome | null;
+  busy: boolean;
+  error: string;
+}
 
 /** A finding plus where it currently sits in the open document. */
 export interface Placed extends Finding {
@@ -37,6 +56,8 @@ class App {
 
   status = $state("");
   mode = $state<"write" | "review">("write");
+  duel = $state<DuelState | null>(null);
+  history = $state<HistoryState | null>(null);
   revealed = $state<number[]>([]);
   dirty = $state(false);
   busy = $state(0);
@@ -200,6 +221,82 @@ class App {
     this.findings = this.findings.map((x) => (x.id === f.id ? { ...x, status } : x));
     if (this.cursor >= this.visible.length) this.cursor = this.visible.length - 1;
     this.say(status);
+  }
+
+  // --------------------------------------------------------------- history
+
+  async openHistory() {
+    if (!this.doc) return;
+    const revisions = await store.revisions(this.doc.id);
+    if (revisions.length === 0) {
+      this.say("no revisions yet");
+      return;
+    }
+    this.history = { revisions, index: 0, chunks: [] };
+    await this.diffHistory();
+  }
+
+  async stepHistory(delta: number) {
+    const h = this.history;
+    if (!h) return;
+    h.index = Math.min(Math.max(h.index + delta, 0), h.revisions.length - 1);
+    await this.diffHistory();
+  }
+
+  /** What changed between the selected revision and the draft as it stands. */
+  private async diffHistory() {
+    const h = this.history;
+    if (!h) return;
+    h.chunks = await diffApi.words(h.revisions[h.index].contentText, this.plainText());
+  }
+
+  /** Put an old revision back. Nothing is lost: the current text was already
+   *  saved, and this save adds another revision on top. */
+  async restoreHistory() {
+    const h = this.history;
+    if (!h || !this.editor) return;
+    const rev = h.revisions[h.index];
+    this.editor.commands.setContent(JSON.parse(rev.contentJson));
+    this.history = null;
+    await this.save(true, `restored ${rev.createdAt}`);
+    await this.reanchor();
+    this.editor.commands.focus();
+  }
+
+  closeHistory() {
+    this.history = null;
+    this.editor?.commands.focus();
+  }
+
+  // ------------------------------------------------------------------ duel
+
+  /** The paragraph the cursor sits in. The duel compares one paragraph at a
+   *  time, because that is the unit an author actually rewrites. */
+  paragraphAtCursor(): string {
+    if (!this.editor) return "";
+    const { $from } = this.editor.state.selection;
+    return $from.parent.textContent.trim();
+  }
+
+  openDuel() {
+    const original = this.paragraphAtCursor();
+    if (!original) {
+      this.say("put the cursor in a paragraph first");
+      return;
+    }
+    this.duel = {
+      original,
+      rewrite: "",
+      findingId: this.current?.id ?? null,
+      result: null,
+      busy: false,
+      error: "",
+    };
+  }
+
+  closeDuel() {
+    this.duel = null;
+    this.editor?.commands.focus();
   }
 
   // ----------------------------------------------------------------- chrome

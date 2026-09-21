@@ -1,0 +1,162 @@
+<script lang="ts">
+  import { app } from "../state.svelte";
+  import { runDuel, describe, judgeName } from "./run";
+  import { store } from "../ipc";
+  import { tally } from "./judge";
+
+  let field = $state<HTMLTextAreaElement | null>(null);
+  let record = $state({ total: 0, original: 0, rewrite: 0, ties: 0 });
+
+  $effect(() => {
+    if (app.duel) queueMicrotask(() => field?.focus());
+  });
+
+  $effect(() => {
+    const doc = app.doc;
+    if (!doc) return;
+    void store.duels(doc.id).then((rows) => (record = tally(rows)));
+  });
+
+  async function submit() {
+    const d = app.duel;
+    if (!d || !app.config || !app.doc || d.busy) return;
+    d.busy = true;
+    d.error = "";
+    try {
+      const outcome = await runDuel(
+        app.config,
+        app.doc.id,
+        d.original,
+        d.rewrite,
+        d.findingId,
+      );
+      d.result = outcome;
+      app.say(describe(outcome));
+      record = tally(await store.duels(app.doc.id));
+    } catch (e) {
+      d.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      d.busy = false;
+    }
+  }
+
+  function keydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      app.closeDuel();
+    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      void submit();
+    }
+  }
+</script>
+
+{#if app.duel}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="sheet" onkeydown={keydown}>
+    <div class="inner">
+      <p class="label">as it stands</p>
+      <p class="original">{app.duel.original}</p>
+
+      <p class="label">your rewrite</p>
+      <textarea
+        bind:this={field}
+        bind:value={app.duel.rewrite}
+        rows="6"
+        spellcheck="false"
+        placeholder="Write it again."
+        disabled={app.duel.busy || !!app.duel.result}
+      ></textarea>
+
+      {#if app.duel.result}
+        {@const r = app.duel.result}
+        <p class="verdict">
+          {r.originalWon === null
+            ? "A tie."
+            : r.originalWon
+              ? "Your first version won."
+              : "Your rewrite won."}
+        </p>
+        <p class="reason">{r.verdict.reason}</p>
+        {#if r.warning}<p class="warn">{r.warning}</p>{/if}
+      {:else if app.duel.error}
+        <p class="warn">{app.duel.error}</p>
+      {/if}
+
+      <p class="foot">
+        {#if app.duel.busy}
+          asking {judgeName(app.config!)}…
+        {:else if app.duel.result}
+          esc to close
+        {:else}
+          ⌘⏎ to ask {judgeName(app.config!)} · esc to abandon
+        {/if}
+        {#if record.total > 0}
+          <span class="record"
+            >{record.rewrite} rewrites, {record.original} first drafts, {record.ties} ties</span
+          >
+        {/if}
+      </p>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .sheet {
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    overflow-y: auto;
+    padding: 12vh 0 20vh;
+  }
+
+  .inner {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0 max(3rem, 4vw);
+  }
+
+  .label {
+    font-size: 0.66rem;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin: 0 0 0.5rem;
+  }
+
+  .original {
+    margin: 0 0 2.4rem;
+    color: var(--ink-soft);
+  }
+
+  textarea {
+    font: inherit;
+    color: inherit;
+    width: 100%;
+    background: none;
+    border: 0;
+    border-left: 1px solid var(--rule);
+    padding: 0 0 0 1.4rem;
+    margin: 0 0 2.4rem;
+    outline: none;
+    resize: none;
+    line-height: var(--lead);
+  }
+  textarea::placeholder { color: var(--ink-faint); }
+  textarea:disabled { color: var(--ink-soft); }
+
+  .verdict { margin: 0 0 0.4rem; }
+  .reason { margin: 0 0 1.6rem; color: var(--ink-soft); }
+  .warn { margin: 0 0 1.6rem; color: var(--ink-soft); }
+
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    font-size: 0.66rem;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+</style>
