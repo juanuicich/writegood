@@ -3,124 +3,42 @@
  *  A pass is one prompt. Passes fan out across a small worker pool; findings
  *  are written to the database as each pass completes so a later failure never
  *  loses earlier work. */
-import { streamText, Output } from "ai";
-import { store, type NewFinding, type Pass, type Severity } from "../ipc";
+import { generateText } from "ai";
+import { store, type NewFinding, type Pass } from "../ipc";
 import { app } from "../state.svelte";
 import { resolve, providerFor, ProviderError, type Resolved } from "../providers";
-import { FindingElement, preamble, outputNote } from "./schema";
+import { preamble } from "./schema";
+import { buildPrompt, paragraphs, parseFindings } from "./parse";
 
 const MAX_PARALLEL = 4;
 
-/** Paragraph scope sends one call per paragraph, with the whole draft as
- *  context so the model can see what surrounds it. */
-function paragraphs(text: string): string[] {
-  return text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
-}
-
-function buildPrompt(pass: Pass, draft: string, chunk: string | null): string {
-  const parts = [pass.prompt.trim(), outputNote(), "", "--- the draft ---", draft];
-  if (chunk !== null) {
-    parts.push(
-      "",
-      "--- examine only this paragraph ---",
-      chunk,
-      "",
-      "Report problems in that paragraph only. The rest of the draft is context.",
-    );
-  }
-  return parts.join("\n");
-}
-
-async function viaApi(
+/** Both backends end at the same place: a block of text that should contain a
+ *  JSON array of findings.
+ *
+ *  The AI SDK's `Output.array` is tempting and does not survive provider
+ *  switching. An endpoint without structured-output support — DeepSeek, most
+ *  local servers — returns a bare array where the SDK expects a wrapper, and
+ *  the result is silently zero findings. Parsing the text ourselves is one code
+ *  path with one failure mode, and it works everywhere. The cost is that
+ *  findings arrive per pass rather than one at a time. */
+async function collect(
   resolved: Resolved,
   system: string,
   prompt: string,
   signal: AbortSignal,
-  onFinding: (f: NewFinding) => void,
-): Promise<void> {
-  const { elementStream } = streamText({
-    model: resolved.model!,
-    system,
-    prompt,
-    abortSignal: signal,
-    output: Output.array({ element: FindingElement }),
-  });
-  for await (const el of elementStream) {
-    onFinding(toFinding(el));
-  }
-}
+): Promise<NewFinding[]> {
+  const text = resolved.runCli
+    ? await resolved.runCli(`${system}\n\n${prompt}`)
+    : (
+        await generateText({
+          model: resolved.model!,
+          system,
+          prompt,
+          abortSignal: signal,
+        })
+      ).text;
 
-async function viaCli(
-  resolved: Resolved,
-  system: string,
-  prompt: string,
-  onFinding: (f: NewFinding) => void,
-): Promise<void> {
-  const full = [
-    system,
-    "",
-    prompt,
-    "",
-    "Reply with a JSON array and nothing else. Each item has the keys quote,",
-    "prefix, suffix, category, severity, note. An empty array is a valid reply.",
-  ].join("\n");
-
-  const out = await resolved.runCli!(full);
-  const json = extractArray(out);
-  if (json === null) {
-    throw new Error(`${resolved.name} returned no JSON array`);
-  }
-  const parsed = JSON.parse(json);
-  if (!Array.isArray(parsed)) throw new Error(`${resolved.name} returned ${typeof parsed}, not an array`);
-  for (const raw of parsed) {
-    const el = FindingElement.safeParse(raw);
-    if (el.success) onFinding(toFinding(el.data));
-  }
-}
-
-/** Pull the first JSON array out of a CLI reply that may carry a preamble.
- *  The API backend does not need this; the CLI backend usually does. */
-export function extractArray(text: string): string | null {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fenced ? fenced[1] : text;
-  const start = body.indexOf("[");
-  if (start < 0) return null;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < body.length; i++) {
-    const c = body[i];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (c === "\\") {
-      escaped = true;
-      continue;
-    }
-    if (c === '"') inString = !inString;
-    if (inString) continue;
-    if (c === "[") depth++;
-    else if (c === "]") {
-      depth--;
-      if (depth === 0) return body.slice(start, i + 1);
-    }
-  }
-  return null;
-}
-
-function toFinding(el: FindingElement): NewFinding {
-  return {
-    quote: el.quote,
-    prefix: el.prefix ?? "",
-    suffix: el.suffix ?? "",
-    category: el.category,
-    severity: el.severity as Severity,
-    note: el.note,
-  };
+  return parseFindings(text, resolved.name);
 }
 
 /** Work through `jobs` with a bounded worker pool. */
@@ -194,14 +112,12 @@ export async function runPasses(
     );
 
     const collected: NewFinding[] = [];
-    const collect = (f: NewFinding) => collected.push(f);
 
     try {
       const chunks = pass.scope === "paragraph" ? paragraphs(draft) : [null];
       for (const chunk of chunks) {
-        const prompt = buildPrompt(pass, draft, chunk);
-        if (resolved.runCli) await viaCli(resolved, system, prompt, collect);
-        else await viaApi(resolved, system, prompt, signal, collect);
+        const found = await collect(resolved, system, buildPrompt(pass, draft, chunk), signal);
+        collected.push(...found);
       }
       if (collected.length > 0) {
         await store.addFindings(run.id, docId, collected);

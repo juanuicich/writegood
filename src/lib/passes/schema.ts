@@ -58,10 +58,15 @@ export function preamble(rules: Rules): string {
   return lines.join("\n");
 }
 
-/** The instruction appended to every pass prompt, describing the output. */
+/** The instruction appended to every pass prompt, describing the output.
+ *
+ *  The word "json" has to appear here. DeepSeek, and other OpenAI-compatible
+ *  endpoints, reject a request that asks for `response_format: json_object`
+ *  without it. Saying so costs nothing on providers that do not care. */
 export function outputNote(): string {
   return [
     "",
+    "Reply as JSON: an array of findings.",
     "For each problem you find, return one item with:",
     "- quote: the exact words from the draft, copied character for character",
     `- prefix and suffix: the ${CONTEXT_LEN} characters either side of the quote, verbatim`,

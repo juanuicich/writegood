@@ -373,6 +373,12 @@ key_ref = "keychain:writegood/anthropic"
 # model   = "gpt-5.2"
 # key_ref = "env:OPENAI_API_KEY"
 
+# [providers.deepseek]
+# kind     = "openai-compatible"
+# base_url = "https://api.deepseek.com/v1"
+# model    = "deepseek-flash"
+# key_ref  = "env:DEEPSEEK_API_KEY"
+
 # [providers.local]
 # kind     = "openai-compatible"
 # base_url = "http://localhost:11434/v1"

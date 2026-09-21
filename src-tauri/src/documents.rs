@@ -116,7 +116,14 @@ pub fn write(path: &str, text: &str) -> AppResult<()> {
         .into_owned();
     let tmp = dir.join(format!(".{name}.tmp"));
 
-    std::fs::write(&tmp, text)?;
+    // The editor's serialiser emits no trailing newline. Text files should end
+    // with one, or every other tool that reads the file complains.
+    let mut body = text.to_string();
+    if !body.is_empty() && !body.ends_with('\n') {
+        body.push('\n');
+    }
+
+    std::fs::write(&tmp, &body)?;
     std::fs::rename(&tmp, &target)?;
     Ok(())
 }
@@ -232,7 +239,9 @@ mod tests {
         let home = env_home("docs-write");
         let path = home.dir.join("documents").join("a.md");
         write(&path.to_string_lossy(), "hello").unwrap();
-        assert_eq!(read(&path.to_string_lossy()).unwrap(), "hello");
+        assert_eq!(read(&path.to_string_lossy()).unwrap(), "hello\n", "files end with a newline");
+        write(&path.to_string_lossy(), "already\n").unwrap();
+        assert_eq!(read(&path.to_string_lossy()).unwrap(), "already\n", "and not two");
         let leftovers: Vec<_> = std::fs::read_dir(home.dir.join("documents"))
             .unwrap()
             .filter_map(Result::ok)
