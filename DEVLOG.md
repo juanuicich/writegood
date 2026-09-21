@@ -103,3 +103,32 @@ unattended. Harmless when unset. Remove it if it offends.
 **DECISION — `tauri-plugin-http` pinned to `~2.6` to match the npm package.**
 The Rust crate had moved to 2.7.0 while `@tauri-apps/plugin-http` has no 2.7.x
 release, and Tauri warns on every launch about the mismatch.
+
+## 2026-09-22 — the duel and the history
+
+**VERIFIED — the duel does not leak which version is newer.** `bb09350`.
+Fourteen duels against DeepSeek across two runs, with the sides shuffled each
+time. The rewrite won every one, from the A position and the B position alike,
+so the verdict is tracking the prose rather than the position. The passages
+were a deliberately nominalised paragraph and a plainer version of it, so the
+right answer was known in advance.
+
+**DECISION — `parseVerdict` has a salvage path.** One reply in ten failed to
+parse. The judge quotes words from the passages it is judging — "decided to
+decide" — and does not always escape the inner quotes. Strict `JSON.parse`
+runs first and is unchanged; only on failure does a tolerant matcher pull
+`verdict` and `reason` out, and the schema judges both the same way. Eight
+duels since with no failures.
+
+**DECISION — `churn` ignores whitespace.** `similar` tokenises the gaps between
+words, and those tokens match even when every word around them has been
+replaced. A complete rewrite scored 0.95 instead of 1. Documented with a test
+so the next reader does not think it is a bug.
+
+**ASSUMPTION — restoring a revision saves a new major revision.** Nothing is
+lost, because the current text was already saved before the restore. It does
+mean the history grows on every restore. Say if you would rather it rewound.
+
+**DEFERRED — the judge is asked once.** Three calls with the sides reshuffled
+would be a better signal for three times the cost. One verdict currently
+decides a duel.

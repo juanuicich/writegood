@@ -589,24 +589,42 @@ document position, then severity.
 
 The app is driven from the keyboard.
 
+A bare `n` has to type an "n", so the single-letter keys live in a **review
+mode**. `Esc` leaves the text and enters it; the editor dims and the margin
+becomes the active pane. `Esc`, `Enter` or `i` returns to writing.
+
+Always available:
+
 | Key | Action |
 |---|---|
-| `n` / `p` | next / previous finding, scrolling both panes |
-| `j` / `k` | same, without leaving the sidebar |
+| `⌘K` | the command bar |
+| `⌘O` | open a document (the same bar, pre-filtered) |
+| `⌘⏎` | run the enabled passes |
+| `⌘S` | save |
+| `⌘⇧S` | save and flag a major revision |
+| `⌘D` | duel: rewrite the current paragraph |
+| `⌘Y` | revisions |
+| `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
+| `Esc` | review mode |
+
+In review mode:
+
+| Key | Action |
+|---|---|
+| `n` / `j` | next finding |
+| `p` / `k` | previous finding |
 | `x` | mark the selected finding addressed |
 | `d` | dismiss it |
-| `r` | reveal a redacted span |
-| `⌘⏎` | run the enabled passes |
-| `⌘⇧⏎` | run one pass, chosen from a palette |
-| `⌘S` | save a revision |
-| `⌘⇧S` | save and flag as a major revision |
-| `⌘D` | open the duel on the current paragraph |
-| `⌘K` | command palette |
-| `Esc` | back to the editor |
+| `r` | reveal a withheld span |
+| `i` / `Enter` / `Esc` | back to writing |
 
 Findings navigation must work without the mouse, including scroll sync. That is
 the "tick forward and back through suggestions" requirement, and it is the
 difference between using the tool and abandoning it.
+
+The duel and the revisions sheet cover the window and take the keyboard while
+they are open: `Esc` closes, `⌘⏎` asks the judge, `j` / `k` move between
+revisions, `Enter` puts a revision back.
 
 ### 12.5 States that need designing
 
@@ -638,20 +656,20 @@ The database holds history and findings only, and the app works without it.
 
 ## 14. Build order
 
-1. **Bones.** Tauri shell, Svelte, TipTap, SQLite, documents and revisions.
-   Write and save, nothing else. Verify it is pleasant to type in.
-2. **Anchoring.** `anchors.rs` with its test suite, the position map, and the
-   decoration plugin. Prove a finding survives an edit before any model is
-   involved, using fixtures.
-3. **One pass, one provider.** Anthropic through the AI SDK, one hard-coded
-   prompt, findings into the sidebar, keyboard navigation.
-4. **The pass library.** Config loading, the starter prompts, fan-out, progress.
-5. **Providers.** The rest of the AI SDK backends, then the CLI runner.
-6. **Revisions.** History view, major flags, diff between revisions.
-7. **The duel.**
+1. ~~**Bones.** Tauri shell, Svelte, TipTap, SQLite, documents and revisions.~~
+2. ~~**Anchoring.** `anchors.rs`, the position map, the decoration plugin.~~
+3. ~~**One pass, one provider.**~~
+4. ~~**The pass library.** Config loading, the starter prompts, fan-out.~~
+5. ~~**Providers.** The AI SDK backends and the CLI runner.~~
+6. ~~**Revisions.** History sheet, major flags, word-level diff.~~
+7. ~~**The duel.**~~
 
-Steps 1 and 2 are the risk. If anchoring does not feel solid, nothing built on
-top of it will.
+All seven are built. What is left is not a next step but a list: see 15.
+
+The original note said steps 1 and 2 were the risk, and that was wrong.
+Anchoring worked from its first test suite. The risk was the provider layer,
+where the same code silently returned nothing on one vendor and worked on
+another (8.3).
 
 ---
 
@@ -664,5 +682,15 @@ top of it will.
   space. Genius solves this by stacking and offsetting. Needs a layout pass.
 - **Does the redaction guard annoy more than it protects?** Unknown until it is
   used on real notes. Instrument how often spans are revealed.
+- **Passes are slow.** `deepseek-flash` takes about a minute per call, and a
+  paragraph-scope pass makes one call per paragraph. Nine passes over a real
+  piece is a coffee break. Worth measuring against a faster vendor, and worth
+  reconsidering whether paragraph scope should batch several paragraphs.
+- **`allow_suggestions = true` is accepted but does nothing.** The preamble
+  drops its no-suggestions clause; the schema has no field to hold a
+  replacement and there is no apply action. Finishing it means a second schema.
+- **The judge is not sampled.** One verdict decides a duel. Three calls with
+  the sides shuffled each time would be a better signal, at three times the
+  cost.
 - **Diff granularity in revision history.** Word-level diff is more useful than
   line-level for prose, and more work. Probably `similar` in Rust.
