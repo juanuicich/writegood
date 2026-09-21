@@ -1,0 +1,607 @@
+//! SQLite storage. Single user, single process, so one connection behind a
+//! mutex is enough and keeps every write serialised.
+
+use rusqlite::{params, Connection, OptionalExtension, Row};
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+use std::sync::Mutex;
+
+use crate::error::{AppError, AppResult};
+
+pub struct Db(pub Mutex<Connection>);
+
+const SCHEMA: &str = r#"
+pragma journal_mode = wal;
+pragma foreign_keys = on;
+
+create table if not exists documents (
+    id          integer primary key,
+    title       text    not null,
+    created_at  text    not null default (datetime('now')),
+    updated_at  text    not null default (datetime('now'))
+);
+
+create table if not exists revisions (
+    id           integer primary key,
+    doc_id       integer not null references documents(id) on delete cascade,
+    parent_id    integer references revisions(id),
+    content_json text    not null,
+    content_text text    not null,
+    major        integer not null default 0,
+    label        text,
+    created_at   text    not null default (datetime('now'))
+);
+create index if not exists revisions_doc on revisions(doc_id, id desc);
+
+create table if not exists runs (
+    id          integer primary key,
+    doc_id      integer not null references documents(id) on delete cascade,
+    revision_id integer not null references revisions(id) on delete cascade,
+    pass_slug   text    not null,
+    pass_name   text    not null,
+    provider    text    not null,
+    model       text,
+    status      text    not null default 'running',
+    error       text,
+    started_at  text    not null default (datetime('now')),
+    finished_at text
+);
+create index if not exists runs_doc on runs(doc_id, id desc);
+
+create table if not exists findings (
+    id         integer primary key,
+    run_id     integer not null references runs(id) on delete cascade,
+    doc_id     integer not null references documents(id) on delete cascade,
+    category   text    not null,
+    severity   text    not null default 'medium',
+    note       text    not null,
+    quote      text    not null,
+    prefix     text    not null default '',
+    suffix     text    not null default '',
+    status     text    not null default 'open',
+    created_at text    not null default (datetime('now'))
+);
+create index if not exists findings_doc on findings(doc_id, status);
+
+create table if not exists duels (
+    id             integer primary key,
+    doc_id         integer not null references documents(id) on delete cascade,
+    finding_id     integer references findings(id) on delete set null,
+    a_text         text    not null,
+    b_text         text    not null,
+    a_is_original  integer not null,
+    judge_provider text    not null,
+    judge_model    text,
+    verdict        text,
+    original_won   integer,
+    reason         text,
+    created_at     text    not null default (datetime('now'))
+);
+create index if not exists duels_doc on duels(doc_id, id desc);
+"#;
+
+pub fn open(path: &Path) -> AppResult<Connection> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let conn = Connection::open(path)?;
+    conn.execute_batch(SCHEMA)?;
+    Ok(conn)
+}
+
+// ---------------------------------------------------------------- documents
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Document {
+    pub id: i64,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+fn document_from_row(row: &Row) -> rusqlite::Result<Document> {
+    Ok(Document {
+        id: row.get("id")?,
+        title: row.get("title")?,
+        created_at: row.get("created_at")?,
+        updated_at: row.get("updated_at")?,
+    })
+}
+
+pub fn list_documents(conn: &Connection) -> AppResult<Vec<Document>> {
+    let mut stmt = conn.prepare("select * from documents order by updated_at desc, id desc")?;
+    let rows = stmt.query_map([], document_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+pub fn create_document(conn: &Connection, title: &str) -> AppResult<Document> {
+    conn.execute("insert into documents (title) values (?1)", params![title])?;
+    get_document(conn, conn.last_insert_rowid())
+}
+
+pub fn get_document(conn: &Connection, id: i64) -> AppResult<Document> {
+    let mut stmt = conn.prepare("select * from documents where id = ?1")?;
+    stmt.query_row(params![id], document_from_row)
+        .optional()?
+        .ok_or(AppError::NotFound("document"))
+}
+
+pub fn rename_document(conn: &Connection, id: i64, title: &str) -> AppResult<()> {
+    conn.execute(
+        "update documents set title = ?2, updated_at = datetime('now') where id = ?1",
+        params![id, title],
+    )?;
+    Ok(())
+}
+
+pub fn delete_document(conn: &Connection, id: i64) -> AppResult<()> {
+    conn.execute("delete from documents where id = ?1", params![id])?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------- revisions
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Revision {
+    pub id: i64,
+    pub doc_id: i64,
+    pub parent_id: Option<i64>,
+    pub content_json: String,
+    pub content_text: String,
+    pub major: bool,
+    pub label: Option<String>,
+    pub created_at: String,
+}
+
+fn revision_from_row(row: &Row) -> rusqlite::Result<Revision> {
+    Ok(Revision {
+        id: row.get("id")?,
+        doc_id: row.get("doc_id")?,
+        parent_id: row.get("parent_id")?,
+        content_json: row.get("content_json")?,
+        content_text: row.get("content_text")?,
+        major: row.get::<_, i64>("major")? != 0,
+        label: row.get("label")?,
+        created_at: row.get("created_at")?,
+    })
+}
+
+/// Save a revision. Consecutive minor saves collapse into the newest one, so
+/// ordinary typing does not bury the revisions the author actually marked.
+pub fn save_revision(
+    conn: &Connection,
+    doc_id: i64,
+    content_json: &str,
+    content_text: &str,
+    major: bool,
+    label: Option<&str>,
+) -> AppResult<Revision> {
+    let latest = latest_revision(conn, doc_id)?;
+
+    if !major {
+        if let Some(prev) = &latest {
+            if !prev.major {
+                conn.execute(
+                    "update revisions set content_json = ?2, content_text = ?3, created_at = datetime('now') where id = ?1",
+                    params![prev.id, content_json, content_text],
+                )?;
+                touch_document(conn, doc_id)?;
+                return get_revision(conn, prev.id);
+            }
+        }
+    }
+
+    conn.execute(
+        "insert into revisions (doc_id, parent_id, content_json, content_text, major, label)
+         values (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![doc_id, latest.map(|r| r.id), content_json, content_text, major as i64, label],
+    )?;
+    touch_document(conn, doc_id)?;
+    get_revision(conn, conn.last_insert_rowid())
+}
+
+fn touch_document(conn: &Connection, doc_id: i64) -> AppResult<()> {
+    conn.execute(
+        "update documents set updated_at = datetime('now') where id = ?1",
+        params![doc_id],
+    )?;
+    Ok(())
+}
+
+pub fn get_revision(conn: &Connection, id: i64) -> AppResult<Revision> {
+    let mut stmt = conn.prepare("select * from revisions where id = ?1")?;
+    stmt.query_row(params![id], revision_from_row)
+        .optional()?
+        .ok_or(AppError::NotFound("revision"))
+}
+
+pub fn latest_revision(conn: &Connection, doc_id: i64) -> AppResult<Option<Revision>> {
+    let mut stmt =
+        conn.prepare("select * from revisions where doc_id = ?1 order by id desc limit 1")?;
+    Ok(stmt.query_row(params![doc_id], revision_from_row).optional()?)
+}
+
+pub fn list_revisions(conn: &Connection, doc_id: i64) -> AppResult<Vec<Revision>> {
+    let mut stmt = conn.prepare("select * from revisions where doc_id = ?1 order by id desc")?;
+    let rows = stmt.query_map(params![doc_id], revision_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+pub fn flag_revision(conn: &Connection, id: i64, major: bool, label: Option<&str>) -> AppResult<()> {
+    conn.execute(
+        "update revisions set major = ?2, label = ?3 where id = ?1",
+        params![id, major as i64, label],
+    )?;
+    Ok(())
+}
+
+// --------------------------------------------------------------------- runs
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Run {
+    pub id: i64,
+    pub doc_id: i64,
+    pub revision_id: i64,
+    pub pass_slug: String,
+    pub pass_name: String,
+    pub provider: String,
+    pub model: Option<String>,
+    pub status: String,
+    pub error: Option<String>,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+}
+
+fn run_from_row(row: &Row) -> rusqlite::Result<Run> {
+    Ok(Run {
+        id: row.get("id")?,
+        doc_id: row.get("doc_id")?,
+        revision_id: row.get("revision_id")?,
+        pass_slug: row.get("pass_slug")?,
+        pass_name: row.get("pass_name")?,
+        provider: row.get("provider")?,
+        model: row.get("model")?,
+        status: row.get("status")?,
+        error: row.get("error")?,
+        started_at: row.get("started_at")?,
+        finished_at: row.get("finished_at")?,
+    })
+}
+
+pub fn start_run(
+    conn: &Connection,
+    doc_id: i64,
+    revision_id: i64,
+    pass_slug: &str,
+    pass_name: &str,
+    provider: &str,
+    model: Option<&str>,
+) -> AppResult<Run> {
+    conn.execute(
+        "insert into runs (doc_id, revision_id, pass_slug, pass_name, provider, model)
+         values (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![doc_id, revision_id, pass_slug, pass_name, provider, model],
+    )?;
+    let id = conn.last_insert_rowid();
+    let mut stmt = conn.prepare("select * from runs where id = ?1")?;
+    Ok(stmt.query_row(params![id], run_from_row)?)
+}
+
+pub fn finish_run(conn: &Connection, id: i64, status: &str, error: Option<&str>) -> AppResult<()> {
+    conn.execute(
+        "update runs set status = ?2, error = ?3, finished_at = datetime('now') where id = ?1",
+        params![id, status, error],
+    )?;
+    Ok(())
+}
+
+pub fn list_runs(conn: &Connection, doc_id: i64, limit: i64) -> AppResult<Vec<Run>> {
+    let mut stmt =
+        conn.prepare("select * from runs where doc_id = ?1 order by id desc limit ?2")?;
+    let rows = stmt.query_map(params![doc_id, limit], run_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+// ----------------------------------------------------------------- findings
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Finding {
+    pub id: i64,
+    pub run_id: i64,
+    pub doc_id: i64,
+    pub category: String,
+    pub severity: String,
+    pub note: String,
+    pub quote: String,
+    pub prefix: String,
+    pub suffix: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewFinding {
+    pub category: String,
+    pub severity: String,
+    pub note: String,
+    pub quote: String,
+    #[serde(default)]
+    pub prefix: String,
+    #[serde(default)]
+    pub suffix: String,
+}
+
+fn finding_from_row(row: &Row) -> rusqlite::Result<Finding> {
+    Ok(Finding {
+        id: row.get("id")?,
+        run_id: row.get("run_id")?,
+        doc_id: row.get("doc_id")?,
+        category: row.get("category")?,
+        severity: row.get("severity")?,
+        note: row.get("note")?,
+        quote: row.get("quote")?,
+        prefix: row.get("prefix")?,
+        suffix: row.get("suffix")?,
+        status: row.get("status")?,
+        created_at: row.get("created_at")?,
+    })
+}
+
+pub fn add_findings(
+    conn: &mut Connection,
+    run_id: i64,
+    doc_id: i64,
+    items: &[NewFinding],
+) -> AppResult<Vec<Finding>> {
+    let tx = conn.transaction()?;
+    let mut ids = Vec::with_capacity(items.len());
+    {
+        let mut stmt = tx.prepare(
+            "insert into findings (run_id, doc_id, category, severity, note, quote, prefix, suffix)
+             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        )?;
+        for f in items {
+            stmt.execute(params![
+                run_id,
+                doc_id,
+                f.category,
+                f.severity,
+                f.note,
+                f.quote,
+                f.prefix,
+                f.suffix
+            ])?;
+            ids.push(tx.last_insert_rowid());
+        }
+    }
+    tx.commit()?;
+
+    let mut out = Vec::with_capacity(ids.len());
+    let mut stmt = conn.prepare("select * from findings where id = ?1")?;
+    for id in ids {
+        out.push(stmt.query_row(params![id], finding_from_row)?);
+    }
+    Ok(out)
+}
+
+pub fn list_findings(conn: &Connection, doc_id: i64) -> AppResult<Vec<Finding>> {
+    let mut stmt = conn.prepare(
+        "select * from findings where doc_id = ?1 order by severity = 'high' desc, id asc",
+    )?;
+    let rows = stmt.query_map(params![doc_id], finding_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+pub fn set_finding_status(conn: &Connection, id: i64, status: &str) -> AppResult<()> {
+    conn.execute("update findings set status = ?2 where id = ?1", params![id, status])?;
+    Ok(())
+}
+
+pub fn clear_findings(conn: &Connection, doc_id: i64) -> AppResult<()> {
+    conn.execute("delete from findings where doc_id = ?1", params![doc_id])?;
+    Ok(())
+}
+
+// -------------------------------------------------------------------- duels
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Duel {
+    pub id: i64,
+    pub doc_id: i64,
+    pub finding_id: Option<i64>,
+    pub a_text: String,
+    pub b_text: String,
+    pub a_is_original: bool,
+    pub judge_provider: String,
+    pub judge_model: Option<String>,
+    pub verdict: Option<String>,
+    pub original_won: Option<bool>,
+    pub reason: Option<String>,
+    pub created_at: String,
+}
+
+fn duel_from_row(row: &Row) -> rusqlite::Result<Duel> {
+    Ok(Duel {
+        id: row.get("id")?,
+        doc_id: row.get("doc_id")?,
+        finding_id: row.get("finding_id")?,
+        a_text: row.get("a_text")?,
+        b_text: row.get("b_text")?,
+        a_is_original: row.get::<_, i64>("a_is_original")? != 0,
+        judge_provider: row.get("judge_provider")?,
+        judge_model: row.get("judge_model")?,
+        verdict: row.get("verdict")?,
+        original_won: row.get::<_, Option<i64>>("original_won")?.map(|v| v != 0),
+        reason: row.get("reason")?,
+        created_at: row.get("created_at")?,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn record_duel(
+    conn: &Connection,
+    doc_id: i64,
+    finding_id: Option<i64>,
+    a_text: &str,
+    b_text: &str,
+    a_is_original: bool,
+    judge_provider: &str,
+    judge_model: Option<&str>,
+    verdict: &str,
+    reason: Option<&str>,
+) -> AppResult<Duel> {
+    let original_won = match verdict {
+        "A" => Some(a_is_original),
+        "B" => Some(!a_is_original),
+        _ => None,
+    };
+    conn.execute(
+        "insert into duels (doc_id, finding_id, a_text, b_text, a_is_original,
+                            judge_provider, judge_model, verdict, original_won, reason)
+         values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![
+            doc_id,
+            finding_id,
+            a_text,
+            b_text,
+            a_is_original as i64,
+            judge_provider,
+            judge_model,
+            verdict,
+            original_won.map(|v| v as i64),
+            reason
+        ],
+    )?;
+    let id = conn.last_insert_rowid();
+    let mut stmt = conn.prepare("select * from duels where id = ?1")?;
+    Ok(stmt.query_row(params![id], duel_from_row)?)
+}
+
+pub fn list_duels(conn: &Connection, doc_id: i64) -> AppResult<Vec<Duel>> {
+    let mut stmt = conn.prepare("select * from duels where doc_id = ?1 order by id desc")?;
+    let rows = stmt.query_map(params![doc_id], duel_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mem() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(SCHEMA).unwrap();
+        conn
+    }
+
+    fn new_finding(quote: &str) -> NewFinding {
+        NewFinding {
+            category: "passive".into(),
+            severity: "medium".into(),
+            note: "The actor is missing.".into(),
+            quote: quote.into(),
+            prefix: String::new(),
+            suffix: String::new(),
+        }
+    }
+
+    #[test]
+    fn creates_and_lists_documents() {
+        let conn = mem();
+        let doc = create_document(&conn, "First piece").unwrap();
+        assert_eq!(doc.title, "First piece");
+        assert_eq!(list_documents(&conn).unwrap().len(), 1);
+        rename_document(&conn, doc.id, "Renamed").unwrap();
+        assert_eq!(get_document(&conn, doc.id).unwrap().title, "Renamed");
+    }
+
+    #[test]
+    fn minor_revisions_collapse_but_major_ones_do_not() {
+        let conn = mem();
+        let doc = create_document(&conn, "d").unwrap();
+        save_revision(&conn, doc.id, "{}", "one", false, None).unwrap();
+        save_revision(&conn, doc.id, "{}", "two", false, None).unwrap();
+        assert_eq!(list_revisions(&conn, doc.id).unwrap().len(), 1, "minor saves collapse");
+        assert_eq!(latest_revision(&conn, doc.id).unwrap().unwrap().content_text, "two");
+
+        save_revision(&conn, doc.id, "{}", "three", true, Some("after cuts")).unwrap();
+        save_revision(&conn, doc.id, "{}", "four", false, None).unwrap();
+        save_revision(&conn, doc.id, "{}", "five", false, None).unwrap();
+        let revs = list_revisions(&conn, doc.id).unwrap();
+        assert_eq!(revs.len(), 3, "major save is kept, later minor saves collapse onto one");
+        assert_eq!(revs[0].content_text, "five");
+        assert!(revs[1].major);
+        assert_eq!(revs[1].label.as_deref(), Some("after cuts"));
+    }
+
+    #[test]
+    fn revisions_chain_to_their_parent() {
+        let conn = mem();
+        let doc = create_document(&conn, "d").unwrap();
+        let a = save_revision(&conn, doc.id, "{}", "one", true, None).unwrap();
+        let b = save_revision(&conn, doc.id, "{}", "two", true, None).unwrap();
+        assert_eq!(b.parent_id, Some(a.id));
+        assert_eq!(a.parent_id, None);
+    }
+
+    #[test]
+    fn stores_findings_against_a_run() {
+        let mut conn = mem();
+        let doc = create_document(&conn, "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let run = start_run(&conn, doc.id, rev.id, "passive", "Passive voice", "anthropic", Some("claude-opus-5")).unwrap();
+        let saved = add_findings(&mut conn, run.id, doc.id, &[new_finding("was decided"), new_finding("were made")]).unwrap();
+        assert_eq!(saved.len(), 2);
+        assert_eq!(list_findings(&conn, doc.id).unwrap().len(), 2);
+
+        set_finding_status(&conn, saved[0].id, "dismissed").unwrap();
+        let after = list_findings(&conn, doc.id).unwrap();
+        assert_eq!(after[0].status, "dismissed");
+
+        finish_run(&conn, run.id, "done", None).unwrap();
+        assert_eq!(list_runs(&conn, doc.id, 10).unwrap()[0].status, "done");
+    }
+
+    #[test]
+    fn deleting_a_document_takes_its_findings_with_it() {
+        let mut conn = mem();
+        let doc = create_document(&conn, "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let run = start_run(&conn, doc.id, rev.id, "p", "P", "anthropic", None).unwrap();
+        add_findings(&mut conn, run.id, doc.id, &[new_finding("x")]).unwrap();
+        delete_document(&conn, doc.id).unwrap();
+        assert!(list_findings(&conn, doc.id).unwrap().is_empty());
+        assert!(list_revisions(&conn, doc.id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_duel_records_whether_the_original_won() {
+        let conn = mem();
+        let doc = create_document(&conn, "d").unwrap();
+        // The original was shown as B, and the judge picked B.
+        let d = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", Some("gpt-5"), "B", Some("tighter")).unwrap();
+        assert_eq!(d.original_won, Some(true));
+
+        // Same layout, judge picked A, so the rewrite won.
+        let d2 = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", None, "A", None).unwrap();
+        assert_eq!(d2.original_won, Some(false));
+
+        // A tie tells us nothing either way.
+        let d3 = record_duel(&conn, doc.id, None, "a", "b", true, "openai", None, "tie", None).unwrap();
+        assert_eq!(d3.original_won, None);
+
+        assert_eq!(list_duels(&conn, doc.id).unwrap().len(), 3);
+    }
+
+    #[test]
+    fn missing_rows_report_not_found() {
+        let conn = mem();
+        assert!(matches!(get_document(&conn, 999), Err(AppError::NotFound(_))));
+        assert!(matches!(get_revision(&conn, 999), Err(AppError::NotFound(_))));
+    }
+}

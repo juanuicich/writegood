@@ -48,7 +48,11 @@ to land. The system preamble forbids it as a second line of defence. The A/B
 judge (§11) never learns which side you wrote later, and runs on a different
 provider with no history of the editing session.
 
-Neither rule is a setting. Adding a Rule One override would defeat the app.
+Both rules are configurable, in `[rules]` in `config.toml` (§9.1). The
+defaults are strict. The settings exist because the rules are the author's
+discipline, not the app's opinion, and because a rule you cannot switch off is a
+rule you cannot test. Relaxing one is a deliberate edit to a config file, never
+a button in the interface.
 
 ---
 
@@ -128,6 +132,8 @@ zod                    4.6.5
 svelte                 5.57.1
 @tiptap/core           3.31.3
 vite                   8.3.0
+prosemirror-markdown   1.13.4
+markdown-it            14.1.0
 ```
 
 Two notes. The AI SDK is at v7, not v6 — `streamObject` still exists but the
@@ -149,7 +155,9 @@ writegood/
 │   ├── lib/
 │   │   ├── state.svelte.ts       runes store: document, findings, cursor
 │   │   ├── ipc.ts                typed wrappers over Tauri invoke
+│   │   ├── markdown.ts           Markdown ↔ ProseMirror (§6.1)
 │   │   ├── text.ts               ProseMirror doc → plain text + position map
+│   │   ├── palette/Palette.svelte  the only chrome (§12.2)
 │   │   ├── editor/
 │   │   │   ├── Editor.svelte     TipTap instance
 │   │   │   └── findings.ts       decoration plugin for highlights
@@ -170,7 +178,8 @@ writegood/
         ├── error.rs              AppError → serialisable strings
         ├── db.rs                 schema, CRUD, transactions
         ├── anchors.rs            re-anchoring (§7)
-        ├── config.rs             ~/.writegood config + pass loading
+        ├── config.rs             ~/.writegood config, rules, passes
+        ├── documents.rs          Markdown files on disk (§6.1)
         ├── runner.rs             CLI subprocess with timeout
         └── secrets.rs            macOS keychain via `keyring`
 ```
@@ -183,10 +192,33 @@ mapping. Neither reaches across.
 
 ## 6. Data model
 
+### 6.1 Markdown is the source of truth
+
+A draft is a Markdown file on disk. `~/.writegood/documents/*.md` by default,
+or any path you open. The app reads and writes that file and nothing else owns
+it. You can edit it in another editor, keep it in git, and delete the database
+without losing a word.
+
+The database holds everything the Markdown file cannot: revisions, findings,
+runs and duels. If the database is missing it is rebuilt empty and the drafts
+still open.
+
+Conversion is explicit and lossless for the subset the editor supports:
+paragraphs, headings, emphasis, strong, code, code blocks, blockquotes, lists,
+horizontal rules, links and hard breaks. `markdown.ts` wraps
+`prosemirror-markdown` with TipTap's node names, which differ (`codeBlock` for
+`code_block`, `bold` for `strong`, and so on). Anything outside the subset
+round-trips as literal text rather than being dropped.
+
+Saving writes the file first and the revision row second. A failed write is
+reported and does not advance the revision history.
+
+### 6.2 Database
+
 SQLite, WAL, foreign keys on. Stored at `~/.writegood/writegood.db`.
 
 ```sql
-documents(id, title, created_at, updated_at)
+documents(id, path, title, created_at, updated_at)
 
 revisions(id, doc_id→documents, parent_id→revisions,
           content_json, content_text, major, label, created_at)
@@ -201,8 +233,11 @@ duels(id, doc_id, finding_id→findings, a_text, b_text, a_is_original,
       judge_provider, judge_model, verdict, original_won, reason, created_at)
 ```
 
-`content_json` is the ProseMirror document. `content_text` is the flattened
-text, kept so anchoring and passes never have to walk the JSON.
+`documents.path` is absolute and unique. The row is a pointer and a cache of
+the title; the file is the document.
+
+`content_json` is the ProseMirror document, kept so a revision restores exactly.
+`content_text` is the flattened text that anchoring and passes work against.
 
 **Revision policy.** Consecutive ordinary saves collapse into the newest row, so
 typing does not bury the revisions you marked. Marking a revision major starts a
@@ -324,6 +359,20 @@ stay visible, marked with the revision they came from.
 default_provider = "anthropic"
 judge_provider   = "openai"      # must differ from the pass provider (§11)
 
+[rules]
+# Rule One. Defaults keep the model's wording out of your draft entirely.
+allow_suggestions   = false  # true adds a replacement field and an apply action
+redact_suggestions  = true   # block wording that leaked into a note (§10.3)
+# Rule Two.
+forbid_praise       = true   # the no-encouragement preamble
+blind_judge         = true   # shuffle A/B, strip history, require a second vendor
+
+[appearance]
+font        = "ui-serif"
+font_size   = 19
+measure     = 68             # characters per line
+theme       = "light"        # light | dark | system
+
 [providers.anthropic]
 kind    = "anthropic"
 model   = "claude-opus-5"
@@ -346,6 +395,15 @@ args    = ["-p", "{prompt}", "--output-format", "json"]
 json_path = "result"        # extract this field from stdout, then parse
 timeout_secs = 180
 ```
+
+`[rules]` is the one place the two rules can be relaxed (§2). Turning
+`allow_suggestions` on changes the finding schema and adds an apply action;
+everything else in the app is unaffected. `blind_judge = false` lets the judge
+share a vendor with the pass, which makes the duel results worth less.
+
+`[appearance]` is read at startup and on file change. `font` accepts any
+family installed locally, or the `ui-serif` / `ui-sans-serif` / `ui-monospace`
+keywords.
 
 `kind` selects the backend. Anything with an API key uses the AI SDK; `cli`
 shells out. A pass names a provider or inherits `default_provider`. The header
@@ -465,15 +523,36 @@ your time.
 
 ### 12.1 Layout
 
-Three panes. Left: document list, collapsible. Centre: the editor, a fixed
-measure of about 68 characters, generous margins, one serif face. Right: the
-sidebar, notes aligned to the vertical position of the text they refer to,
-Genius-style.
+Monochrome, classic, text first. The reference points are iA Writer and
+Japanese minimalism: nothing on screen that is not text or a response to text.
+Black on off-white, one grey for anything secondary, no colour except a single
+hairline accent for the selected finding. No icons, no toolbar, no menu bar, no
+buttons where a keystroke will do.
 
-The centre pane is the only thing that matters visually. It should be pleasant
-to write in for an hour.
+A serif face by default — `ui-serif`, which is New York on macOS — set large,
+with a fixed measure of about 68 characters and generous margins. The typeface
+is configurable in `config.toml`.
 
-### 12.2 Findings in the text
+Three panes, but only one of them is ever furniture. Centre: the editor.
+Right: the sidebar, notes aligned to the vertical position of the text they
+refer to, Genius-style; it appears when there are findings and is otherwise not
+there. Left: the document list, hidden by default and summoned from the
+palette.
+
+The centre pane is the whole app. It should be pleasant to write in for an
+hour, and it should look the same whether or not a model has ever run.
+
+### 12.2 The command bar
+
+There are no menus. Everything that is not typing happens through a `⌘K`
+palette: open a document, create one, run passes, choose a provider, flag a
+revision, open the duel, toggle settings. It is a single text field with a
+filtered list, monochrome, no icons.
+
+A command that needs an argument asks for it in the same field rather than
+opening a dialog.
+
+### 12.3 Findings in the text
 
 Open findings get a subtle underline, coloured by severity. The selected finding
 gets a background highlight and its sidebar note expands. Stale findings are
@@ -482,7 +561,7 @@ greyed with no underline. Dismissed findings are hidden unless you turn them on.
 Overlapping findings are normal. Underlines stack; the sidebar orders by
 document position, then severity.
 
-### 12.3 Keyboard
+### 12.4 Keyboard
 
 The app is driven from the keyboard.
 
@@ -505,7 +584,7 @@ Findings navigation must work without the mouse, including scroll sync. That is
 the "tick forward and back through suggestions" requirement, and it is the
 difference between using the tool and abandoning it.
 
-### 12.4 States that need designing
+### 12.5 States that need designing
 
 Empty document. Pass running, no findings yet. Pass returned nothing — say so
 plainly, "no findings", not "looks good". Pass failed. Provider key missing.
@@ -519,15 +598,17 @@ Note the second-to-last: the empty result must not become a compliment.
 
 ```
 ~/.writegood/
-├── config.toml           providers, defaults, preferences
-├── writegood.db          SQLite
-└── passes/               your prompts, one per file, git-tracked
+├── config.toml           providers, rules, appearance
+├── writegood.db          revisions, findings, runs, duels
+├── documents/            your drafts, Markdown, one per file
+│   └── on-writing.md
+└── passes/               your prompts, Markdown, one per file
     ├── 01-nominalization.md
     └── ...
 ```
 
-Everything except the database is plain text you can edit and version. The
-database holds drafts and history only.
+Everything except the database is plain text you can edit, diff and version.
+The database holds history and findings only, and the app works without it.
 
 ---
 
