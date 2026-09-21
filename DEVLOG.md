@@ -195,3 +195,21 @@ paragraph: []` followed by the actual findings is a plausible reply, and the
 first rule read it backwards. The order is now: the first non-empty array of
 objects, else any array of objects, else the first balanced array of the first
 candidate that has one. A lone `[]` still means no findings.
+
+**FIXED — the last quiet path, and three misleading messages.** A reply that
+could not be read used to say one thing whatever had happened. It now says
+which of four, because each implies a different fix: items that fail the
+schema, a reply cut off mid-array, an array holding no findings, or no array at
+all. A well-formed array whose every item fails the schema now throws with the
+count and the first Zod issue, rather than returning nothing silently — a
+provider that renames a field must not read as a clean nothing-found. Dropping
+individual malformed items is unchanged, and an empty array is still silent.
+
+**DECISION — no fallback to an array of non-objects.** It existed to avoid
+throwing, and throwing is the point: it named the provider and got noticed,
+where an empty pass looked like success. Nothing valid was lost, since a real
+findings array always starts with `{`.
+
+**NOTE — a stray unclosed `[` in prose reads as truncation.** `I looked at
+paragraph [3` reports "probably cut off". Weighing where the bracket sits is
+more machinery than the case deserves, which is why the wording hedges.

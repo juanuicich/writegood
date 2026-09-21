@@ -3,6 +3,7 @@
  *
  *  Kept free of the store and of Tauri so it can be unit tested, and so the
  *  probe in `dev/` can exercise exactly the code the app runs. */
+import type { ZodError } from "zod";
 import type { NewFinding, Pass, Severity } from "../ipc";
 import { FindingElement, outputNote } from "./schema";
 
@@ -49,11 +50,13 @@ interface Span {
   end: number;
 }
 
-/** Every balanced array in `body`, in the order their brackets open.
+/** What one linear pass over `body` found: every balanced array, in the order
+ *  their brackets open, and whether any `[` was still open at the end.
  *
  *  Brackets inside a JSON string do not count, and a backslash only escapes
- *  inside a string. An array that never closes yields no span. */
-function balancedArrays(body: string): Span[] {
+ *  inside a string. An array that never closes yields no span, but does leave
+ *  `unclosed` set, which is how a cut-off reply is told from a complete one. */
+function scan(body: string): { spans: Span[]; unclosed: boolean } {
   const spans: Span[] = [];
   const open: number[] = [];
   let inString = false;
@@ -73,7 +76,7 @@ function balancedArrays(body: string): Span[] {
       if (start !== undefined) spans.push({ start, end: i });
     }
   }
-  return spans.sort((a, b) => a.start - b.start);
+  return { spans: spans.sort((a, b) => a.start - b.start), unclosed: open.length > 0 };
 }
 
 /** The trimmed contents between an array's brackets. */
@@ -99,12 +102,15 @@ interface Scanned {
 /** Pull the findings array out of a reply that may carry a preamble, a fenced
  *  block, trailing chatter, or a wrapper object with other arrays in it.
  *
- *  Three passes over the candidates, in order: a findings array with something
- *  in it, then an empty findings array, then the reply we do not understand. */
+ *  Two passes over the candidates: a findings array with something in it, then
+ *  an empty one. Nothing else counts. An array that holds no objects is not
+ *  findings, and returning it would give the caller a pass with no findings and
+ *  no error, which reads as a clean result. Better to return null and let
+ *  `parseFindings` throw with the provider's name in the message. */
 export function extractArray(text: string): string | null {
   const scanned: Scanned[] = candidates(text).map((body) => ({
     body,
-    spans: balancedArrays(body),
+    spans: scan(body).spans,
   }));
   const cut = (c: Scanned, span: Span) => c.body.slice(span.start, span.end + 1);
 
@@ -123,15 +129,33 @@ export function extractArray(text: string): string | null {
     }
   }
 
-  // Neither, so degrade to what this used to do: the first balanced array of
-  // any kind. It has to open at the candidate's first bracket, or a truncated
-  // reply like `[{"a": [1]}` would quietly yield its nested array. A throw
-  // names the provider; a pass with no findings looks like a clean result.
-  for (const c of scanned) {
-    const first = c.spans[0];
-    if (first && first.start === c.body.indexOf("[")) return cut(c, first);
-  }
   return null;
+}
+
+/** Why `extractArray` gave up, for the error message.
+ *
+ *  `"objects"` means it did not give up. `"truncated"` means a `[` was left
+ *  open at the end. `"other"` means the reply held an array but none of them
+ *  held findings, and `"none"` means there was no balanced array anywhere.
+ *
+ *  Truncation outranks `"other"`: no usable array was found, and a dangling
+ *  bracket explains that better than the contents of some other array that did
+ *  close. Each arm sends the reader somewhere different, which is the point —
+ *  `"other"` means read what the model wrote, `"truncated"` means look at the
+ *  output token limit. */
+export function arrayShape(text: string): "objects" | "truncated" | "other" | "none" {
+  let seen = false;
+  let unclosed = false;
+  for (const body of candidates(text)) {
+    const found = scan(body);
+    for (const span of found.spans) {
+      seen = true;
+      if (holdsObjects(body, span)) return "objects";
+    }
+    if (found.unclosed) unclosed = true;
+  }
+  if (unclosed) return "truncated";
+  return seen ? "other" : "none";
 }
 
 export function toFinding(el: FindingElement): NewFinding {
@@ -145,15 +169,41 @@ export function toFinding(el: FindingElement): NewFinding {
   };
 }
 
+/** What to tell the reader when no findings array came back. A stray `[` in
+ *  prose gives the same signal as a cut-off reply, so the truncated case says
+ *  what was seen and what it probably means, not what caused it. */
+function failure(who: string, text: string): string {
+  switch (arrayShape(text)) {
+    case "truncated":
+      return `${who}'s reply ends with an unclosed array, so it was probably cut off`;
+    case "other":
+      return `${who} returned an array that holds no findings`;
+    default:
+      return `${who} returned no JSON array`;
+  }
+}
+
+/** The first schema complaint, as `path: message`, for the error text. */
+function firstIssue(error: ZodError): string {
+  const issue = error.issues[0];
+  if (issue === undefined) return "no reason given";
+  const path = issue.path.join(".");
+  return path.length > 0 ? `${path}: ${issue.message}` : issue.message;
+}
+
 /**
  * Read findings out of a model reply.
  *
  * Items that do not satisfy the schema are dropped rather than failing the
  * pass: one malformed entry should not discard the nine good ones beside it.
+ * But if nothing at all survives and there was something to drop, the reply is
+ * wrong rather than empty, so we throw. A provider that renames a field would
+ * otherwise look like a clean nothing-found. An array with no items in it is a
+ * normal result and stays silent.
  */
 export function parseFindings(text: string, who = "the model"): NewFinding[] {
   const json = extractArray(text);
-  if (json === null) throw new Error(`${who} returned no JSON array`);
+  if (json === null) throw new Error(failure(who, text));
 
   let parsed: unknown;
   try {
@@ -166,9 +216,16 @@ export function parseFindings(text: string, who = "the model"): NewFinding[] {
   }
 
   const out: NewFinding[] = [];
+  let why: string | null = null;
   for (const raw of parsed) {
     const el = FindingElement.safeParse(raw);
     if (el.success) out.push(toFinding(el.data));
+    else if (why === null) why = firstIssue(el.error);
+  }
+  if (out.length === 0 && parsed.length > 0) {
+    throw new Error(
+      `${who} returned ${parsed.length} findings, none of which fit the schema: ${why}`,
+    );
   }
   return out;
 }

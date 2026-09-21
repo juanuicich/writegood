@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { NewFinding, Pass } from '../ipc'
-import { buildPrompt, extractArray, paragraphs, parseFindings } from './parse'
+import { arrayShape, buildPrompt, extractArray, paragraphs, parseFindings } from './parse'
 
 /** One well-formed finding, as a model would write it. */
 const good = {
@@ -28,7 +28,7 @@ const pass: Pass = {
 
 describe('extractArray', () => {
 	test('returns a bare array unchanged', () => {
-		expect(extractArray('[1, 2, 3]')).toBe('[1, 2, 3]')
+		expect(extractArray('[{"a": 1}, {"b": 2}]')).toBe('[{"a": 1}, {"b": 2}]')
 	})
 
 	test('reads an array out of a json fence', () => {
@@ -45,7 +45,7 @@ describe('extractArray', () => {
 	})
 
 	test('falls back to the whole text when a fence is never closed', () => {
-		expect(extractArray('```json\n[1]')).toBe('[1]')
+		expect(extractArray('```json\n[{"a": 1}]')).toBe('[{"a": 1}]')
 	})
 
 	test('balances arrays nested inside objects inside the array', () => {
@@ -87,8 +87,10 @@ describe('extractArray', () => {
 		expect(extractArray('{"findings": 3}')).toBeNull()
 	})
 
-	test('stops at the first array and ignores a second one', () => {
-		expect(extractArray('[1] and then [2]')).toBe('[1]')
+	test('an array that holds no objects is not findings', () => {
+		// Returning `[1]` here would give the caller an empty pass with no error,
+		// which reads as a clean nothing-found.
+		expect(extractArray('[1] and then [2]')).toBeNull()
 	})
 
 	test('skips a decoy array and takes the findings out of a wrapper object', () => {
@@ -123,8 +125,8 @@ describe('extractArray', () => {
 		expect(extractArray('[{"a": [1]}')).toBeNull()
 	})
 
-	test('falls back to an array of strings when no array of objects exists', () => {
-		expect(extractArray('{"findings": ["a", "b"]}')).toBe('["a", "b"]')
+	test('an array of strings in a wrapper object is not findings', () => {
+		expect(extractArray('{"findings": ["a", "b"]}')).toBeNull()
 	})
 
 	test('returns null when no candidate holds a balanced array', () => {
@@ -162,15 +164,15 @@ describe('parseFindings', () => {
 
 	test('drops an item with no quote', () => {
 		const { quote: _q, ...noQuote } = good
-		expect(parseFindings(reply(noQuote))).toEqual([])
+		expect(parseFindings(reply(good, noQuote)).length).toBe(1)
 	})
 
 	test('drops an item whose severity is not in the enum', () => {
-		expect(parseFindings(reply({ ...good, severity: 'critical' }))).toEqual([])
+		expect(parseFindings(reply(good, { ...good, severity: 'critical' })).length).toBe(1)
 	})
 
 	test('drops an item whose quote is too short', () => {
-		expect(parseFindings(reply({ ...good, quote: 'a' }))).toEqual([])
+		expect(parseFindings(reply(good, { ...good, quote: 'a' })).length).toBe(1)
 	})
 
 	test('returns an empty array for an empty array, without throwing', () => {
@@ -178,7 +180,9 @@ describe('parseFindings', () => {
 	})
 
 	test('throws when the reply holds no array, naming who replied', () => {
-		expect(() => parseFindings('No problems here.', 'gpt-5')).toThrow(/gpt-5/)
+		expect(() => parseFindings('No problems here.', 'gpt-5')).toThrow(
+			'gpt-5 returned no JSON array',
+		)
 	})
 
 	test('throws when the reply is a top level JSON object', () => {
@@ -200,8 +204,80 @@ describe('parseFindings', () => {
 		expect(parseFindings(text).length).toBe(1)
 	})
 
-	test('an array of strings gives no findings rather than throwing', () => {
-		expect(parseFindings('["draft", "v2"]')).toEqual([])
+	test('throws on a cut off reply, saying the array never closed', () => {
+		expect(() => parseFindings('[{"quote": "ok"}, {"quote"', 'gpt-5')).toThrow(
+			"gpt-5's reply ends with an unclosed array, so it was probably cut off",
+		)
+	})
+
+	test('throws on an array of strings, saying the array held no findings', () => {
+		// A different message from the no-array case, so a log line does not send
+		// the reader looking for an array that was there all along.
+		expect(() => parseFindings('["draft", "v2"]', 'gemini')).toThrow(
+			'gemini returned an array that holds no findings',
+		)
+	})
+
+	test('throws when every item fails the schema, with the count and the field', () => {
+		const renamed = Array.from({ length: 7 }, () => ({ ...good, quote: undefined, text: 'x' }))
+		expect(() => parseFindings(reply(...renamed), 'claude')).toThrow(
+			/claude returned 7 findings, none of which fit the schema: quote/,
+		)
+	})
+
+	test('keeps the one good item among several bad ones, without throwing', () => {
+		const bad = { ...good, severity: 'critical' }
+		const out = parseFindings(reply(bad, good, bad, bad))
+		expect(out.length).toBe(1)
+	})
+})
+
+describe('arrayShape', () => {
+	test('reports objects when a findings array is there', () => {
+		expect(arrayShape('[{"quote": "ok"}]')).toBe('objects')
+	})
+
+	test('reports objects for an empty array', () => {
+		expect(arrayShape('[]')).toBe('objects')
+	})
+
+	test('reports other when the only arrays hold no objects', () => {
+		expect(arrayShape('{"findings": ["a", "b"]}')).toBe('other')
+	})
+
+	test('reports none when nothing balances', () => {
+		expect(arrayShape('I found nothing to report.')).toBe('none')
+	})
+
+	test('reports truncated for an array with a balanced one inside it', () => {
+		// Truncation outranks `other`: the nested `[1]` balances, but the open
+		// bracket explains the missing findings better than its contents do.
+		expect(arrayShape('[{"a": [1]}')).toBe('truncated')
+	})
+
+	test('reports truncated for an array with nothing nested in it', () => {
+		expect(arrayShape('[{"a": 1}, {"b": 2}')).toBe('truncated')
+	})
+
+	test('an unclosed bracket inside a string is not truncation', () => {
+		// The scanner tracks strings, so a `[` in a quote leaves nothing open.
+		expect(arrayShape('["a [ b"]')).toBe('other')
+		expect(arrayShape('[{"quote": "see [1 in the draft"}]')).toBe('objects')
+	})
+
+	test('agrees with extractArray on every reply', () => {
+		const replies = [
+			'[{"quote": "ok"}]',
+			'[]',
+			'["a"]',
+			'no array here',
+			'[{"a": 1}',
+			'["a [ b"]',
+			'{"tags": ["x"], "findings": [{"quote": "ok"}]}',
+		]
+		for (const text of replies) {
+			expect(arrayShape(text) === 'objects').toBe(extractArray(text) !== null)
+		}
 	})
 })
 

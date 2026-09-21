@@ -353,8 +353,27 @@ structured-output support returns a bare array where the SDK expects a wrapper,
 and the result is silently zero findings. One code path with one failure mode
 is worth more here than per-element streaming.
 
-An item that fails the schema is dropped. One malformed entry must not discard
-the nine good ones beside it.
+An item that fails the schema is dropped, so one malformed entry does not
+discard the nine good ones beside it. If *every* item fails and there was at
+least one, the pass throws instead: a provider that has changed its field names
+must not read as a clean nothing-found. A genuinely empty array stays silent,
+because finding nothing is a normal result.
+
+A reply that cannot be read says which of four things went wrong, because each
+implies a different remedy:
+
+```
+deepseek returned 7 findings, none of which fit the schema: quote: expected string
+deepseek's reply ends with an unclosed array, so it was probably cut off
+deepseek returned an array that holds no findings
+deepseek returned no JSON array
+```
+
+The parser looks for an array in every ```json fence, then every plain fence,
+then the raw reply, and takes the first non-empty array of objects, else an
+empty one. It never falls back to an array of something else: that path
+returned zero findings with no error, which is the failure this whole section
+exists to prevent.
 
 Every pass prompt contains the word "json". DeepSeek, and other
 OpenAI-compatible endpoints, return a 400 for a structured-output request whose
