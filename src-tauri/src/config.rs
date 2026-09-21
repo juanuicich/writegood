@@ -14,8 +14,56 @@ use crate::error::{AppError, AppResult};
 // Paths
 // ---------------------------------------------------------------------------
 
+/// Tests must never touch a real `~/.writegood`. An earlier run did exactly
+/// that, because a test that had not yet set the override raced one that had.
+/// Failing loudly is cheaper than cleaning up someone's drafts.
+#[cfg(test)]
+fn guard_test_home() {
+    assert!(
+        std::env::var_os("WRITEGOOD_HOME").is_some(),
+        "a test reached home_dir() without setting WRITEGOOD_HOME"
+    );
+}
+
+/// Test-only support for the modules that exercise the real path helpers.
+/// `WRITEGOOD_HOME` is process-wide, so holding this guard is the only safe
+/// way to set it.
+#[cfg(test)]
+pub(crate) mod testing {
+    use std::path::PathBuf;
+    use std::sync::{Mutex, MutexGuard};
+
+    static LOCK: Mutex<()> = Mutex::new(());
+
+    pub(crate) struct EnvHome {
+        pub dir: PathBuf,
+        _guard: MutexGuard<'static, ()>,
+    }
+
+    impl Drop for EnvHome {
+        fn drop(&mut self) {
+            std::env::remove_var("WRITEGOOD_HOME");
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    /// Point `WRITEGOOD_HOME` at a fresh temp directory for the life of the
+    /// returned value. Serialised against every other caller.
+    pub(crate) fn env_home(tag: &str) -> EnvHome {
+        let guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = std::env::temp_dir().join(format!("writegood-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_var("WRITEGOOD_HOME", &dir);
+        EnvHome { dir, _guard: guard }
+    }
+}
+
 /// `$WRITEGOOD_HOME`, else `~/.writegood`.
 pub fn home_dir() -> PathBuf {
+    #[cfg(test)]
+    guard_test_home();
+
     home_from(std::env::var_os("WRITEGOOD_HOME"), std::env::var_os("HOME"))
 }
 
@@ -796,6 +844,7 @@ mod tests {
 
     #[test]
     fn the_paths_hang_off_the_home() {
+        let _env = super::testing::env_home("paths");
         let home = home_dir();
         assert_eq!(config_path(), home.join("config.toml"));
         assert_eq!(documents_dir(), home.join("documents"));

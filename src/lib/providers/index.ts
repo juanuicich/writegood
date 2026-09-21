@@ -24,10 +24,10 @@ export interface Resolved {
   vendor: string;
 }
 
+/** Only Anthropic gets a default. Guessing another vendor's current model id
+ *  would fail at request time with a worse message than asking for one here. */
 const DEFAULT_MODEL: Record<string, string> = {
   anthropic: "claude-opus-5",
-  openai: "gpt-5.2",
-  google: "gemini-3-pro",
 };
 
 /** Requests go through Rust's HTTP client, so CORS never applies. */
@@ -66,7 +66,9 @@ export async function resolve(config: Config, name: string): Promise<Resolved> {
 
   const id = provider.model ?? DEFAULT_MODEL[provider.kind] ?? "";
   if (!id) {
-    throw new ProviderError(`provider "${name}" needs a model in config.toml`);
+    throw new ProviderError(
+      `provider "${name}" needs a model in config.toml, for example model = "..."`,
+    );
   }
 
   let model: LanguageModel;

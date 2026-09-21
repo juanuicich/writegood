@@ -193,22 +193,7 @@ pub fn doc_rename(path: String, title: String) -> AppResult<String> {
 mod tests {
     use super::*;
 
-    /// `WRITEGOOD_HOME` is process-wide, so tests that set it must not run at
-    /// the same time. The guard is held for the body of each such test.
-    static HOME: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-    struct Home {
-        dir: PathBuf,
-        _guard: std::sync::MutexGuard<'static, ()>,
-    }
-
-    fn temp_home(tag: &str) -> Home {
-        let guard = HOME.lock().unwrap_or_else(|e| e.into_inner());
-        let dir = std::env::temp_dir().join(format!("writegood-docs-{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::env::set_var("WRITEGOOD_HOME", &dir);
-        Home { dir, _guard: guard }
-    }
+    use crate::config::testing::env_home;
 
     #[test]
     fn takes_the_title_from_the_first_heading() {
@@ -244,7 +229,7 @@ mod tests {
 
     #[test]
     fn writes_atomically_and_leaves_no_temp_file() {
-        let home = temp_home("write");
+        let home = env_home("docs-write");
         let path = home.dir.join("documents").join("a.md");
         write(&path.to_string_lossy(), "hello").unwrap();
         assert_eq!(read(&path.to_string_lossy()).unwrap(), "hello");
@@ -258,7 +243,7 @@ mod tests {
 
     #[test]
     fn creating_twice_does_not_overwrite() {
-        let _home = temp_home("create");
+        let _home = env_home("docs-create");
         let a = create("Draft").unwrap();
         let b = create("Draft").unwrap();
         assert_ne!(a, b);
@@ -267,7 +252,7 @@ mod tests {
 
     #[test]
     fn lists_only_markdown_and_newest_first() {
-        let home = temp_home("list");
+        let home = env_home("docs-list");
         create("Older").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(1100));
         create("Newer").unwrap();
