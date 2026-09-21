@@ -478,7 +478,7 @@ type PassBackend = (req: {
 
 ```ts
 const Finding = z.object({
-  quote:    z.string().min(3).max(400).describe("Exact text from the draft, copied verbatim, 3-400 characters."),
+  quote:    z.string().min(2).max(400).describe("Exact text from the draft, copied verbatim, at most 400 characters."),
   prefix:   z.string().describe("The 32 characters immediately before the quote, verbatim."),
   suffix:   z.string().describe("The 32 characters immediately after the quote, verbatim."),
   category: z.string(),

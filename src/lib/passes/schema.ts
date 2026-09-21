@@ -10,13 +10,15 @@ export const CONTEXT_LEN = 32;
 export const FindingElement = z.object({
   quote: z
     .string()
-    // The bound is the anchor's, not the prose's. Under three characters a
-    // quote cannot be placed reliably; over four hundred it is a paragraph,
-    // and a paragraph-long quote will not survive the author rewriting it.
-    .min(3)
+    // Two characters is deliberately permissive. A filler-words pass has every
+    // right to quote "so", and a short quote still anchors, because it is
+    // placed with thirty-two characters of context either side. The upper
+    // bound is the real one: past four hundred characters a quote is a
+    // paragraph, and a paragraph will not survive being rewritten.
+    .min(2)
     .max(400)
     .describe(
-      "Exact text from the draft, copied verbatim. Three to four hundred characters.",
+      "Exact text from the draft, copied verbatim. At most four hundred characters.",
     ),
   prefix: z
     .string()

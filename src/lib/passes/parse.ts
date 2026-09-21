@@ -29,35 +29,83 @@ export function buildPrompt(pass: Pass, draft: string, chunk: string | null): st
   return parts.join("\n");
 }
 
-/** Pull the first JSON array out of a reply that may carry a preamble, a
- *  fenced block, or trailing chatter. */
-export function extractArray(text: string): string | null {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fenced ? fenced[1] : text;
-  const start = body.indexOf("[");
-  if (start < 0) return null;
-  let depth = 0;
+const FENCE = /```([A-Za-z0-9_+-]*)[^\S\r\n]*\r?\n?([\s\S]*?)```/g;
+
+/** The places an array might hide, best first: every ```json fence, then every
+ *  plain fence, then the raw reply. A model that quotes the draft in a fence
+ *  and puts the array after it is still readable this way. */
+function candidates(text: string): string[] {
+  const json: string[] = [];
+  const plain: string[] = [];
+  for (const m of text.matchAll(FENCE)) {
+    (m[1]!.toLowerCase() === "json" ? json : plain).push(m[2]!);
+  }
+  return [...json, ...plain, text];
+}
+
+/** An array in `body`, by the index of its `[` and of its matching `]`. */
+interface Span {
+  start: number;
+  end: number;
+}
+
+/** Every balanced array in `body`, in the order their brackets open.
+ *
+ *  Brackets inside a JSON string do not count, and a backslash only escapes
+ *  inside a string. An array that never closes yields no span. */
+function balancedArrays(body: string): Span[] {
+  const spans: Span[] = [];
+  const open: number[] = [];
   let inString = false;
   let escaped = false;
-  for (let i = start; i < body.length; i++) {
+  for (let i = 0; i < body.length; i++) {
     const c = body[i];
-    if (escaped) {
-      escaped = false;
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === "\\") escaped = true;
+      else if (c === '"') inString = false;
       continue;
     }
-    if (c === "\\") {
-      escaped = true;
-      continue;
-    }
-    if (c === '"') inString = !inString;
-    if (inString) continue;
-    if (c === "[") depth++;
+    if (c === '"') inString = true;
+    else if (c === "[") open.push(i);
     else if (c === "]") {
-      depth--;
-      if (depth === 0) return body.slice(start, i + 1);
+      const start = open.pop();
+      if (start !== undefined) spans.push({ start, end: i });
     }
   }
-  return null;
+  return spans.sort((a, b) => a.start - b.start);
+}
+
+/** Findings are objects, so the array we want is empty or opens with `{`.
+ *
+ *  This is what tells the findings in `{"meta": {"tags": ["draft"]}, ...}`
+ *  from the decoy beside them. An empty array is a normal result and stays
+ *  acceptable. */
+function holdsObjects(body: string, span: Span): boolean {
+  const inner = body.slice(span.start + 1, span.end).trim();
+  return inner.length === 0 || inner.startsWith("{");
+}
+
+/** Pull the findings array out of a reply that may carry a preamble, a fenced
+ *  block, trailing chatter, or a wrapper object with other arrays in it.
+ *
+ *  An array of objects wins wherever it is found. Failing that we return the
+ *  first balanced array of any kind, which is what this used to do, so a reply
+ *  we do not understand degrades instead of throwing. */
+export function extractArray(text: string): string | null {
+  let fallback: string | null = null;
+  for (const body of candidates(text)) {
+    const spans = balancedArrays(body);
+    if (spans.length === 0) continue;
+    for (const span of spans) {
+      if (holdsObjects(body, span)) return body.slice(span.start, span.end + 1);
+    }
+    if (fallback === null) {
+      const first = spans[0]!;
+      fallback = body.slice(first.start, first.end + 1);
+    }
+  }
+  return fallback;
 }
 
 export function toFinding(el: FindingElement): NewFinding {
