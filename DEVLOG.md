@@ -183,3 +183,15 @@ Only the upper bound means anything.
 **NOTE — a dead branch was kept on purpose.** `parseFindings` guards against a
 non-array, which `extractArray` can no longer produce. Two lines of guard are
 worth keeping against a future change to the extractor.
+
+**FIXED — a truncated reply is loud again.** Collecting every balanced array
+meant `[{"a": [1]}` returned the inner `[1]` rather than null, turning a throw
+into a quietly empty pass. The fallback span must now start at the candidate's
+first `[`. A throw names the provider and gets noticed; an empty pass looks
+like a clean nothing-found and does not.
+
+**DECISION — a real array beats an earlier empty one.** `nothing in this
+paragraph: []` followed by the actual findings is a plausible reply, and the
+first rule read it backwards. The order is now: the first non-empty array of
+objects, else any array of objects, else the first balanced array of the first
+candidate that has one. A lone `[]` still means no findings.

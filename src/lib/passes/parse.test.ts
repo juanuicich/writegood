@@ -106,9 +106,21 @@ describe('extractArray', () => {
 		expect(extractArray(text)).toBe('[{"quote": "ok"}]')
 	})
 
-	test('takes an empty array over a later array of objects', () => {
-		// An empty array is a normal result, so the first one found still wins.
-		expect(extractArray('[] then [{"quote": "ok"}]')).toBe('[]')
+	test('takes a later array of objects over an earlier empty one', () => {
+		// Pinned: a model may write "nothing here" and then the real array. An
+		// empty array that comes first must not be read as the answer.
+		expect(extractArray('nothing in this paragraph: [] ... [{"quote": "ok"}]')).toBe(
+			'[{"quote": "ok"}]',
+		)
+	})
+
+	test('a lone empty array is still the answer', () => {
+		expect(extractArray('I found nothing: []')).toBe('[]')
+	})
+
+	test('returns null for a truncated array with a nested one inside it', () => {
+		// Returning the nested `[1]` here would look like a clean empty pass.
+		expect(extractArray('[{"a": [1]}')).toBeNull()
 	})
 
 	test('falls back to an array of strings when no array of objects exists', () => {

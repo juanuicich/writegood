@@ -76,36 +76,62 @@ function balancedArrays(body: string): Span[] {
   return spans.sort((a, b) => a.start - b.start);
 }
 
+/** The trimmed contents between an array's brackets. */
+function inner(body: string, span: Span): string {
+  return body.slice(span.start + 1, span.end).trim();
+}
+
 /** Findings are objects, so the array we want is empty or opens with `{`.
  *
  *  This is what tells the findings in `{"meta": {"tags": ["draft"]}, ...}`
  *  from the decoy beside them. An empty array is a normal result and stays
  *  acceptable. */
 function holdsObjects(body: string, span: Span): boolean {
-  const inner = body.slice(span.start + 1, span.end).trim();
-  return inner.length === 0 || inner.startsWith("{");
+  const text = inner(body, span);
+  return text.length === 0 || text.startsWith("{");
+}
+
+interface Scanned {
+  body: string;
+  spans: Span[];
 }
 
 /** Pull the findings array out of a reply that may carry a preamble, a fenced
  *  block, trailing chatter, or a wrapper object with other arrays in it.
  *
- *  An array of objects wins wherever it is found. Failing that we return the
- *  first balanced array of any kind, which is what this used to do, so a reply
- *  we do not understand degrades instead of throwing. */
+ *  Three passes over the candidates, in order: a findings array with something
+ *  in it, then an empty findings array, then the reply we do not understand. */
 export function extractArray(text: string): string | null {
-  let fallback: string | null = null;
-  for (const body of candidates(text)) {
-    const spans = balancedArrays(body);
-    if (spans.length === 0) continue;
-    for (const span of spans) {
-      if (holdsObjects(body, span)) return body.slice(span.start, span.end + 1);
-    }
-    if (fallback === null) {
-      const first = spans[0]!;
-      fallback = body.slice(first.start, first.end + 1);
+  const scanned: Scanned[] = candidates(text).map((body) => ({
+    body,
+    spans: balancedArrays(body),
+  }));
+  const cut = (c: Scanned, span: Span) => c.body.slice(span.start, span.end + 1);
+
+  // Findings. A model may write "nothing here: []" and then the real array,
+  // so an empty array earlier in the reply must not win over this.
+  for (const c of scanned) {
+    for (const span of c.spans) {
+      if (holdsObjects(c.body, span) && inner(c.body, span).length > 0) return cut(c, span);
     }
   }
-  return fallback;
+
+  // An empty array. Finding nothing is a normal result.
+  for (const c of scanned) {
+    for (const span of c.spans) {
+      if (holdsObjects(c.body, span)) return cut(c, span);
+    }
+  }
+
+  // Neither, so degrade to what this used to do: the first balanced array of
+  // any kind. It has to open at the candidate's first bracket, or a truncated
+  // reply like `[{"a": [1]}` would quietly yield its nested array. A throw
+  // names the provider; a pass with no findings looks like a clean result.
+  for (const c of scanned) {
+    const first = c.spans[0];
+    if (first && first.start === c.body.indexOf("[")) return cut(c, first);
+  }
+  return null;
 }
 
 export function toFinding(el: FindingElement): NewFinding {
