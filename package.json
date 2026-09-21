@@ -10,7 +10,9 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
     "app": "tauri dev",
-    "app:build": "tauri build"
+    "app:build": "tauri build",
+    "browser": "vite --config dev/browser/vite.config.ts",
+    "test": "bun test src/lib"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.58",

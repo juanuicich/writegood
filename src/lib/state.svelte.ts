@@ -64,9 +64,17 @@ class App {
   paletteOpen = $state(false);
   sidebarForced = $state(false);
 
-  /** Only open findings are worth stepping through. */
+  /** Only open findings are worth stepping through, and the margin reads in
+   *  document order. Findings that no longer place sort last. */
   visible = $derived(
-    this.findings.filter((f) => f.status === "open" || f.status === "addressed"),
+    this.findings
+      .filter((f) => f.status === "open" || f.status === "addressed")
+      .sort((a, b) => {
+        if (a.from === null && b.from === null) return a.id - b.id;
+        if (a.from === null) return 1;
+        if (b.from === null) return -1;
+        return a.from - b.from || severity(b) - severity(a);
+      }),
   );
 
   current = $derived(this.visible[this.cursor] ?? null);
@@ -316,6 +324,11 @@ class App {
       this.busy -= 1;
     }
   }
+}
+
+const RANK = { low: 0, medium: 1, high: 2 } as const;
+function severity(f: Finding): number {
+  return RANK[f.severity as keyof typeof RANK] ?? 0;
 }
 
 function stale(s: Finding["status"]) {

@@ -90,8 +90,26 @@ VITE_WRITEGOOD_AUTORUN=nominalization bun run app
 ```
 
 That hook exists because driving the window from a script needs accessibility
-permission a terminal does not have. Screenshots are unavailable for the same
-reason: `screencapture` fails with "could not create image from display".
+permission a terminal does not have. `screencapture` fails for the same reason.
+
+## Looking at the interface
+
+`bun run browser` serves the app at http://localhost:1421 with Tauri replaced
+by fixtures in `dev/browser/`. Nothing touches disk and no key is needed. Add
+`?theme=dark`, and `?show=review|history|duel|palette` to open straight into a
+state worth reviewing. Screenshot it with headless Chrome:
+
+```
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --disable-gpu --hide-scrollbars --virtual-time-budget=4000 \
+  --window-size=1280,860 --screenshot=/tmp/ui.png \
+  "http://localhost:1421/?show=review"
+```
+
+This is the only way to see the design. It has already caught paragraph
+spacing that had been cancelled by a later rule, colliding margin notes, a
+clipped command bar and timestamps rendered in UTC. Look at the screenshot
+before claiming a visual change works.
 
 Keys come from the macOS keychain or from `env:NAME`, which falls back to a
 `.env` file. `.env` is in `.gitignore` and must stay there.

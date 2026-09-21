@@ -1,13 +1,23 @@
 <script lang="ts">
   import { app } from "../state.svelte";
 
+  /** SQLite stores `datetime('now')`, which is UTC with no marker. Say so, or
+   *  every timestamp reads hours wrong. */
+  function when(stamp: string): string {
+    const d = new Date(stamp.replace(" ", "T") + "Z");
+    if (Number.isNaN(d.getTime())) return stamp;
+    return d.toLocaleString(undefined, {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
   /** A revision's line in the list: when, and what you called it. */
   function line(index: number): string {
-    const h = app.history!;
-    const r = h.revisions[index];
-    const when = r.createdAt.replace(" ", " · ").slice(0, 16);
-    if (r.major) return `${when}  ${r.label ?? "major"}`;
-    return `${when}`;
+    const r = app.history!.revisions[index];
+    return r.major ? `${when(r.createdAt)}   ${r.label ?? "major"}` : when(r.createdAt);
   }
 
   function keydown(e: KeyboardEvent) {
@@ -68,9 +78,9 @@
   }
 
   .inner {
-    max-width: var(--measure);
+    max-width: calc(var(--measure) + 6rem);
     margin: 0 auto;
-    padding: 0 max(3rem, 4vw);
+    padding: 0 3rem;
   }
 
   .list {
@@ -101,6 +111,13 @@
     white-space: pre-wrap;
   }
 
+  /* A deletion and the insertion that replaced it sit flush against each
+     other. Give them room, or they read as one mangled word. */
+  ins, del {
+    padding: 0 0.12em;
+    border-radius: 2px;
+  }
+
   .same { color: var(--ink-soft); }
 
   ins {
@@ -113,6 +130,7 @@
 
   del {
     text-decoration: line-through;
+    text-decoration-thickness: 1px;
     color: var(--ink-faint);
   }
 

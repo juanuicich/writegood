@@ -111,9 +111,9 @@
   }
 
   .inner {
-    max-width: var(--measure);
+    max-width: calc(var(--measure) + 6rem);
     margin: 0 auto;
-    padding: 0 max(3rem, 4vw);
+    padding: 0 3rem;
   }
 
   .label {

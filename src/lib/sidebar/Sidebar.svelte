@@ -3,6 +3,11 @@
   import { guard } from "./redact";
 
   let tops = $state<Record<number, number>>({});
+  /** Measured note heights, so stacking uses real sizes rather than a guess. */
+  let heights = $state<Record<number, number>>({});
+  let host = $state<HTMLElement | null>(null);
+
+  const GAP = 18;
 
   const draft = $derived(app.editor ? app.plainText() : "");
   const enabled = $derived(app.config?.rules.redactSuggestions ?? true);
@@ -13,23 +18,27 @@
   $effect(() => {
     const editor = app.editor;
     const list = app.visible;
-    if (!editor || list.length === 0) {
+    // Re-run when a note is measured or the document changes under it.
+    void heights;
+    void app.findings;
+    if (!editor || !host || list.length === 0) {
       tops = {};
       return;
     }
+    const origin = host.getBoundingClientRect().top;
     const next: Record<number, number> = {};
-    let floor = 0;
+    let floor = -Infinity;
     for (const f of list) {
       if (f.from === null) continue;
-      let y = 0;
+      let y: number;
       try {
-        y = editor.view.coordsAtPos(f.from).top;
+        y = editor.view.coordsAtPos(f.from).top - origin;
       } catch {
         continue;
       }
       const placed = Math.max(y, floor);
       next[f.id] = placed;
-      floor = placed + 58;
+      floor = placed + (heights[f.id] ?? 56) + GAP;
     }
     tops = next;
   });
@@ -39,9 +48,10 @@
   }
 </script>
 
-<aside class="margin scroll">
+<aside class="margin scroll" bind:this={host}>
   {#each app.visible as f (f.id)}
     <article
+      bind:clientHeight={heights[f.id]}
       class="note"
       class:current={app.current?.id === f.id}
       class:stale={f.status === "stale"}
@@ -85,17 +95,17 @@
   .margin {
     position: relative;
     height: 100%;
-    width: 22rem;
-    flex: 0 0 22rem;
-    padding: 14vh 1.6rem 40vh 0;
-    font-size: 0.72em;
-    line-height: 1.5;
+    width: 23rem;
+    flex: 0 0 23rem;
+    padding: 14vh 2rem 40vh 1.4rem;
+    font-size: 0.7em;
+    line-height: 1.55;
     color: var(--ink-soft);
   }
 
   .note {
     position: absolute;
-    right: 1.6rem;
+    right: 2rem;
     width: 19rem;
     opacity: 0.55;
     transition: opacity 120ms ease;
@@ -121,7 +131,7 @@
     display: flex;
     gap: 0.5rem;
     align-items: baseline;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.3rem;
   }
 
   .cat {
@@ -150,7 +160,7 @@
 
   .empty {
     position: absolute;
-    right: 1.6rem;
+    right: 2rem;
     color: var(--ink-faint);
     font-variant-caps: all-small-caps;
     letter-spacing: 0.09em;

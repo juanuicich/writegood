@@ -132,3 +132,27 @@ mean the history grows on every restore. Say if you would rather it rewound.
 **DEFERRED — the judge is asked once.** Three calls with the sides reshuffled
 would be a better signal for three times the cost. One verdict currently
 decides a duel.
+
+## 2026-09-22 — looking at it
+
+**NOTE — `bun run browser` renders the app with Tauri mocked out.** Fixtures in
+`dev/browser/`, served at :1421, `?theme=dark` and
+`?show=review|history|duel|palette`. Headless Chrome screenshots it. This is
+the only way to see the design, since both screen recording and accessibility
+permissions are unavailable to a terminal.
+
+It immediately found four things that every test suite had passed over:
+paragraph spacing cancelled by a later `p { margin: 0 }`, margin notes stacked
+with a hardcoded height so they overlapped, a command bar that sliced its last
+row in half, and revision timestamps rendered as UTC because SQLite's
+`datetime('now')` carries no marker.
+
+**DECISION — the margin reads in document order.** It was sorting by severity,
+which put a late high-severity finding at the top and then dragged every note
+below it out of line with its text.
+
+**DECISION — Literata, one accent.** The accent is a muted vermilion and means
+"you are here": the selected finding, the selected palette row, additions in a
+diff, the duel's verdict, and the two states worth a glance — *working* and
+*unsaved*. Severity still reads as the weight of an underline. Checked in both
+themes.

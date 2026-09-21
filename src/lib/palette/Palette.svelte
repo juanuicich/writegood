@@ -154,46 +154,56 @@
     position: fixed;
     inset: 0;
     background: var(--paper);
-    opacity: 0.86;
+    opacity: 0.95;
   }
 
   .bar {
     position: fixed;
-    top: 22vh;
+    top: 20vh;
     left: 50%;
     transform: translateX(-50%);
-    width: min(42rem, 88vw);
+    width: min(38rem, 88vw);
+    max-height: 62vh;
+    display: flex;
+    flex-direction: column;
     background: var(--paper);
-    border-bottom: 1px solid var(--ink);
-    padding-bottom: 0.4rem;
   }
 
+  /* The rule belongs under what you type, not under the list. */
   input {
-    font-size: 1.35rem;
-    line-height: 1.4;
-    padding: 0.2rem 0;
+    font-size: 1.3rem;
+    line-height: 1.5;
+    padding: 0 0 0.5rem;
+    border-bottom: 1px solid var(--ink);
+    flex: 0 0 auto;
   }
+  input::placeholder { color: var(--ink-faint); }
 
   ul {
     list-style: none;
-    margin: 0.7rem 0 0;
-    padding: 0;
-    max-height: 46vh;
+    margin: 0.5rem 0 0;
+    padding: 0 0 0.25rem;
     overflow-y: auto;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
+    flex: 1 1 auto;
+    /* Fade the last row rather than slicing it in half. */
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.2rem), transparent);
   }
 
   li {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.28rem 0.4rem;
+    align-items: baseline;
+    gap: 1.5rem;
+    padding: 0.3rem 0.45rem;
     color: var(--ink-soft);
     cursor: pointer;
+    border-radius: 2px;
   }
   li.on {
     color: var(--ink);
     background: var(--wash);
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .hint {

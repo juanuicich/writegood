@@ -27,6 +27,19 @@
     // keyboard. VITE_WRITEGOOD_AUTORUN names a pass slug, or "all".
     const auto = import.meta.env.VITE_WRITEGOOD_AUTORUN;
     if (auto) await run(auto === "all" ? undefined : auto);
+
+    // Design review: open the app already showing the state being reviewed.
+    const show = new URLSearchParams(location.search).get("show");
+    if (show === "review") {
+      app.mode = "review";
+      app.step(1);
+    } else if (show === "history") {
+      await app.openHistory();
+    } else if (show === "duel") {
+      app.openDuel();
+    } else if (show === "palette") {
+      app.paletteOpen = true;
+    }
   });
 
   async function run(only?: string) {
