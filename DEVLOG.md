@@ -156,3 +156,30 @@ below it out of line with its text.
 diff, the duel's verdict, and the two states worth a glance — *working* and
 *unsaved*. Severity still reads as the weight of an underline. Checked in both
 themes.
+
+## 2026-09-22 — what the parser was quietly doing
+
+**FIXED — a decoy array could empty a pass with no error.** `extractArray`
+took the first `[` anywhere in the reply, so `{"meta": {"tags": ["draft"]},
+"findings": [...]}` returned `["draft"]`, every item failed the schema, and the
+pass reported no findings and no error. This is the second time the same shape
+of bug has appeared: a provider returns good output and the run says nothing
+was found. The parser now walks candidate bodies — every ```json fence, then
+every plain fence, then the raw reply — and takes the first balanced array that
+is empty or whose first element is an object, falling back to any array rather
+than throwing.
+
+**FIXED — a fenced quotation hid the findings.** The fence pattern matched the
+first fence of any kind, so a reply that quoted the draft in a plain fence
+before the array lost the array entirely. Fences are now searched in order of
+usefulness.
+
+**DECISION — the quote lower bound stays at two characters.** The validator and
+its own description disagreed, and I first corrected the wrong one. A short
+quote anchors perfectly well, because it is placed with thirty-two characters
+of context either side, and a filler-words pass has every right to quote "so".
+Only the upper bound means anything.
+
+**NOTE — a dead branch was kept on purpose.** `parseFindings` guards against a
+non-array, which `extractArray` can no longer produce. Two lines of guard are
+worth keeping against a future change to the extractor.

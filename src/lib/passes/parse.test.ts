@@ -90,6 +90,34 @@ describe('extractArray', () => {
 	test('stops at the first array and ignores a second one', () => {
 		expect(extractArray('[1] and then [2]')).toBe('[1]')
 	})
+
+	test('skips a decoy array and takes the findings out of a wrapper object', () => {
+		const text = '{"meta": {"tags": ["draft", "v2"]}, "findings": [{"quote": "ok"}]}'
+		expect(extractArray(text)).toBe('[{"quote": "ok"}]')
+	})
+
+	test('reads the array after a fence that quotes the draft', () => {
+		const text = 'The passage:\n```\nthe [sic] quick fox\n```\nFindings:\n[{"quote": "ok"}]'
+		expect(extractArray(text)).toBe('[{"quote": "ok"}]')
+	})
+
+	test('prefers a json fence over an earlier plain fence', () => {
+		const text = '```\n["draft"]\n```\n```json\n[{"quote": "ok"}]\n```'
+		expect(extractArray(text)).toBe('[{"quote": "ok"}]')
+	})
+
+	test('takes an empty array over a later array of objects', () => {
+		// An empty array is a normal result, so the first one found still wins.
+		expect(extractArray('[] then [{"quote": "ok"}]')).toBe('[]')
+	})
+
+	test('falls back to an array of strings when no array of objects exists', () => {
+		expect(extractArray('{"findings": ["a", "b"]}')).toBe('["a", "b"]')
+	})
+
+	test('returns null when no candidate holds a balanced array', () => {
+		expect(extractArray('```\nno array here\n```\nnor out here')).toBeNull()
+	})
 })
 
 describe('parseFindings', () => {
@@ -153,6 +181,15 @@ describe('parseFindings', () => {
 
 	test('names "the model" when no who is given', () => {
 		expect(() => parseFindings('nothing')).toThrow(/the model/)
+	})
+
+	test('reads findings out of a wrapper object with a decoy array', () => {
+		const text = `{"tags": ["draft"], "findings": ${reply(good)}}`
+		expect(parseFindings(text).length).toBe(1)
+	})
+
+	test('an array of strings gives no findings rather than throwing', () => {
+		expect(parseFindings('["draft", "v2"]')).toEqual([])
 	})
 })
 
