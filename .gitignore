@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# macOS
+.DS_Store
+
+# local env
+.env
+.env.local
