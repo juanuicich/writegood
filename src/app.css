@@ -1,0 +1,189 @@
+/* writegood — monochrome, serif, text first.
+   Reference points: iA Writer, and the restraint of Japanese minimalism.
+   There is no colour in this file. If something needs emphasis it gets weight,
+   space, or a hairline. Never a hue. */
+
+:root {
+  --paper:      #fbfbf9;
+  --ink:        #1a1a18;
+  --ink-soft:   #66665f;
+  --ink-faint:  #a6a69e;
+  --rule:       #e7e7e1;
+  --wash:       #eeeee8;
+  --wash-deep:  #e2e2da;
+
+  --measure: 68ch;
+  --size: 19px;
+  --serif: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --lead: 1.62;
+  --step: 1.6rem;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper:      #17171a;
+  --ink:        #e6e6df;
+  --ink-soft:   #9a9a92;
+  --ink-faint:  #63635c;
+  --rule:       #2b2b30;
+  --wash:       #212127;
+  --wash-deep:  #2c2c33;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #17171a;
+    --ink:        #e6e6df;
+    --ink-soft:   #9a9a92;
+    --ink-faint:  #63635c;
+    --rule:       #2b2b30;
+    --wash:       #212127;
+    --wash-deep:  #2c2c33;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: var(--size);
+  line-height: var(--lead);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: oldstyle-num;
+}
+
+body { overflow: hidden; }
+
+#app { height: 100%; }
+
+::selection { background: var(--wash-deep); }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  outline: none;
+  width: 100%;
+}
+
+/* Scrollbars are furniture. Hide them until they are used. */
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll:hover { scrollbar-color: var(--rule) transparent; }
+.scroll::-webkit-scrollbar { width: 9px; }
+.scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 9px; }
+.scroll:hover::-webkit-scrollbar-thumb { background: var(--rule); }
+
+/* --- the editor ------------------------------------------------------- */
+
+.ProseMirror {
+  outline: none;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 14vh 0 60vh;
+  hyphens: auto;
+}
+
+.ProseMirror > * + * { margin-top: var(--step); }
+
+.ProseMirror p { margin: 0; }
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: calc(var(--step) * 1.9) 0 0;
+  letter-spacing: -0.012em;
+}
+.ProseMirror h1 { font-size: 1.62em; }
+.ProseMirror h2 { font-size: 1.28em; }
+.ProseMirror h3 { font-size: 1.07em; }
+.ProseMirror > h1:first-child { margin-top: 0; }
+
+.ProseMirror blockquote {
+  margin: var(--step) 0;
+  padding-left: 1.4em;
+  border-left: 1px solid var(--rule);
+  color: var(--ink-soft);
+}
+
+.ProseMirror code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--wash);
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+}
+
+.ProseMirror pre {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  line-height: 1.5;
+  background: var(--wash);
+  padding: 1em 1.1em;
+  border-radius: 3px;
+  overflow-x: auto;
+}
+.ProseMirror pre code { background: none; padding: 0; }
+
+.ProseMirror ul, .ProseMirror ol { padding-left: 1.3em; margin: 0; }
+.ProseMirror li + li { margin-top: 0.35em; }
+
+.ProseMirror hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: calc(var(--step) * 2) 0;
+}
+
+.ProseMirror a { color: inherit; text-decoration-color: var(--ink-faint); }
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--ink-faint);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* --- findings in the text --------------------------------------------
+   Severity is carried by the weight of the underline, never by colour. */
+
+.finding {
+  text-decoration: underline;
+  text-decoration-color: var(--ink-faint);
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+}
+.finding-high   { text-decoration-thickness: 2px; text-decoration-color: var(--ink-soft); }
+.finding-low    { text-decoration-style: dotted; }
+.finding-stale  { text-decoration: none; color: var(--ink-faint); }
+.finding-current {
+  background: var(--wash);
+  box-shadow: 0 0 0 0.18em var(--wash);
+  border-radius: 1px;
+}

@@ -12,3 +12,6 @@ src-tauri/gen/
 # local env
 .env
 .env.local
+
+# scratch
+dist/

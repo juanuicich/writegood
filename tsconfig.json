@@ -14,7 +14,7 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "types": ["svelte", "vite/client"]
+    "types": ["svelte", "vite/client", "bun"]
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "vite.config.ts"]
 }

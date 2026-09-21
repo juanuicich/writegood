@@ -83,7 +83,6 @@ fn resolve_one(chars: &[char], lower: &[char], sel: &Selector) -> Anchor {
             .iter()
             .map(|&at| (at, context_score(chars, at, quote.len(), sel)))
             .max_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(at, ctx)| (at, ctx))
             .unwrap();
         return Anchor {
             id: sel.id,
@@ -119,7 +118,7 @@ fn resolve_one(chars: &[char], lower: &[char], sel: &Selector) -> Anchor {
             }
             let ctx = context_score(chars, start, end - start, sel);
             let total = 0.75 * qsim + 0.25 * ctx;
-            if best.map_or(true, |(_, _, b, _)| total > b) {
+            if best.is_none_or(|(_, _, b, _)| total > b) {
                 best = Some((start, end, total, qsim));
             }
         }

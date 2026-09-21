@@ -25,11 +25,15 @@
     "@tiptap/pm": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "ai": "^7.0.108",
+    "markdown-it": "^15.0.2",
+    "prosemirror-markdown": "^1.13.8",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tauri-apps/cli": "^2.11.5",
+    "@types/bun": "^1.4.2",
+    "@types/markdown-it": "^14.2.0",
     "svelte": "^5.57.1",
     "svelte-check": "^4.4.3",
     "typescript": "^5.9.3",

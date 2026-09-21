@@ -16,6 +16,7 @@ pragma foreign_keys = on;
 
 create table if not exists documents (
     id          integer primary key,
+    path        text    not null unique,
     title       text    not null,
     created_at  text    not null default (datetime('now')),
     updated_at  text    not null default (datetime('now'))
@@ -95,6 +96,9 @@ pub fn open(path: &Path) -> AppResult<Connection> {
 #[serde(rename_all = "camelCase")]
 pub struct Document {
     pub id: i64,
+    /// Absolute path of the Markdown file. The file is the document; this row
+    /// only exists so findings and revisions have something to hang from.
+    pub path: String,
     pub title: String,
     pub created_at: String,
     pub updated_at: String,
@@ -103,6 +107,7 @@ pub struct Document {
 fn document_from_row(row: &Row) -> rusqlite::Result<Document> {
     Ok(Document {
         id: row.get("id")?,
+        path: row.get("path")?,
         title: row.get("title")?,
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
@@ -115,9 +120,34 @@ pub fn list_documents(conn: &Connection) -> AppResult<Vec<Document>> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
-pub fn create_document(conn: &Connection, title: &str) -> AppResult<Document> {
-    conn.execute("insert into documents (title) values (?1)", params![title])?;
-    get_document(conn, conn.last_insert_rowid())
+/// Register a Markdown file, or update the cached title of one already known.
+pub fn upsert_document(conn: &Connection, path: &str, title: &str) -> AppResult<Document> {
+    conn.execute(
+        "insert into documents (path, title) values (?1, ?2)
+         on conflict(path) do update set title = ?2, updated_at = datetime('now')",
+        params![path, title],
+    )?;
+    get_document_by_path(conn, path)
+}
+
+pub fn get_document_by_path(conn: &Connection, path: &str) -> AppResult<Document> {
+    let mut stmt = conn.prepare("select * from documents where path = ?1")?;
+    stmt.query_row(params![path], document_from_row)
+        .optional()?
+        .ok_or(AppError::NotFound("document"))
+}
+
+/// Forget a file that is no longer on disk, along with its history.
+pub fn forget_missing(conn: &Connection, present: &[String]) -> AppResult<usize> {
+    let known = list_documents(conn)?;
+    let mut removed = 0;
+    for doc in known {
+        if !present.iter().any(|p| p == &doc.path) {
+            delete_document(conn, doc.id)?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
 }
 
 pub fn get_document(conn: &Connection, id: i64) -> AppResult<Document> {
@@ -513,7 +543,7 @@ mod tests {
     #[test]
     fn creates_and_lists_documents() {
         let conn = mem();
-        let doc = create_document(&conn, "First piece").unwrap();
+        let doc = upsert_document(&conn, "/tmp/a.md", "First piece").unwrap();
         assert_eq!(doc.title, "First piece");
         assert_eq!(list_documents(&conn).unwrap().len(), 1);
         rename_document(&conn, doc.id, "Renamed").unwrap();
@@ -521,9 +551,31 @@ mod tests {
     }
 
     #[test]
+    fn registering_the_same_path_twice_updates_rather_than_duplicates() {
+        let conn = mem();
+        let a = upsert_document(&conn, "/tmp/x.md", "Draft").unwrap();
+        let b = upsert_document(&conn, "/tmp/x.md", "Better title").unwrap();
+        assert_eq!(a.id, b.id);
+        assert_eq!(b.title, "Better title");
+        assert_eq!(list_documents(&conn).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn files_deleted_from_disk_are_forgotten() {
+        let conn = mem();
+        upsert_document(&conn, "/tmp/kept.md", "kept").unwrap();
+        upsert_document(&conn, "/tmp/gone.md", "gone").unwrap();
+        let removed = forget_missing(&conn, &["/tmp/kept.md".to_string()]).unwrap();
+        assert_eq!(removed, 1);
+        let left = list_documents(&conn).unwrap();
+        assert_eq!(left.len(), 1);
+        assert_eq!(left[0].path, "/tmp/kept.md");
+    }
+
+    #[test]
     fn minor_revisions_collapse_but_major_ones_do_not() {
         let conn = mem();
-        let doc = create_document(&conn, "d").unwrap();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         save_revision(&conn, doc.id, "{}", "one", false, None).unwrap();
         save_revision(&conn, doc.id, "{}", "two", false, None).unwrap();
         assert_eq!(list_revisions(&conn, doc.id).unwrap().len(), 1, "minor saves collapse");
@@ -542,7 +594,7 @@ mod tests {
     #[test]
     fn revisions_chain_to_their_parent() {
         let conn = mem();
-        let doc = create_document(&conn, "d").unwrap();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         let a = save_revision(&conn, doc.id, "{}", "one", true, None).unwrap();
         let b = save_revision(&conn, doc.id, "{}", "two", true, None).unwrap();
         assert_eq!(b.parent_id, Some(a.id));
@@ -552,7 +604,7 @@ mod tests {
     #[test]
     fn stores_findings_against_a_run() {
         let mut conn = mem();
-        let doc = create_document(&conn, "d").unwrap();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let run = start_run(&conn, doc.id, rev.id, "passive", "Passive voice", "anthropic", Some("claude-opus-5")).unwrap();
         let saved = add_findings(&mut conn, run.id, doc.id, &[new_finding("was decided"), new_finding("were made")]).unwrap();
@@ -570,7 +622,7 @@ mod tests {
     #[test]
     fn deleting_a_document_takes_its_findings_with_it() {
         let mut conn = mem();
-        let doc = create_document(&conn, "d").unwrap();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let run = start_run(&conn, doc.id, rev.id, "p", "P", "anthropic", None).unwrap();
         add_findings(&mut conn, run.id, doc.id, &[new_finding("x")]).unwrap();
@@ -582,7 +634,7 @@ mod tests {
     #[test]
     fn a_duel_records_whether_the_original_won() {
         let conn = mem();
-        let doc = create_document(&conn, "d").unwrap();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         // The original was shown as B, and the judge picked B.
         let d = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", Some("gpt-5"), "B", Some("tighter")).unwrap();
         assert_eq!(d.original_won, Some(true));
