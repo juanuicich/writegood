@@ -547,15 +547,25 @@ your time.
 
 ### 12.1 Layout
 
-Monochrome, classic, text first. The reference points are iA Writer and
-Japanese minimalism: nothing on screen that is not text or a response to text.
-Black on off-white, one grey for anything secondary, no colour except a single
-hairline accent for the selected finding. No icons, no toolbar, no menu bar, no
-buttons where a keystroke will do.
+Quiet, classic, text first. The reference points are iA Writer and Japanese
+minimalism: nothing on screen that is not text or a response to text. No icons,
+no toolbar, no menu bar, no buttons where a keystroke will do.
 
-A serif face by default — `ui-serif`, which is New York on macOS — set large,
-with a fixed measure of about 68 characters and generous margins. The typeface
-is configurable in `config.toml`.
+**Type.** Literata, bundled as a variable font in four woff2 subsets, about
+390 KB. It is a modern reading serif — softer and rounder than a bookface,
+drawn for screens, with optical sizing. Set at 18px on a 1.66 line, a fixed
+measure of about 68 characters, and generous margins. `ui-serif` and Georgia
+follow it in the stack, and `[appearance] font` overrides the whole thing.
+Bundled rather than fetched, because the app must work with no network.
+
+**Colour is rationed.** Paper and ink carry everything, with one grey for
+anything secondary. There is exactly one accent: a muted vermilion, the red of
+a hanko seal. It means "you are here" and nothing else — the selected finding,
+the selected revision, additions in a diff, the duel's verdict, and the two
+states worth a glance from across the room, *working* and *unsaved*.
+
+Severity is still carried by the weight of an underline, never by hue. Nothing
+in the text competes with the text.
 
 Three panes, but only one of them is ever furniture. Centre: the editor.
 Right: the sidebar, notes aligned to the vertical position of the text they

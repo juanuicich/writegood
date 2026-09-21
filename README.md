@@ -3,9 +3,10 @@
 A local desktop app for workshopping your own prose.
 
 **Status: early, and usable.** You can write in it, run your editing passes
-over a draft, and step through what they found. The A/B duel and the revision
-viewer are not built yet. The design is in [`SPEC.md`](./SPEC.md); the
-assumptions and gaps are in [`DEVLOG.md`](./DEVLOG.md).
+over a draft, step through what they found, compare a rewrite against your
+first draft, and walk back through revisions. The design is in
+[`SPEC.md`](./SPEC.md); the assumptions and the known gaps are in
+[`DEVLOG.md`](./DEVLOG.md).
 
 ## The idea
 

@@ -84,6 +84,7 @@
   .list li { color: var(--ink-faint); }
   .list li.major { color: var(--ink-soft); }
   .list li.on { color: var(--ink); }
+  .list li.on button::before { color: var(--accent); }
   .list li.on button::before { content: "— "; }
   .list button { display: block; width: 100%; text-align: left; padding: 0.1rem 0; }
 
@@ -106,6 +107,7 @@
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.22em;
+    text-decoration-color: var(--accent);
     color: var(--ink);
   }
 

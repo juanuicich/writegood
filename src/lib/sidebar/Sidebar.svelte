@@ -102,6 +102,16 @@
   }
   .note:hover { opacity: 0.85; }
   .note.current { opacity: 1; color: var(--ink); }
+  /* A hairline in the margin, the only colour on this pane. */
+  .note.current::before {
+    content: "";
+    position: absolute;
+    left: -0.9rem;
+    top: 0.15em;
+    bottom: 0.15em;
+    width: 2px;
+    background: var(--accent);
+  }
   .note.stale { opacity: 0.3; }
   .note.done { text-decoration: line-through; opacity: 0.3; }
 
@@ -119,6 +129,7 @@
     letter-spacing: 0.09em;
     color: var(--ink-faint);
   }
+  .note.current .cat { color: var(--accent); }
 
   .tag {
     font-variant-caps: all-small-caps;

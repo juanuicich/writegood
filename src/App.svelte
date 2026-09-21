@@ -265,12 +265,12 @@
 
 <footer>
   <span class="left">
-    {#if app.mode === "review"}review{/if}
+    {#if app.mode === "review"}<span class="live">review</span>{/if}
   </span>
   <span class="right">
-    {#if app.busy > 0}working{/if}
+    {#if app.busy > 0}<span class="live">working</span>{/if}
     {#if app.status}{app.status}{/if}
-    {#if app.dirty}·{/if}
+    {#if app.dirty}<span class="unsaved" title="unsaved">·</span>{/if}
   </span>
 </footer>
 
@@ -310,4 +310,8 @@
     color: var(--ink-faint);
     pointer-events: none;
   }
+
+  /* Two states worth a glance: something is happening, something is unsaved. */
+  .live { color: var(--accent); }
+  .unsaved { color: var(--accent); font-size: 1.4em; line-height: 0; }
 </style>

@@ -1,48 +1,101 @@
-/* writegood — monochrome, serif, text first.
+/* writegood — quiet, serif, text first.
    Reference points: iA Writer, and the restraint of Japanese minimalism.
-   There is no colour in this file. If something needs emphasis it gets weight,
-   space, or a hairline. Never a hue. */
+
+   Colour is rationed. The palette is paper and ink, plus one accent — a muted
+   vermilion, the red of a hanko seal — used only to say "you are here": the
+   selected finding, the selected revision, the unsaved mark. Severity is still
+   carried by the weight of an underline, never by hue, so nothing competes
+   with the text. */
+
+/* Literata: a modern reading serif, softer than a bookface and built for
+   screens. Bundled rather than fetched, because the app must work offline. */
+@font-face {
+  font-family: "Literata";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: block;
+  src: url("./assets/fonts/literata-roman-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Literata";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: block;
+  src: url("./assets/fonts/literata-roman-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Literata";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: block;
+  src: url("./assets/fonts/literata-italic-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Literata";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: block;
+  src: url("./assets/fonts/literata-italic-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 :root {
-  --paper:      #fbfbf9;
-  --ink:        #1a1a18;
-  --ink-soft:   #66665f;
-  --ink-faint:  #a6a69e;
-  --rule:       #e7e7e1;
-  --wash:       #eeeee8;
-  --wash-deep:  #e2e2da;
+  --paper:      #fcfbf8;
+  --ink:        #1b1a17;
+  --ink-soft:   #6a675e;
+  --ink-faint:  #a9a69b;
+  --rule:       #e8e5dc;
+  --wash:       #f0ede4;
+  --wash-deep:  #e4e0d4;
+  --accent:     #b04a2f;
+  --accent-wash:#f4e6df;
 
   --measure: 68ch;
-  --size: 19px;
-  --serif: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+  --size: 18px;
+  --serif: "Literata", ui-serif, Charter, Georgia, serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
 
-  --lead: 1.62;
-  --step: 1.6rem;
+  --lead: 1.66;
+  --step: 1.55rem;
 
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --paper:      #17171a;
-  --ink:        #e6e6df;
-  --ink-soft:   #9a9a92;
-  --ink-faint:  #63635c;
-  --rule:       #2b2b30;
-  --wash:       #212127;
-  --wash-deep:  #2c2c33;
+  --paper:      #16161a;
+  --ink:        #e5e3da;
+  --ink-soft:   #97948a;
+  --ink-faint:  #615f58;
+  --rule:       #2b2b31;
+  --wash:       #202027;
+  --wash-deep:  #2b2b33;
+  --accent:     #dd8467;
+  --accent-wash:#33241f;
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper:      #17171a;
-    --ink:        #e6e6df;
-    --ink-soft:   #9a9a92;
-    --ink-faint:  #63635c;
-    --rule:       #2b2b30;
-    --wash:       #212127;
-    --wash-deep:  #2c2c33;
+    --paper:      #16161a;
+    --ink:        #e5e3da;
+    --ink-soft:   #97948a;
+    --ink-faint:  #615f58;
+    --rule:       #2b2b31;
+    --wash:       #202027;
+    --wash-deep:  #2b2b33;
+    --accent:     #dd8467;
+    --accent-wash:#33241f;
     color-scheme: dark;
   }
 }
@@ -60,6 +113,8 @@ html, body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-variant-numeric: oldstyle-num;
+  font-optical-sizing: auto;
+  font-synthesis: none;
 }
 
 body { overflow: hidden; }
@@ -182,8 +237,11 @@ input {
 .finding-high   { text-decoration-thickness: 2px; text-decoration-color: var(--ink-soft); }
 .finding-low    { text-decoration-style: dotted; }
 .finding-stale  { text-decoration: none; color: var(--ink-faint); }
+
+/* The one place colour earns its keep: where you are. */
 .finding-current {
-  background: var(--wash);
-  box-shadow: 0 0 0 0.18em var(--wash);
+  background: var(--accent-wash);
+  box-shadow: 0 0 0 0.18em var(--accent-wash);
   border-radius: 1px;
+  text-decoration-color: var(--accent);
 }

@@ -145,7 +145,7 @@
   textarea::placeholder { color: var(--ink-faint); }
   textarea:disabled { color: var(--ink-soft); }
 
-  .verdict { margin: 0 0 0.4rem; }
+  .verdict { margin: 0 0 0.4rem; color: var(--accent); }
   .reason { margin: 0 0 1.6rem; color: var(--ink-soft); }
   .warn { margin: 0 0 1.6rem; color: var(--ink-soft); }
 

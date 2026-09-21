@@ -274,8 +274,10 @@ class App {
    *  time, because that is the unit an author actually rewrites. */
   paragraphAtCursor(): string {
     if (!this.editor) return "";
-    const { $from } = this.editor.state.selection;
-    return $from.parent.textContent.trim();
+    // Not destructured: Svelte reserves the `$` prefix for identifiers in a
+    // .svelte.ts file, and ProseMirror's resolved position is called `$from`.
+    const at = this.editor.state.selection.$from;
+    return at.parent.textContent.trim();
   }
 
   openDuel() {

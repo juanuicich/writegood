@@ -180,10 +180,10 @@ pub struct Appearance {
 }
 
 fn default_font() -> String {
-    "ui-serif".to_string()
+    "Literata, ui-serif, Georgia, serif".to_string()
 }
 fn default_font_size() -> u32 {
-    19
+    18
 }
 fn default_measure() -> u32 {
     68
@@ -358,8 +358,8 @@ forbid_praise       = true   # the no-encouragement preamble
 blind_judge         = true   # shuffle A/B, strip history, require a second vendor
 
 [appearance]
-font        = "ui-serif"
-font_size   = 19
+font        = "Literata, ui-serif, Georgia, serif"
+font_size   = 18
 measure     = 68             # characters per line
 theme       = "light"        # light | dark | system
 
