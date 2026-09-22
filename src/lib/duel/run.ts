@@ -7,6 +7,7 @@
 import { cli, llm, store, type Config, type Duel } from "../ipc";
 import { resolve, ProviderError, type Resolved } from "../providers";
 import { judgePrompt, originalWon, parseVerdict, shuffle, type Verdict } from "./judge";
+import { total, UNREPORTED } from "../usage";
 
 export interface DuelOutcome {
   duel: Duel;
@@ -55,10 +56,11 @@ export async function runDuel(
 
   // A fresh call with no editing history. Nothing here tells the model that
   // one of these passages is a revision of the other.
-  const text =
+  const reply =
     judge.provider.kind === "cli"
-      ? await cli.run(judge.provider, `${system}\n\n${prompt}`)
-      : await llm.chat(judge.provider, system, prompt);
+      ? { text: await cli.run(judge.provider, `${system}\n\n${prompt}`), ...UNREPORTED }
+      : await llm.chat(name, judge.provider, system, prompt);
+  const text = reply.text;
 
   const verdict = parseVerdict(text, name);
 
@@ -72,6 +74,7 @@ export async function runDuel(
     judgeModel: judge.provider.model ?? null,
     verdict: verdict.verdict,
     reason: verdict.reason,
+    usage: total([reply]),
   });
 
   return {

@@ -8,6 +8,7 @@
   import History from "./lib/history/History.svelte";
   import { runPasses, summarise } from "./lib/passes/run";
   import { cfg, log, shell, store } from "./lib/ipc";
+  import { label } from "./lib/usage";
 
   let booted = $state(false);
   let override = $state<string | null>(null);
@@ -51,6 +52,11 @@
       app.paletteOpen = true;
     }
   });
+
+  /** The open file's spending, when the config asks for it (SPEC §9.4). */
+  const spent = $derived(
+    app.config?.appearance.showCost && app.usage ? label(app.usage) : null,
+  );
 
   /** Name what the runner is waiting for. Four passes run at once, so the
    *  active ones are listed and the rest are counted. */
@@ -304,6 +310,7 @@
 <footer>
   <span class="left">
     {#if app.mode === "review"}<span class="live">review</span>{/if}
+    {#if spent}<span class="spent" title="spent on this file">{spent}</span>{/if}
   </span>
   <span class="right">
     {#if app.progress}<span class="live">{running(app.progress)}</span>
@@ -349,6 +356,10 @@
     color: var(--ink-faint);
     pointer-events: none;
   }
+
+  .left { display: inline-flex; gap: 1.2em; }
+  /* Standing information, not a change of state, so it keeps the faint ink. */
+  .spent { font-variant-numeric: tabular-nums; }
 
   /* Two states worth a glance: something is happening, something is unsaved. */
   .live { color: var(--accent); }

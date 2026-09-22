@@ -177,6 +177,9 @@ pub struct Appearance {
     pub measure: u32,
     #[serde(default = "default_theme")]
     pub theme: String,
+    /// Show the open file's running cost in the status bar (SPEC §9.4).
+    #[serde(default, alias = "show_cost")]
+    pub show_cost: bool,
 }
 
 fn default_font() -> String {
@@ -199,6 +202,7 @@ impl Default for Appearance {
             font_size: default_font_size(),
             measure: default_measure(),
             theme: default_theme(),
+            show_cost: false,
         }
     }
 }
@@ -221,6 +225,10 @@ pub struct Provider {
     pub json_path: Option<String>,
     #[serde(default = "default_timeout", alias = "timeout_secs")]
     pub timeout_secs: u64,
+    /// This provider's vendor id in the price catalog, when it differs from
+    /// the provider's table name (SPEC §9.4).
+    #[serde(default)]
+    pub catalog: Option<String>,
 }
 
 fn default_timeout() -> u64 {
@@ -238,6 +246,7 @@ impl Default for Provider {
             args: Vec::new(),
             json_path: None,
             timeout_secs: default_timeout(),
+            catalog: None,
         }
     }
 }
@@ -272,6 +281,7 @@ mod wire {
         pub font_size: u32,
         pub measure: u32,
         pub theme: &'a str,
+        pub show_cost: bool,
     }
 
     #[derive(Serialize)]
@@ -290,6 +300,8 @@ mod wire {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub json_path: Option<&'a str>,
         pub timeout_secs: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub catalog: Option<&'a str>,
     }
 
     pub fn borrow(cfg: &Config) -> WConfig<'_> {
@@ -321,6 +333,7 @@ mod wire {
             font_size: a.font_size,
             measure: a.measure,
             theme: &a.theme,
+            show_cost: a.show_cost,
         }
     }
 
@@ -334,6 +347,7 @@ mod wire {
             args: p.args.iter().map(String::as_str).collect(),
             json_path: p.json_path.as_deref(),
             timeout_secs: p.timeout_secs,
+            catalog: p.catalog.as_deref(),
         }
     }
 }
@@ -362,6 +376,7 @@ font        = "Literata, ui-serif, Georgia, serif"
 font_size   = 18
 measure     = 68             # characters per line
 theme       = "light"        # light | dark | system
+show_cost   = false          # the file's running cost in the status bar
 
 [providers.anthropic]
 kind    = "anthropic"
@@ -998,6 +1013,30 @@ timeout_secs = 90
             back.providers["anthropic"].model.as_deref(),
             Some("claude-opus-5")
         );
+    }
+
+    #[test]
+    fn the_cost_settings_survive_a_save() {
+        let home = TempHome::new();
+        ensure_scaffold_in(home.at()).unwrap();
+
+        let fresh = load_config_in(home.at()).unwrap();
+        assert!(!fresh.appearance.show_cost, "cost is off until asked for");
+
+        let mut cfg = fresh;
+        cfg.appearance.show_cost = true;
+        cfg.providers.get_mut("anthropic").unwrap().catalog = Some("anthropic-eu".into());
+        save_config_in(home.at(), &cfg).unwrap();
+
+        let text = std::fs::read_to_string(home.at().join("config.toml")).unwrap();
+        assert!(text.contains("show_cost = true"), "{text}");
+        assert!(text.contains("catalog = \"anthropic-eu\""), "{text}");
+
+        let back = load_config_in(home.at()).unwrap();
+        assert!(back.appearance.show_cost);
+        assert_eq!(back.providers["anthropic"].catalog.as_deref(), Some("anthropic-eu"));
+        // A provider without the key does not grow one on save.
+        assert!(!text.contains("catalog = \"\""));
     }
 
     #[test]

@@ -16,6 +16,8 @@ export interface Appearance {
   fontSize: number;
   measure: number;
   theme: "light" | "dark" | "system";
+  /** Show the open file's running cost in the status bar (SPEC §9.4). */
+  showCost: boolean;
 }
 
 export interface Provider {
@@ -27,6 +29,8 @@ export interface Provider {
   args: string[];
   jsonPath?: string | null;
   timeoutSecs: number;
+  /** The vendor id in the price catalog, when it differs from the name. */
+  catalog?: string | null;
 }
 
 export interface Config {
@@ -82,6 +86,37 @@ export interface Revision {
   createdAt: string;
 }
 
+/** Tokens one call used. `input` includes the cache reads and writes. */
+export interface Tokens {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+/** A network reply. `tokens` is null when the provider reported no usage;
+ *  `costUsd` is null when the price catalog does not know the model. */
+export interface Reply {
+  text: string;
+  tokens: Tokens | null;
+  costUsd: number | null;
+}
+
+/** What a run or a duel used, summed over its calls. Null means not
+ *  recorded, never zero. */
+export interface Usage {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costUsd: number | null;
+}
+
+/** One file's running total across its runs and duels. */
+export interface DocUsage {
+  costUsd: number;
+  pricedCalls: number;
+  unpricedTokens: number;
+}
+
 export interface Run {
   id: number;
   docId: number;
@@ -94,6 +129,7 @@ export interface Run {
   error: string | null;
   startedAt: string;
   finishedAt: string | null;
+  usage: Usage;
 }
 
 export type Severity = "low" | "medium" | "high";
@@ -129,6 +165,7 @@ export interface Duel {
   originalWon: boolean | null;
   reason: string | null;
   createdAt: string;
+  usage: Usage;
 }
 
 export interface Chunk {
@@ -220,8 +257,8 @@ export const store = {
       provider,
       model: model ?? null,
     }),
-  finishRun: (id: number, status: string, error?: string | null) =>
-    invoke<void>("run_finish", { id, status, error: error ?? null }),
+  finishRun: (id: number, status: string, error: string | null, usage: Usage) =>
+    invoke<void>("run_finish", { id, status, error, usage }),
   runs: (docId: number, limit?: number) => invoke<Run[]>("run_list", { docId, limit }),
 
   addFindings: (runId: number, docId: number, items: NewFinding[]) =>
@@ -241,8 +278,10 @@ export const store = {
     judgeModel: string | null;
     verdict: string;
     reason: string | null;
+    usage: Usage;
   }) => invoke<Duel>("duel_record", args),
   duels: (docId: number) => invoke<Duel[]>("duel_list", { docId }),
+  usage: (docId: number) => invoke<DocUsage>("doc_usage", { docId }),
 };
 
 export const anchors = {
@@ -271,8 +310,8 @@ export const cli = {
  *  visible is suspended by macOS, which froze a pass mid-run when this lived
  *  in the frontend. Keys never reach the webview either. */
 export const llm = {
-  chat: (provider: Provider, system: string, prompt: string) =>
-    invoke<string>("llm_chat", { provider, system, prompt }),
+  chat: (name: string, provider: Provider, system: string, prompt: string) =>
+    invoke<Reply>("llm_chat", { name, provider, system, prompt }),
 };
 
 /** Open a path with the system default application. Rust owns the filesystem,

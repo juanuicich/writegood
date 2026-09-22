@@ -31,6 +31,8 @@
         d.rewrite,
         d.findingId,
       );
+      // The judge was paid whether or not the duel is still on screen.
+      void app.loadUsage();
       // Esc during the call abandons the duel. The reply arrives anyway, so
       // check that this is still the duel on screen before showing it.
       if (app.duel !== d) return;

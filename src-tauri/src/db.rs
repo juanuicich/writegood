@@ -45,7 +45,10 @@ create table if not exists runs (
     status      text    not null default 'running',
     error       text,
     started_at  text    not null default (datetime('now')),
-    finished_at text
+    finished_at text,
+    input_tokens  integer,
+    output_tokens integer,
+    cost_usd      real
 );
 create index if not exists runs_doc on runs(doc_id, id desc);
 
@@ -76,7 +79,10 @@ create table if not exists duels (
     verdict        text,
     original_won   integer,
     reason         text,
-    created_at     text    not null default (datetime('now'))
+    created_at     text    not null default (datetime('now')),
+    input_tokens   integer,
+    output_tokens  integer,
+    cost_usd       real
 );
 create index if not exists duels_doc on duels(doc_id, id desc);
 "#;
@@ -87,8 +93,37 @@ pub fn open(path: &Path) -> AppResult<Connection> {
     }
     let conn = Connection::open(path)?;
     conn.execute_batch(SCHEMA)?;
+    migrate(&conn)?;
     recover_orphaned_runs(&conn)?;
     Ok(conn)
+}
+
+/// Columns added after the first release. `create table if not exists` leaves
+/// an existing table as it was, so a database made before a column existed
+/// gains it here. Rows it already holds read null, which the app shows as
+/// "not recorded" rather than zero.
+const ADDED: &[(&str, &str, &str)] = &[
+    ("runs", "input_tokens", "integer"),
+    ("runs", "output_tokens", "integer"),
+    ("runs", "cost_usd", "real"),
+    ("duels", "input_tokens", "integer"),
+    ("duels", "output_tokens", "integer"),
+    ("duels", "cost_usd", "real"),
+];
+
+fn migrate(conn: &Connection) -> AppResult<()> {
+    for (table, column, kind) in ADDED {
+        let mut stmt = conn.prepare(&format!("pragma table_info({table})"))?;
+        let present = stmt
+            .query_map([], |row| row.get::<_, String>("name"))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+            .iter()
+            .any(|name| name == column);
+        if !present {
+            conn.execute_batch(&format!("alter table {table} add column {column} {kind}"))?;
+        }
+    }
+    Ok(())
 }
 
 /// A run is marked finished by the frontend. If the app stops first — a crash,
@@ -284,6 +319,59 @@ pub fn flag_revision(conn: &Connection, id: i64, major: bool, label: Option<&str
     Ok(())
 }
 
+// -------------------------------------------------------------------- usage
+
+/// What a run or a duel used, summed over its calls (SPEC §9.4). Each field is
+/// null when nothing was reported: a CLI call has no tokens, and a model the
+/// price catalog does not know has tokens but no cost.
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Usage {
+    pub input_tokens: Option<i64>,
+    pub output_tokens: Option<i64>,
+    pub cost_usd: Option<f64>,
+}
+
+fn usage_from_row(row: &Row) -> rusqlite::Result<Usage> {
+    Ok(Usage {
+        input_tokens: row.get("input_tokens")?,
+        output_tokens: row.get("output_tokens")?,
+        cost_usd: row.get("cost_usd")?,
+    })
+}
+
+/// One file's running total across its runs and duels.
+///
+/// `cost_usd` adds up only the rows that carry a price. `unpriced_tokens`
+/// counts the tokens of rows that do not, so the display can say how much of
+/// the usage the dollar figure leaves out instead of hiding it.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocUsage {
+    pub cost_usd: f64,
+    pub priced_calls: i64,
+    pub unpriced_tokens: i64,
+}
+
+pub fn doc_usage(conn: &Connection, doc_id: i64) -> AppResult<DocUsage> {
+    let sql = "select
+                 coalesce(sum(cost_usd), 0.0),
+                 count(cost_usd),
+                 coalesce(sum(case when cost_usd is null
+                                   then coalesce(input_tokens, 0) + coalesce(output_tokens, 0)
+                              end), 0)
+               from (select cost_usd, input_tokens, output_tokens from runs where doc_id = ?1
+                     union all
+                     select cost_usd, input_tokens, output_tokens from duels where doc_id = ?1)";
+    Ok(conn.query_row(sql, params![doc_id], |row| {
+        Ok(DocUsage {
+            cost_usd: row.get(0)?,
+            priced_calls: row.get(1)?,
+            unpriced_tokens: row.get(2)?,
+        })
+    })?)
+}
+
 // --------------------------------------------------------------------- runs
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -300,6 +388,7 @@ pub struct Run {
     pub error: Option<String>,
     pub started_at: String,
     pub finished_at: Option<String>,
+    pub usage: Usage,
 }
 
 fn run_from_row(row: &Row) -> rusqlite::Result<Run> {
@@ -315,6 +404,7 @@ fn run_from_row(row: &Row) -> rusqlite::Result<Run> {
         error: row.get("error")?,
         started_at: row.get("started_at")?,
         finished_at: row.get("finished_at")?,
+        usage: usage_from_row(row)?,
     })
 }
 
@@ -337,10 +427,18 @@ pub fn start_run(
     Ok(stmt.query_row(params![id], run_from_row)?)
 }
 
-pub fn finish_run(conn: &Connection, id: i64, status: &str, error: Option<&str>) -> AppResult<()> {
+pub fn finish_run(
+    conn: &Connection,
+    id: i64,
+    status: &str,
+    error: Option<&str>,
+    usage: Usage,
+) -> AppResult<()> {
     conn.execute(
-        "update runs set status = ?2, error = ?3, finished_at = datetime('now') where id = ?1",
-        params![id, status, error],
+        "update runs set status = ?2, error = ?3, finished_at = datetime('now'),
+                         input_tokens = ?4, output_tokens = ?5, cost_usd = ?6
+         where id = ?1",
+        params![id, status, error, usage.input_tokens, usage.output_tokens, usage.cost_usd],
     )?;
     Ok(())
 }
@@ -471,6 +569,7 @@ pub struct Duel {
     pub original_won: Option<bool>,
     pub reason: Option<String>,
     pub created_at: String,
+    pub usage: Usage,
 }
 
 fn duel_from_row(row: &Row) -> rusqlite::Result<Duel> {
@@ -487,6 +586,7 @@ fn duel_from_row(row: &Row) -> rusqlite::Result<Duel> {
         original_won: row.get::<_, Option<i64>>("original_won")?.map(|v| v != 0),
         reason: row.get("reason")?,
         created_at: row.get("created_at")?,
+        usage: usage_from_row(row)?,
     })
 }
 
@@ -502,6 +602,7 @@ pub fn record_duel(
     judge_model: Option<&str>,
     verdict: &str,
     reason: Option<&str>,
+    usage: Usage,
 ) -> AppResult<Duel> {
     let original_won = match verdict {
         "A" => Some(a_is_original),
@@ -510,8 +611,9 @@ pub fn record_duel(
     };
     conn.execute(
         "insert into duels (doc_id, finding_id, a_text, b_text, a_is_original,
-                            judge_provider, judge_model, verdict, original_won, reason)
-         values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                            judge_provider, judge_model, verdict, original_won, reason,
+                            input_tokens, output_tokens, cost_usd)
+         values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         params![
             doc_id,
             finding_id,
@@ -522,7 +624,10 @@ pub fn record_duel(
             judge_model,
             verdict,
             original_won.map(|v| v as i64),
-            reason
+            reason,
+            usage.input_tokens,
+            usage.output_tokens,
+            usage.cost_usd
         ],
     )?;
     let id = conn.last_insert_rowid();
@@ -632,7 +737,7 @@ mod tests {
         let after = list_findings(&conn, doc.id).unwrap();
         assert_eq!(after[0].status, "dismissed");
 
-        finish_run(&conn, run.id, "done", None).unwrap();
+        finish_run(&conn, run.id, "done", None, Usage::default()).unwrap();
         assert_eq!(list_runs(&conn, doc.id, 10).unwrap()[0].status, "done");
     }
 
@@ -653,15 +758,15 @@ mod tests {
         let conn = mem();
         let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         // The original was shown as B, and the judge picked B.
-        let d = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", Some("gpt-5"), "B", Some("tighter")).unwrap();
+        let d = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", Some("gpt-5"), "B", Some("tighter"), Usage::default()).unwrap();
         assert_eq!(d.original_won, Some(true));
 
         // Same layout, judge picked A, so the rewrite won.
-        let d2 = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", None, "A", None).unwrap();
+        let d2 = record_duel(&conn, doc.id, None, "rewrite", "original", false, "openai", None, "A", None, Usage::default()).unwrap();
         assert_eq!(d2.original_won, Some(false));
 
         // A tie tells us nothing either way.
-        let d3 = record_duel(&conn, doc.id, None, "a", "b", true, "openai", None, "tie", None).unwrap();
+        let d3 = record_duel(&conn, doc.id, None, "a", "b", true, "openai", None, "tie", None, Usage::default()).unwrap();
         assert_eq!(d3.original_won, None);
 
         assert_eq!(list_duels(&conn, doc.id).unwrap().len(), 3);
@@ -674,7 +779,7 @@ mod tests {
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let open = start_run(&conn, doc.id, rev.id, "p", "P", "anthropic", None).unwrap();
         let closed = start_run(&conn, doc.id, rev.id, "q", "Q", "anthropic", None).unwrap();
-        finish_run(&conn, closed.id, "done", None).unwrap();
+        finish_run(&conn, closed.id, "done", None, Usage::default()).unwrap();
 
         assert_eq!(recover_orphaned_runs(&conn).unwrap(), 1, "only the open one");
 
@@ -695,5 +800,102 @@ mod tests {
         let conn = mem();
         assert!(matches!(get_document(&conn, 999), Err(AppError::NotFound(_))));
         assert!(matches!(get_revision(&conn, 999), Err(AppError::NotFound(_))));
+    }
+
+    // ------------------------------------------------------------- usage
+
+    fn priced(input: i64, output: i64, cost: f64) -> Usage {
+        Usage { input_tokens: Some(input), output_tokens: Some(output), cost_usd: Some(cost) }
+    }
+
+    fn unpriced(input: i64, output: i64) -> Usage {
+        Usage { input_tokens: Some(input), output_tokens: Some(output), cost_usd: None }
+    }
+
+    /// A document with one saved revision, ready for runs.
+    fn doc_with_revision(conn: &Connection, path: &str) -> (i64, i64) {
+        let doc = upsert_document(conn, path, "T").unwrap();
+        let rev = save_revision(conn, doc.id, "{}", "text", false, None).unwrap();
+        (doc.id, rev.id)
+    }
+
+    #[test]
+    fn a_finished_run_keeps_its_usage() {
+        let conn = mem();
+        let (doc, rev) = doc_with_revision(&conn, "/tmp/u1.md");
+        let run = start_run(&conn, doc, rev, "p", "P", "deepseek", Some("deepseek-flash")).unwrap();
+        finish_run(&conn, run.id, "done", None, priced(1200, 300, 0.00036)).unwrap();
+        let back = &list_runs(&conn, doc, 10).unwrap()[0];
+        assert_eq!(back.usage.input_tokens, Some(1200));
+        assert_eq!(back.usage.output_tokens, Some(300));
+        assert_eq!(back.usage.cost_usd, Some(0.00036));
+    }
+
+    #[test]
+    fn a_file_totals_its_runs_and_duels_and_counts_what_has_no_price() {
+        let conn = mem();
+        let (doc, rev) = doc_with_revision(&conn, "/tmp/u2.md");
+        let (other, other_rev) = doc_with_revision(&conn, "/tmp/u3.md");
+
+        for usage in [priced(1000, 100, 0.01), priced(2000, 200, 0.02), unpriced(700, 50)] {
+            let r = start_run(&conn, doc, rev, "p", "P", "x", None).unwrap();
+            finish_run(&conn, r.id, "done", None, usage).unwrap();
+        }
+        // A CLI run: no tokens at all. It adds nothing either way.
+        let cli = start_run(&conn, doc, rev, "p", "P", "claude-cli", None).unwrap();
+        finish_run(&conn, cli.id, "done", None, Usage::default()).unwrap();
+        record_duel(&conn, doc, None, "a", "b", true, "openai", None, "A", None, priced(500, 20, 0.005)).unwrap();
+
+        // Another file's spending must not leak in.
+        let r = start_run(&conn, other, other_rev, "p", "P", "x", None).unwrap();
+        finish_run(&conn, r.id, "done", None, priced(9, 9, 9.0)).unwrap();
+
+        let u = doc_usage(&conn, doc).unwrap();
+        assert!((u.cost_usd - 0.035).abs() < 1e-12, "{u:?}");
+        assert_eq!(u.priced_calls, 3);
+        assert_eq!(u.unpriced_tokens, 750);
+    }
+
+    #[test]
+    fn a_file_with_no_runs_totals_nothing() {
+        let conn = mem();
+        let (doc, _) = doc_with_revision(&conn, "/tmp/u4.md");
+        assert_eq!(doc_usage(&conn, doc).unwrap(), DocUsage::default());
+    }
+
+    #[test]
+    fn a_database_made_before_the_usage_columns_gains_them() {
+        let conn = Connection::open_in_memory().unwrap();
+        // The runs and duels tables as the first release made them.
+        conn.execute_batch(
+            "create table documents (id integer primary key, path text not null unique,
+                                     title text not null,
+                                     created_at text not null default (datetime('now')),
+                                     updated_at text not null default (datetime('now')));
+             create table runs (id integer primary key, doc_id integer not null,
+                                revision_id integer not null, pass_slug text not null,
+                                pass_name text not null, provider text not null, model text,
+                                status text not null default 'running', error text,
+                                started_at text not null default (datetime('now')),
+                                finished_at text);
+             create table duels (id integer primary key, doc_id integer not null,
+                                 finding_id integer, a_text text not null, b_text text not null,
+                                 a_is_original integer not null, judge_provider text not null,
+                                 judge_model text, verdict text, original_won integer,
+                                 reason text,
+                                 created_at text not null default (datetime('now')));
+             insert into documents (path, title) values ('/tmp/old.md', 'Old');
+             insert into runs (doc_id, revision_id, pass_slug, pass_name, provider, status)
+                    values (1, 1, 'p', 'P', 'anthropic', 'done');",
+        )
+        .unwrap();
+
+        migrate(&conn).unwrap();
+        migrate(&conn).unwrap(); // a second start must not fail
+
+        let old = &list_runs(&conn, 1, 10).unwrap()[0];
+        assert_eq!(old.usage.input_tokens, None, "old rows read as not recorded");
+        assert_eq!(old.usage.cost_usd, None);
+        assert_eq!(doc_usage(&conn, 1).unwrap(), DocUsage::default());
     }
 }

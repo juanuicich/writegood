@@ -98,6 +98,8 @@ const CONFIG = {
     fontSize: 18,
     measure: 68,
     theme: new URLSearchParams(location.search).get("theme") ?? "light",
+    // ?cost shows the file's spending in the status bar.
+    showCost: new URLSearchParams(location.search).has("cost"),
   },
   providers: { deepseek: { kind: "openai-compatible", args: [], timeoutSecs: 180 } },
 };
@@ -158,6 +160,11 @@ export async function invoke(cmd: string, args: Record<string, unknown> = {}): P
       return { id: 3, docId: 1, parentId: 2, contentJson: "{}", contentText: "", major: false, label: null, createdAt: "" };
     case "duel_list":
       return [];
+    case "doc_usage": {
+      // ?cost=mixed shows the label for a file that is part priced.
+      const mixed = new URLSearchParams(location.search).get("cost") === "mixed";
+      return { costUsd: 0.0421, pricedCalls: 8, unpricedTokens: mixed ? 3100 : 0 };
+    }
     case "diff_words":
       return [
         { kind: "equal", text: "It was decided by the committee that " },

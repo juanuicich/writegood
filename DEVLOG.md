@@ -327,3 +327,43 @@ ambiguity; the manifest key makes it stay removed.
 instead of saving a revision labelled "major revision", and `⌘⇧⏎` now asks
 which pass to run, which is what the palette had always advertised. Both go
 through the palette command the menu item names.
+
+## 2026-09-22 — usage costs per file
+
+**DONE — the status bar can show what the open file has cost.** Off by default;
+`show_cost = true` under `[appearance]` turns it on. SPEC §9.4 has the design.
+
+**DECISION — prices come from models.dev.** One public file, no key, rates per
+million tokens for input, output, cache read and cache write. llmcatalog.dev
+serves price history one model at a time and has no bulk catalog, so it cannot
+answer a lookup. We keep a slim copy, 517 KB against the source's 4.8 MB, at
+`~/.writegood/prices.json`, refreshed in the background when a week old.
+
+**DECISION — the vendor is the provider's table name.** `kind` cannot be used:
+`openai-compatible` is a protocol, not a vendor. Both configured providers,
+`deepseek` and `anthropic`, match the catalog as they are. `catalog = "..."`
+covers a provider whose name differs.
+
+**ASSUMPTION — a part-priced run counts as unpriced.** If any call in a run has
+tokens but no price, the run records tokens and a null cost, and the status bar
+counts it under "tokens unpriced". The dollar figure is then short by nothing
+it claims to include. Needs checking: whether you would rather see the priced
+part in dollars.
+
+**ASSUMPTION — tiered pricing is ignored.** Google charges more past 200k
+tokens of context. The base tier is used. No pass comes near the boundary.
+
+**GAP — a duel whose verdict will not parse records no cost.** The duel row is
+written only after the verdict parses, so a failed judge call is paid for and
+not recorded. Pass runs do not have this gap: usage is kept before parsing, and
+a failed run still records what it spent.
+
+**VERIFIED against DeepSeek.** The probe fetched the catalog on first use and
+priced one call at $0.010516; the arithmetic checks by hand. In the app, a pass
+that failed on its second call still recorded 980 in, 2,353 out, $0.001484.
+The migration added the six columns to the existing database, and older runs
+read null, not zero.
+
+**NOTE — reasoning dominates the cost on deepseek-flash.** One probe call used
+445 input tokens and 17,478 output tokens, almost all of it reasoning. Output
+is over 99% of that call's cost.

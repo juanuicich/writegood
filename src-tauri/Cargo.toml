@@ -19,6 +19,8 @@ tauri-build = { version = "2.6", features = [] }
 [dependencies]
 tauri = { version = "2.11", features = [] }
 genai = "0.6"
+# Already in the tree through genai; named here to fetch the price catalog.
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "gzip"] }
 tauri-plugin-opener = "2.5"
 tauri-plugin-dialog = "2.7"
 serde = { version = "1", features = ["derive"] }

@@ -9,16 +9,37 @@
 //!
 //! `genai` is the multi-provider client, the nearest Rust equivalent of the AI
 //! SDK's core. It returns text; `parse.ts` still reads findings out of it, so
-//! the parser's tests keep their value.
+//! the parser's tests keep their value. It also returns what the call used,
+//! which is priced here against the catalog in `prices.rs` (SPEC §9.4).
 
 use genai::adapter::AdapterKind;
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest};
 use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget};
 
+use serde::Serialize;
+
 use crate::config::Provider;
 use crate::error::{AppError, AppResult};
+use crate::prices::{self, Tokens};
 use crate::secrets;
+
+/// A reply and what it used. `tokens` is `None` when the provider reported no
+/// usage. `cost_usd` is `None` when the catalog has no price for the model.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Reply {
+    pub text: String,
+    pub tokens: Option<Tokens>,
+    pub cost_usd: Option<f64>,
+}
+
+/// The catalog's name for the vendor behind a provider: `catalog` when the
+/// config sets it, the provider's own table name otherwise. Not `kind`, which
+/// names a protocol — `openai-compatible` is not a vendor.
+pub fn vendor<'a>(name: &'a str, provider: &'a Provider) -> &'a str {
+    provider.catalog.as_deref().unwrap_or(name)
+}
 
 /// Which `genai` adapter serves a `kind` from `config.toml`.
 ///
@@ -38,8 +59,9 @@ pub fn adapter_for(kind: &str) -> AppResult<AdapterKind> {
     }
 }
 
-/// Ask a provider one question and return its reply as text.
-pub async fn chat(provider: &Provider, system: &str, prompt: &str) -> AppResult<String> {
+/// Ask a provider one question. `name` is the provider's table name in
+/// `config.toml`, used to find its price.
+pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -> AppResult<Reply> {
     let adapter = adapter_for(&provider.kind)?;
 
     let model = provider
@@ -95,15 +117,27 @@ pub async fn chat(provider: &Provider, system: &str, prompt: &str) -> AppResult<
         .map_err(|_| AppError::other(format!("{model} did not answer within {seconds}s")))?
         .map_err(|e| AppError::other(format!("{model}: {e}")))?;
 
-    response
+    let text = response
         .first_text()
         .map(str::to_string)
-        .ok_or_else(|| AppError::other(format!("{model} replied with no text")))
+        .ok_or_else(|| AppError::other(format!("{model} replied with no text")))?;
+
+    let tokens = Tokens::from_usage(&response.usage);
+    let cost_usd = tokens.and_then(|t| {
+        prices::lookup(vendor(name, provider), &model).map(|rates| prices::cost(&rates, &t))
+    });
+
+    Ok(Reply { text, tokens, cost_usd })
 }
 
 #[tauri::command]
-pub async fn llm_chat(provider: Provider, system: String, prompt: String) -> AppResult<String> {
-    chat(&provider, &system, &prompt).await
+pub async fn llm_chat(
+    name: String,
+    provider: Provider,
+    system: String,
+    prompt: String,
+) -> AppResult<Reply> {
+    chat(&name, &provider, &system, &prompt).await
 }
 
 #[cfg(test)]
@@ -142,7 +176,7 @@ mod tests {
     async fn a_missing_model_is_reported_before_any_request() {
         let mut p = provider("openai");
         p.model = None;
-        let err = chat(&p, "s", "p").await.unwrap_err().to_string();
+        let err = chat("test", &p, "s", "p").await.unwrap_err().to_string();
         assert!(err.contains("names no model"), "{err}");
     }
 
@@ -151,7 +185,7 @@ mod tests {
         let mut p = provider("openai");
         p.model = Some("any-model".into());
         p.key_ref = Some("env:WRITEGOOD_KEY_THAT_IS_NOT_SET".into());
-        let err = chat(&p, "s", "p").await.unwrap_err().to_string();
+        let err = chat("test", &p, "s", "p").await.unwrap_err().to_string();
         assert!(err.contains("keychain"), "{err}");
         assert!(err.contains(".env"), "{err}");
     }
@@ -161,7 +195,15 @@ mod tests {
         let mut p = provider("openai-compatible");
         p.model = Some("any-model".into());
         p.key_ref = Some("env:PATH".into()); // set, so the check reaches base_url
-        let err = chat(&p, "s", "p").await.unwrap_err().to_string();
+        let err = chat("test", &p, "s", "p").await.unwrap_err().to_string();
         assert!(err.contains("base_url"), "{err}");
+    }
+
+    #[test]
+    fn the_vendor_is_the_table_name_unless_catalog_says_otherwise() {
+        let mut p = provider("openai-compatible");
+        assert_eq!(vendor("deepseek", &p), "deepseek");
+        p.catalog = Some("ollama".into());
+        assert_eq!(vendor("local", &p), "ollama");
     }
 }

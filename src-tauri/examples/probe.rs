@@ -11,7 +11,7 @@
 //! Usage:
 //!   probe --provider <name> --system <file> --prompt <file>
 
-use writegood_lib::{config, llm};
+use writegood_lib::{config, llm, prices};
 
 fn arg(args: &[String], flag: &str) -> Option<String> {
     args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
@@ -59,12 +59,29 @@ async fn main() {
         provider.timeout_secs,
     );
 
+    // The app refreshes the price catalog at startup; do the same, so the
+    // cost reported here is the cost the app would record.
+    if let Err(e) = prices::refresh_if_stale().await {
+        eprintln!("probe: {e}");
+    }
+
     let started = std::time::Instant::now();
-    match llm::chat(provider, &system, &prompt).await {
-        Ok(text) => {
+    match llm::chat(&name, provider, &system, &prompt).await {
+        Ok(reply) => {
             eprintln!("probe: answered in {:.1}s", started.elapsed().as_secs_f64());
+            match (reply.tokens, reply.cost_usd) {
+                (Some(t), Some(c)) => eprintln!(
+                    "probe: {} in ({} cache read, {} cache write), {} out, ${c:.6}",
+                    t.input, t.cache_read, t.cache_write, t.output
+                ),
+                (Some(t), None) => eprintln!(
+                    "probe: {} in, {} out, no price for this model",
+                    t.input, t.output
+                ),
+                (None, _) => eprintln!("probe: the provider reported no usage"),
+            }
             // Only the reply goes to stdout, so the caller can parse it.
-            println!("{text}");
+            println!("{}", reply.text);
         }
         Err(e) => {
             eprintln!("probe: {e}");

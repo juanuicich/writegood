@@ -6000,6 +6000,7 @@ version = "0.1.0"
 dependencies = [
  "genai",
  "keyring",
+ "reqwest",
  "rusqlite",
  "serde",
  "serde_json",

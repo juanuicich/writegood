@@ -11,6 +11,7 @@ pub mod llm;
 pub mod log;
 #[cfg(target_os = "macos")]
 pub mod menu;
+pub mod prices;
 pub mod runner;
 pub mod secrets;
 
@@ -82,9 +83,22 @@ fn run_start(
 }
 
 #[tauri::command]
-fn run_finish(db: State<db::Db>, id: i64, status: String, error: Option<String>) -> AppResult<()> {
+fn run_finish(
+    db: State<db::Db>,
+    id: i64,
+    status: String,
+    error: Option<String>,
+    usage: Option<db::Usage>,
+) -> AppResult<()> {
     let conn = db.0.lock().unwrap();
-    db::finish_run(&conn, id, &status, error.as_deref())
+    db::finish_run(&conn, id, &status, error.as_deref(), usage.unwrap_or_default())
+}
+
+/// The open file's running cost across its runs and duels (SPEC §9.4).
+#[tauri::command]
+fn doc_usage(db: State<db::Db>, doc_id: i64) -> AppResult<db::DocUsage> {
+    let conn = db.0.lock().unwrap();
+    db::doc_usage(&conn, doc_id)
 }
 
 #[tauri::command]
@@ -139,6 +153,7 @@ fn duel_record(
     judge_model: Option<String>,
     verdict: String,
     reason: Option<String>,
+    usage: Option<db::Usage>,
 ) -> AppResult<db::Duel> {
     let conn = db.0.lock().unwrap();
     db::record_duel(
@@ -152,6 +167,7 @@ fn duel_record(
         judge_model.as_deref(),
         &verdict,
         reason.as_deref(),
+        usage.unwrap_or_default(),
     )
 }
 
@@ -199,6 +215,15 @@ pub fn run() {
             if recovered > 0 {
                 let _ = log::write("warn", &format!("closed {recovered} run(s) left open by a previous session"));
             }
+            // Prices refresh in the background. Nothing waits on them, and a
+            // failure only means costs show as tokens until the next start.
+            tauri::async_runtime::spawn(async {
+                match prices::refresh_if_stale().await {
+                    Ok(true) => { let _ = log::write("info", "prices: fetched a new copy from models.dev"); }
+                    Ok(false) => {}
+                    Err(e) => { let _ = log::write("warn", &e.to_string()); }
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -212,6 +237,7 @@ pub fn run() {
             secrets::key_resolve,
             runner::cli_run,
             llm::llm_chat,
+            doc_usage,
             documents::doc_list,
             documents::doc_read,
             documents::doc_write,

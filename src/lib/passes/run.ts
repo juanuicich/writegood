@@ -9,6 +9,7 @@ import { resolve, providerFor, ProviderError, type Resolved } from "../providers
 import { preamble } from "./schema";
 import { buildPrompt, paragraphs, parseFindings } from "./parse";
 import { deadline } from "./deadline";
+import { NONE, total, UNREPORTED, type Call } from "../usage";
 
 const MAX_PARALLEL = 4;
 
@@ -17,11 +18,15 @@ const MAX_PARALLEL = 4;
  *
  *  Both also run in Rust — `llm_chat` for the network, `cli_run` for a
  *  subprocess — each with its own timeout. The deadline here is a second line
- *  of defence with more slack, so Rust's clearer message normally wins. */
+ *  of defence with more slack, so Rust's clearer message normally wins.
+ *
+ *  The call's usage goes into `calls` before the reply is parsed. A reply
+ *  that will not parse was still paid for. */
 async function collect(
   resolved: Resolved,
   system: string,
   prompt: string,
+  calls: Call[],
 ): Promise<NewFinding[]> {
   const seconds = Math.max(resolved.provider.timeoutSecs, 30);
   void log.write(
@@ -32,10 +37,11 @@ async function collect(
 
   const call =
     resolved.provider.kind === "cli"
-      ? cli.run(resolved.provider, `${system}\n\n${prompt}`)
-      : llm.chat(resolved.provider, system, prompt);
+      ? cli.run(resolved.provider, `${system}\n\n${prompt}`).then((text) => ({ text, ...UNREPORTED }))
+      : llm.chat(resolved.name, resolved.provider, system, prompt);
 
-  const text = await deadline(call, (seconds + 30) * 1000, resolved.name);
+  const { text, tokens, costUsd } = await deadline(call, (seconds + 30) * 1000, resolved.name);
+  calls.push({ tokens, costUsd });
   void log.write("info", `${resolved.name} answered with ${text.length} characters`);
 
   return parseFindings(text, resolved.name);
@@ -105,7 +111,7 @@ export async function runPasses(
     } catch (e) {
       const message = e instanceof ProviderError ? e.message : String(e);
       const run = await store.startRun(docId, revisionId, pass.slug, pass.name, name, null);
-      await store.finishRun(run.id, "error", message);
+      await store.finishRun(run.id, "error", message, NONE);
       return { pass: pass.name, findings: 0, error: message };
     }
 
@@ -119,25 +125,27 @@ export async function runPasses(
     );
 
     const collected: NewFinding[] = [];
+    const calls: Call[] = [];
 
     try {
       const chunks = pass.scope === "paragraph" ? paragraphs(draft) : [null];
       void log.write("info", `${pass.name}: ${chunks.length} call(s), ${pass.scope} scope`);
       for (const chunk of chunks) {
-        const found = await collect(resolved, system, buildPrompt(pass, draft, chunk));
+        const found = await collect(resolved, system, buildPrompt(pass, draft, chunk), calls);
         collected.push(...found);
       }
       if (collected.length > 0) {
         await store.addFindings(run.id, docId, collected);
       }
-      await store.finishRun(run.id, "done", null);
+      await store.finishRun(run.id, "done", null, total(calls));
       void log.write("info", `${pass.name}: done, ${collected.length} finding(s)`);
       return { pass: pass.name, findings: collected.length };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       // Keep whatever arrived before the failure.
       if (collected.length > 0) await store.addFindings(run.id, docId, collected);
-      await store.finishRun(run.id, "error", message);
+      // And whatever was spent on it.
+      await store.finishRun(run.id, "error", message, total(calls));
       void log.write("error", `${pass.name}: ${message}`);
       return { pass: pass.name, findings: collected.length, error: message };
     }
@@ -158,6 +166,7 @@ export async function runPasses(
   report();
   const settled = await pool(jobs, MAX_PARALLEL);
   await app.loadFindings();
+  await app.loadUsage();
 
   return settled.map((r, i) =>
     r.status === "fulfilled"

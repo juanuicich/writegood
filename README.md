@@ -90,6 +90,10 @@ Google, or anything OpenAI-compatible, which covers DeepSeek, OpenRouter,
 Ollama and LM Studio. Passes can also run through the `claude` or `codex` CLIs,
 which bills against a subscription instead of API credits.
 
+Set `show_cost = true` under `[appearance]` to see what the open file has cost
+so far. Prices come from [models.dev](https://models.dev) and refresh weekly. A
+model with no known price shows its token count instead.
+
 See [`SPEC.md` §4](./SPEC.md#4-stack) for why, including why not Elixir.
 
 ## Files
@@ -98,6 +102,7 @@ See [`SPEC.md` §4](./SPEC.md#4-stack) for why, including why not Elixir.
 ~/.writegood/
 ├── config.toml     providers and defaults
 ├── writegood.db    drafts, revisions, findings, duels
+├── prices.json     model prices from models.dev
 └── passes/         your prompts, one per file
 ```
 

@@ -221,13 +221,15 @@ revisions(id, doc_id→documents, parent_id→revisions,
           content_json, content_text, major, label, created_at)
 
 runs(id, doc_id, revision_id, pass_slug, pass_name,
-     provider, model, status, error, started_at, finished_at)
+     provider, model, status, error, started_at, finished_at,
+     input_tokens, output_tokens, cost_usd)
 
 findings(id, run_id→runs, doc_id, category, severity, note,
          quote, prefix, suffix, status, created_at)
 
 duels(id, doc_id, finding_id→findings, a_text, b_text, a_is_original,
-      judge_provider, judge_model, verdict, original_won, reason, created_at)
+      judge_provider, judge_model, verdict, original_won, reason, created_at,
+      input_tokens, output_tokens, cost_usd)
 ```
 
 `documents.path` is absolute and unique. The row is a pointer and a cache of
@@ -245,6 +247,11 @@ is ever deleted by the app; `stale` is set by anchoring, not by you.
 
 `duels.original_won` is derived at write time from `verdict` and
 `a_is_original`, so the A/B shuffle never has to be unpicked later.
+
+The three usage columns on `runs` and `duels` are nullable (§9.4). A CLI call
+reports no tokens, so both counts are null. A call with no known price has
+tokens and a null cost. A database made before these columns existed gains
+them at startup; the rows it already holds stay null.
 
 ---
 
@@ -410,6 +417,7 @@ font        = "ui-serif"
 font_size   = 19
 measure     = 68             # characters per line
 theme       = "light"        # light | dark | system
+show_cost   = false          # the file's running cost in the status bar (§9.4)
 
 [providers.anthropic]
 kind    = "anthropic"
@@ -425,6 +433,7 @@ key_ref = "env:OPENAI_API_KEY"
 kind     = "openai-compatible"
 base_url = "http://localhost:11434/v1"
 model    = "qwen3:32b"
+catalog  = "ollama"          # its id in the price catalog, when the name differs (§9.4)
 
 [providers.claude-cli]
 kind    = "cli"
@@ -491,6 +500,64 @@ type PassBackend = (req: {
   signal: AbortSignal;
 }) => AsyncIterable<Finding>;
 ```
+
+### 9.4 Usage and cost
+
+Every network call reports what it used, and the app keeps a running cost for
+each file.
+
+**Tokens.** `genai` returns a `Usage` with every reply. `llm_chat` returns it
+alongside the text instead of discarding it: input tokens, output tokens, and
+the cache reads and cache writes within the input. `genai` counts cache tokens
+inside `prompt_tokens` for every vendor, Anthropic included, so the uncached
+input is `prompt − cache read − cache write`. Reasoning tokens are already
+inside the output count and are not charged twice.
+
+**Prices.** A provider reports tokens, never money. Prices come from
+[models.dev](https://models.dev): one public file, `api.json`, no key, rates in
+US dollars per million tokens for input, output, cache read and cache write.
+`prices.rs` keeps a slim copy, just provider, model and rates, at
+`~/.writegood/prices.json`. It refreshes the copy in the background at startup
+when it is older than seven days, and keeps the old copy when the fetch fails.
+A pass never waits on the catalog and never fails because of it.
+
+llmcatalog.dev was the alternative. Its API serves price history one model at a
+time, with no bulk catalog, so it cannot answer "what does this model cost" in
+one lookup.
+
+**Matching a provider.** The catalog is keyed by vendor id and model id. The
+provider's own table name is the vendor id unless `catalog` says otherwise;
+`kind` cannot be used, because `openai-compatible` names a protocol, not a
+vendor. The model id is `model`, matched exactly.
+
+**Cost of one call.**
+
+```
+  uncached input × input
++ cache reads    × cache_read   (input rate when the catalog has none)
++ cache writes   × cache_write  (input rate when the catalog has none)
++ output         × output
+  ─────────────────────────────
+  ÷ 1,000,000
+```
+
+Tiered pricing, where a long context costs more, is ignored and the base tier
+is used. That undercounts only prompts past the tier boundary, 200k tokens for
+the models that have one, which no pass comes near.
+
+**Storage.** The frontend adds up the calls in a run and writes the totals to
+the run's row when it finishes. The duel writes its judge call to the duel's
+row. A file's cost is the sum over its runs and duels.
+
+**Display.** Off unless `show_cost` is on. The status bar then shows the open
+file's running total:
+
+- every call priced: `$0.042`
+- no call priced: `18,400 tokens`
+- some of each: `$0.042 · 3,100 tokens unpriced`
+
+The app never guesses a price. A model the catalog does not know, or a catalog
+that has never loaded, shows tokens and no money.
 
 ---
 
@@ -697,6 +764,7 @@ Note the second-to-last: the empty result must not become a compliment.
 ~/.writegood/
 ├── config.toml           providers, rules, appearance
 ├── writegood.db          revisions, findings, runs, duels
+├── prices.json           model prices from models.dev, refreshed weekly (§9.4)
 ├── documents/            your drafts, Markdown, one per file
 │   └── on-writing.md
 └── passes/               your prompts, Markdown, one per file

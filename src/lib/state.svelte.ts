@@ -8,6 +8,7 @@ import {
   anchors as anchorApi,
   diff as diffApi,
   type Config,
+  type DocUsage,
   type DocSummary,
   type DocumentRow,
   type Finding,
@@ -61,6 +62,8 @@ class App {
   revealed = $state<number[]>([]);
   dirty = $state(false);
   busy = $state(0);
+  /** The open file's running cost (SPEC §9.4). Null until loaded. */
+  usage = $state<DocUsage | null>(null);
   /** What the pass runner is waiting for, so the status bar can say it. */
   progress = $state<{ done: number; total: number; active: string[] } | null>(null);
   paletteOpen = $state(false);
@@ -122,7 +125,15 @@ class App {
     this.dirty = false;
     this.cursor = -1;
     await this.loadFindings();
+    await this.loadUsage();
     this.say(this.doc.title);
+  }
+
+  /** Re-read the open file's total. Called when a file opens and after every
+   *  call that spends: a review, a duel. */
+  async loadUsage() {
+    const doc = this.doc;
+    this.usage = doc ? await store.usage(doc.id) : null;
   }
 
   async create(title: string) {
