@@ -12,7 +12,9 @@
 </script>
 
 <script lang="ts">
+  import { tick } from "svelte";
   import { app } from "../state.svelte";
+  import { onMenuCommand } from "../ipc";
 
   let { commands }: { commands: Command[] } = $props();
 
@@ -96,6 +98,37 @@
     close();
     await cmd.run();
   }
+
+  /** Run a command the macOS menu asked for. A command that needs an argument
+   *  opens the palette on that command, exactly as choosing it there does. */
+  async function runCommand(id: string) {
+    const cmd = commands.find((c) => c.id === id);
+    if (!cmd) return;
+    if (cmd.argument || cmd.choices) {
+      app.paletteOpen = true;
+      await tick();
+      pending = cmd;
+      query = "";
+      selected = 0;
+      field?.focus();
+      return;
+    }
+    if (app.paletteOpen) close();
+    await cmd.run();
+  }
+
+  $effect(() => {
+    let stop: (() => void) | null = null;
+    let done = false;
+    void onMenuCommand((id) => void runCommand(id)).then((off) => {
+      if (done) off();
+      else stop = off;
+    });
+    return () => {
+      done = true;
+      stop?.();
+    };
+  });
 
   function keydown(e: KeyboardEvent) {
     if (e.key === "Escape") {

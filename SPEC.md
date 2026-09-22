@@ -122,24 +122,19 @@ Checked against the registries on 21 September 2026.
 npm                                crates.io
 @tauri-apps/cli        2.11.5      tauri               2.11.6
 @tauri-apps/api        2.11.1      tauri-build         2.6.3
-@tauri-apps/plugin-http 2.6.1      tauri-plugin-http   2.7.0
-ai                     7.0.108     rusqlite            0.40.2
-@ai-sdk/anthropic      4.0.58      strsim              0.11.1
-@ai-sdk/openai         4.0.72      keyring             4.2.0
-@ai-sdk/google         4.0.76      toml                1.1.6
-@ai-sdk/openai-compatible 3.0.53
-zod                    4.6.5
-svelte                 5.57.1
-@tiptap/core           3.31.3
-vite                   8.3.0
-prosemirror-markdown   1.13.4
-markdown-it            14.1.0
+@tauri-apps/plugin-dialog 2.7.3    tauri-plugin-dialog 2.7.3
+@tauri-apps/plugin-opener 2.5.5    tauri-plugin-opener 2.5.5
+zod                    4.6.5       genai               0.6.5
+svelte                 5.57.1      rusqlite            0.40.2
+@tiptap/core           3.31.3      strsim              0.11.1
+vite                   8.3.0       similar             3.2.0
+prosemirror-markdown   1.13.4      keyring             4.2.0
+markdown-it            14.1.0      toml                1.1.6
 ```
 
-Two notes. The AI SDK is at v7, not v6 — `streamObject` still exists but the
-current API is `streamText` with `Output.array({ element })`. The app does not
-use it — see 8.3 for why provider switching rules it out — and reads the reply
-text itself instead. And
+The npm side has no model provider package. Every provider call runs in Rust
+through `genai` (§9.2), so the webview neither holds a key nor makes a request.
+
 `serde_yaml` is deprecated, so pass files use TOML frontmatter (§8.1) rather
 than YAML, which also means one config language across the project.
 
@@ -178,14 +173,16 @@ writegood/
         ├── config.rs             ~/.writegood config, rules, passes
         ├── llm.rs                provider calls via genai (§9.2)
         ├── log.rs                ~/.writegood/writegood.log
+        ├── menu.rs               the macOS menu bar (§12.2)
         ├── documents.rs          Markdown files on disk (§6.1)
         ├── runner.rs             CLI subprocess with timeout
         └── secrets.rs            macOS keychain via `keyring`
 ```
 
-**Boundary rule.** Rust owns durable state, the filesystem, subprocesses and
-string matching. TypeScript owns the editor, the model calls, and position
-mapping. Neither reaches across.
+**Boundary rule.** Rust owns durable state, the filesystem, subprocesses,
+string matching and every network call. TypeScript owns the editor,
+orchestration, prompt building, parsing and position mapping. Neither reaches
+across.
 
 ---
 
@@ -346,11 +343,11 @@ leaves the other passes alone.
 
 Findings arrive one pass at a time rather than one finding at a time. Both
 backends end at the same place — a block of text that should contain a JSON
-array — and `parse.ts` reads it. The AI SDK's `Output.array` streams per
-element and does not survive provider switching: an endpoint without
-structured-output support returns a bare array where the SDK expects a wrapper,
-and the result is silently zero findings. One code path with one failure mode
-is worth more here than per-element streaming.
+array — and `parse.ts` reads it. Per-element structured-output streaming does
+not survive provider switching: an endpoint without structured-output support
+returns a bare array where the caller expects a wrapper, and the result is
+silently zero findings. One code path with one failure mode is worth more here
+than per-element streaming.
 
 An item that fails the schema is dropped, so one malformed entry does not
 discard the nine good ones beside it. If *every* item fails and there was at
@@ -446,8 +443,8 @@ share a vendor with the pass, which makes the duel results worth less.
 family installed locally, or the `ui-serif` / `ui-sans-serif` / `ui-monospace`
 keywords.
 
-`kind` selects the backend. Anything with an API key uses the AI SDK; `cli`
-shells out. A pass names a provider or inherits `default_provider`. The header
+`kind` selects the backend. Anything with an API key goes through `genai` in
+`llm.rs` (§9.2); `cli` shells out. A pass names a provider or inherits `default_provider`. The header
 bar also has a provider override for the current session, which wins over both.
 
 ### 9.2 Network backend
@@ -574,7 +571,12 @@ your time.
 
 Quiet, classic, text first. The reference points are iA Writer and Japanese
 minimalism: nothing on screen that is not text or a response to text. No icons,
-no toolbar, no menu bar, no buttons where a keystroke will do.
+no toolbar, no in-app menu bar, no buttons where a keystroke will do.
+
+The rule is about the window. Nothing inside the window is chrome. The macOS
+menu bar is outside the window, in the system bar, so it costs the document no
+space and the app fills it in (§12.2). Windows and Linux draw a menu inside the
+window frame, above the text, so those platforms get no menu at all.
 
 **Type.** Literata, bundled as a variable font in four woff2 subsets, about
 390 KB. It is a modern reading serif — softer and rounder than a bookface,
@@ -601,15 +603,27 @@ palette.
 The centre pane is the whole app. It should be pleasant to write in for an
 hour, and it should look the same whether or not a model has ever run.
 
-### 12.2 The command bar
+### 12.2 The command bar and the macOS menu
 
-There are no menus. Everything that is not typing happens through a `⌘K`
-palette: open a document, create one, run passes, choose a provider, flag a
-revision, open the duel, toggle settings. It is a single text field with a
-filtered list, monochrome, no icons.
+Everything that is not typing happens through a `⌘K` palette: open a document,
+create one, run passes, choose a provider, flag a revision, open the duel,
+toggle settings. It is a single text field with a filtered list, monochrome, no
+icons.
 
 A command that needs an argument asks for it in the same field rather than
 opening a dialog.
+
+On macOS the same commands also appear in the system menu bar, in `menu.rs`:
+writegood, File, Edit, Review, Window. A menu item emits the id of a palette
+command, and the palette runs it, so the menu and the keyboard cannot drift
+apart. A command that needs an argument opens the palette on that command. The
+Edit submenu carries Undo, Redo, Cut, Copy, Paste and Select All: WKWebView
+takes those keystrokes from the menu, and without the items the editor cannot
+copy or paste. File > Open the writegood folder is handled in Rust, because
+Rust owns the filesystem.
+
+No menu item writes model words into the document. There is nothing to write
+(§2).
 
 ### 12.3 Findings in the text
 
@@ -633,10 +647,12 @@ Always available:
 | Key | Action |
 |---|---|
 | `⌘K` | the command bar |
+| `⌘N` | new document (the bar asks for a title) |
 | `⌘O` | open a document (the same bar, pre-filtered) |
 | `⌘⏎` | run the enabled passes |
+| `⌘⇧⏎` | run one pass (the bar asks which) |
 | `⌘S` | save |
-| `⌘⇧S` | save and flag a major revision |
+| `⌘⇧S` | save and flag a major revision (the bar asks what changed) |
 | `⌘D` | duel: rewrite the current paragraph |
 | `⌘Y` | revisions |
 | `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
@@ -656,6 +672,10 @@ In review mode:
 Findings navigation must work without the mouse, including scroll sync. That is
 the "tick forward and back through suggestions" requirement, and it is the
 difference between using the tool and abandoning it.
+
+On macOS every key in the first table except `⌘K`, `⌥↓`, `⌥↑` and `Esc` is a
+menu accelerator (§12.2), so the menu bar handles it and the webview never sees
+it. One key, one code path.
 
 The duel and the revisions sheet cover the window and take the keyboard while
 they are open: `Esc` closes, `⌘⏎` asks the judge, `j` / `k` move between
@@ -695,7 +715,7 @@ The database holds history and findings only, and the app works without it.
 2. ~~**Anchoring.** `anchors.rs`, the position map, the decoration plugin.~~
 3. ~~**One pass, one provider.**~~
 4. ~~**The pass library.** Config loading, the starter prompts, fan-out.~~
-5. ~~**Providers.** The AI SDK backends and the CLI runner.~~
+5. ~~**Providers.** The `genai` backend and the CLI runner.~~
 6. ~~**Revisions.** History sheet, major flags, word-level diff.~~
 7. ~~**The duel.**~~
 

@@ -274,3 +274,23 @@ export const llm = {
   chat: (provider: Provider, system: string, prompt: string) =>
     invoke<string>("llm_chat", { provider, system, prompt }),
 };
+
+/** Open a path with the system default application. Rust owns the filesystem,
+ *  so Rust opens it; the opener plugin is not called from the webview. */
+export const shell = {
+  openPath: (path: string) => invoke<void>("shell_open_path", { path }),
+};
+
+/** Menu items emit a palette command id. The listener runs that command, so
+ *  the menu and the keyboard cannot drift apart. The menu is macOS-only, and
+ *  there is no Tauri at all in the browser fixtures, so both cases return a
+ *  no-op unsubscribe. */
+export async function onMenuCommand(
+  handler: (id: string) => void,
+): Promise<() => void> {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return () => {};
+  }
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<string>("menu-command", (e) => handler(e.payload));
+}

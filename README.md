@@ -49,14 +49,36 @@ beat your first draft?
 
 ```
 bun install
-bun run app
+bun run app       # the desktop app: tauri dev
+```
+
+`bun run app` is the one you want. It starts Vite and then builds and launches
+the Tauri window; the first build takes a few minutes, later ones seconds.
+
+`bun run dev` is not the app. It runs Vite alone, on
+[http://localhost:1420](http://localhost:1420), and Tauri runs it for you as
+part of `bun run app`. A browser on that port shows an app with no Tauri behind
+it, so nothing that touches disk or a provider works. Use `bun run browser`
+instead, which serves the interface on port 1421 with fixtures in place of
+Tauri.
+
+The rest:
+
+```
+bun run app:build   # a release .app bundle
+bun run browser     # the interface in a browser, no Tauri, no key
+bun test src/lib    # frontend unit tests
+bun run check       # svelte-check
 ```
 
 On first launch it creates `~/.writegood` with a `config.toml` and nine starter
 passes. Put an API key where `config.toml` points — the macOS keychain, an
 environment variable, or a `.env` file — and press `⌘⏎`.
 
-Everything is `⌘K`. There are no menus.
+Everything is `⌘K`. On macOS the same commands are also in the menu bar, which
+is where macOS puts menus; nothing is painted inside the window. Windows and
+Linux draw a menu inside the window frame, over the text, so they get the
+keyboard and `⌘K` only.
 
 ## Stack
 

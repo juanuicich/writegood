@@ -9,6 +9,8 @@ pub mod documents;
 pub mod error;
 pub mod llm;
 pub mod log;
+#[cfg(target_os = "macos")]
+pub mod menu;
 pub mod runner;
 pub mod secrets;
 
@@ -161,6 +163,17 @@ fn duel_list(db: State<db::Db>, doc_id: i64) -> AppResult<Vec<db::Duel>> {
 
 // -------------------------------------------------------------- anchoring
 
+// -------------------------------------------------------------- the shell
+
+/// Open a path with the system default application. The frontend asks for
+/// this rather than calling the opener plugin itself, because Rust owns the
+/// filesystem.
+#[tauri::command]
+fn shell_open_path(path: String) -> AppResult<()> {
+    tauri_plugin_opener::open_path(&path, None::<&str>)
+        .map_err(|e| error::AppError::other(format!("cannot open {path}: {e}")))
+}
+
 #[tauri::command]
 fn anchors_resolve(text: String, selectors: Vec<anchors::Selector>) -> Vec<anchors::Anchor> {
     anchors::resolve_all(&text, &selectors)
@@ -168,7 +181,13 @@ fn anchors_resolve(text: String, selectors: Vec<anchors::Selector>) -> Vec<ancho
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // macOS only: see menu.rs.
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(menu::build).on_menu_event(menu::on_event);
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -215,6 +234,7 @@ pub fn run() {
             duel_record,
             duel_list,
             anchors_resolve,
+            shell_open_path,
             log::app_log,
             log::log_path,
             diff::diff_words,

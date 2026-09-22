@@ -104,6 +104,9 @@ unattended. Harmless when unset. Remove it if it offends.
 The Rust crate had moved to 2.7.0 while `@tauri-apps/plugin-http` has no 2.7.x
 release, and Tauri warns on every launch about the mismatch.
 
+*Superseded on 2026-09-22: the HTTP plugin is gone, with the AI SDK that needed
+it. See "provider calls moved into Rust" below.*
+
 ## 2026-09-22 — the duel and the history
 
 **VERIFIED — the duel does not leak which version is newer.** `bb09350`.
@@ -289,3 +292,38 @@ part of the path ships. Same for `dev/probe-duel.ts`.
 life in `src-tauri/src/bin/`, and the `.app` then contained `probe` rather than
 `writegood`. It did not crash; it simply was not there, and an empty log was
 the only symptom. It lives in `examples/` now.
+
+## 2026-09-22 — the macOS menu, and a folder that would not open
+
+**DONE — a real macOS menu, in `menu.rs`.** writegood, File, Edit, Review,
+Window. Every custom item carries the accelerator the keyboard already used and
+emits the id of a palette command; the palette runs it. One code path, so the
+menu and the keyboard cannot drift. The Edit submenu matters most: WKWebView
+takes Undo, Cut, Copy, Paste and Select All from the menu, and the default
+Tauri menu was the only reason they worked at all.
+
+The menu is `#[cfg(target_os = "macos")]`. On Windows and Linux Tauri draws the
+menu inside the window frame, above the document, which is the in-app chrome
+SPEC §12.1 rules out. Those platforms get the keyboard and `⌘K`.
+
+It is built through `Builder::menu`, not `AppHandle::set_menu` in `setup`. A
+menu set in `setup` does not take: the window already exists with the default
+menu and keeps it. The symptom is a menu bar that still reads File, Edit, View,
+Window, Help.
+
+**FIXED — "open the writegood folder" did nothing.** The palette called the
+opener plugin from the webview, and the capability file granted
+`opener:default`, which covers `open-url` and `reveal-item-in-dir` but not
+`open-path`. The rejection never reached the screen. The log had it:
+`Command plugin:opener|open_path not allowed by ACL`. There is a
+`shell_open_path` command in Rust now, which is where the filesystem belongs,
+and the menu item calls `tauri_plugin_opener::open_path` directly.
+
+**FIXED — `cargo run` could not choose a binary.** `default-run = "writegood"`
+in `Cargo.toml`. The probe had already moved to `examples/`, which removed the
+ambiguity; the manifest key makes it stay removed.
+
+**Two behaviours changed with the accelerators.** `⌘⇧S` now asks what changed
+instead of saving a revision labelled "major revision", and `⌘⇧⏎` now asks
+which pass to run, which is what the palette had always advertised. Both go
+through the palette command the menu item names.

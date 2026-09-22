@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { openPath } from "@tauri-apps/plugin-opener";
   import { app } from "./lib/state.svelte";
   import Editor from "./lib/editor/Editor.svelte";
   import Sidebar from "./lib/sidebar/Sidebar.svelte";
@@ -8,7 +7,7 @@
   import Duel from "./lib/duel/Duel.svelte";
   import History from "./lib/history/History.svelte";
   import { runPasses, summarise } from "./lib/passes/run";
-  import { cfg, log, store } from "./lib/ipc";
+  import { cfg, log, shell, store } from "./lib/ipc";
 
   let booted = $state(false);
   let override = $state<string | null>(null);
@@ -173,17 +172,17 @@
     {
       id: "folder",
       label: "open the writegood folder",
-      run: () => app.paths && openPath(app.paths.home),
+      run: () => app.paths && shell.openPath(app.paths.home),
     },
     {
       id: "config",
       label: "edit config.toml",
-      run: () => app.paths && openPath(app.paths.config),
+      run: () => app.paths && shell.openPath(app.paths.config),
     },
     {
       id: "passes-folder",
       label: "edit the passes",
-      run: () => app.paths && openPath(app.paths.passes),
+      run: () => app.paths && shell.openPath(app.paths.passes),
     },
   ];
 
