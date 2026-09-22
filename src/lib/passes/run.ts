@@ -89,7 +89,15 @@ export async function runPasses(
 
   const system = preamble(config.rules);
 
-  const jobs = passes.map((pass) => async (): Promise<RunReport> => {
+  // What the status bar reports while this runs. "working" said nothing; the
+  // names of the passes in flight say what the app is waiting for.
+  const active = new Set<string>();
+  let done = 0;
+  const report = () => {
+    app.progress = { done, total: passes.length, active: [...active] };
+  };
+
+  const runOne = async (pass: Pass): Promise<RunReport> => {
     const name = providerFor(config, pass.provider, options.override);
     let resolved: Resolved;
     try {
@@ -133,8 +141,21 @@ export async function runPasses(
       void log.write("error", `${pass.name}: ${message}`);
       return { pass: pass.name, findings: collected.length, error: message };
     }
+  };
+
+  const jobs = passes.map((pass) => async (): Promise<RunReport> => {
+    active.add(pass.name);
+    report();
+    try {
+      return await runOne(pass);
+    } finally {
+      active.delete(pass.name);
+      done += 1;
+      report();
+    }
   });
 
+  report();
   const settled = await pool(jobs, MAX_PARALLEL);
   await app.loadFindings();
 

@@ -61,6 +61,8 @@ class App {
   revealed = $state<number[]>([]);
   dirty = $state(false);
   busy = $state(0);
+  /** What the pass runner is waiting for, so the status bar can say it. */
+  progress = $state<{ done: number; total: number; active: string[] } | null>(null);
   paletteOpen = $state(false);
   sidebarForced = $state(false);
 

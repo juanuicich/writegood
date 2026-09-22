@@ -52,16 +52,31 @@
     }
   });
 
+  /** Name what the runner is waiting for. Four passes run at once, so the
+   *  active ones are listed and the rest are counted. */
+  function running(p: { done: number; total: number; active: string[] }): string {
+    const count = p.total > 1 ? ` · ${p.done} of ${p.total}` : "";
+    if (p.active.length === 0) {
+      return p.done === 0 ? `starting${count}` : `reading the replies${count}`;
+    }
+    return `asking about ${p.active.join(", ")}${count}`;
+  }
+
   async function run(only?: string) {
     const passes = app.passes.filter(
       (p) => p.enabled && (only === undefined || p.slug === only),
     );
     if (passes.length === 0) return app.say("no passes enabled");
+    // Claim the status line before the first await, or it reads "working"
+    // until the runner gets going.
+    app.progress = { done: 0, total: passes.length, active: [] };
     await app.withBusy(`running ${passes.length} pass${passes.length === 1 ? "" : "es"}…`, async () => {
       try {
         app.say(summarise(await runPasses(passes, { override })));
       } catch (e) {
         app.say(e instanceof Error ? e.message : String(e));
+      } finally {
+        app.progress = null;
       }
     });
   }
@@ -291,7 +306,8 @@
     {#if app.mode === "review"}<span class="live">review</span>{/if}
   </span>
   <span class="right">
-    {#if app.busy > 0}<span class="live">working</span>{/if}
+    {#if app.progress}<span class="live">{running(app.progress)}</span>
+    {:else if app.busy > 0}<span class="live">working</span>{/if}
     {#if app.status}{app.status}{/if}
     {#if app.dirty}<span class="unsaved" title="unsaved">·</span>{/if}
   </span>

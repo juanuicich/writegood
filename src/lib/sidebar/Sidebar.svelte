@@ -7,6 +7,11 @@
   /** Measured note heights, so stacking uses real sizes rather than a guess. */
   let heights = $state<Record<number, number>>({});
   let band = $state<HTMLElement | null>(null);
+  /** Which ends of the band currently cut a note in half. Only a cut end is
+   *  faded, so a note that fits is never dimmed. */
+  let fade = $state<"none" | "top" | "bottom" | "both">("none");
+  /** Must match the fade length in the .band mask below. */
+  const FADE = 26;
   /** Bumped when the prose moves under the margin, so the notes follow it. */
   let moved = $state(0);
 
@@ -65,6 +70,15 @@
       floor = placed + (heights[f.id] ?? 56) + GAP;
     }
     tops = next;
+
+    const height = band.clientHeight;
+    let cutTop = false;
+    let cutBottom = false;
+    for (const [id, y] of Object.entries(next)) {
+      if (y < 0) cutTop = true;
+      if (y + (heights[Number(id)] ?? 56) > height) cutBottom = true;
+    }
+    fade = cutTop && cutBottom ? "both" : cutTop ? "top" : cutBottom ? "bottom" : "none";
   });
 
   /** Moving the focus must bring the focused note into the band. Stepping with
@@ -85,8 +99,11 @@
     if (!page || !band || !card) return;
     const edge = band.getBoundingClientRect();
     const note = card.getBoundingClientRect();
-    const below = note.bottom - edge.bottom;
-    const above = edge.top - note.top;
+    // A faded end hides whatever sits under it, so treat it as out of view.
+    const head = fade === "top" || fade === "both" ? FADE : 0;
+    const foot = fade === "bottom" || fade === "both" ? FADE : 0;
+    const below = note.bottom - (edge.bottom - foot);
+    const above = edge.top + head - note.top;
     if (below > 1) page.scrollTop += below;
     else if (above > 1) page.scrollTop -= above;
   }
@@ -97,7 +114,7 @@
 </script>
 
 <aside class="margin">
-  <div class="band" bind:this={band}>
+  <div class="band" data-fade={fade} bind:this={band}>
     {#each app.visible as f (f.id)}
       <article
         bind:clientHeight={heights[f.id]}
@@ -162,8 +179,17 @@
     left: 0;
     right: 2rem;
     overflow: hidden;
-    /* A note that runs past either end of the band is cut off. Fade the cut,
-       or a half a card reads as a rendering fault. */
+  }
+  /* A note that runs past either end of the band is cut off. Fade the cut, or
+     half a card reads as a rendering fault. Fade only the end that cuts one:
+     an unconditional fade dims a last note that is fully in view. */
+  .band[data-fade="top"] {
+    mask-image: linear-gradient(to bottom, transparent 0, #000 1.6rem);
+  }
+  .band[data-fade="bottom"] {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent 100%);
+  }
+  .band[data-fade="both"] {
     mask-image: linear-gradient(
       to bottom,
       transparent 0,
