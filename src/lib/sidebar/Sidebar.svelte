@@ -12,8 +12,42 @@
   let fade = $state<"none" | "top" | "bottom" | "both">("none");
   /** Must match the fade length in the .band mask below. */
   const FADE = 26;
-  /** Bumped when the prose moves under the margin, so the notes follow it. */
+  /** Bumped when the prose moves under the margin, or the margin is scrolled
+   *  by hand, so the notes are placed and the fades recomputed. */
   let moved = $state(0);
+  /** How tall the notes reach. The band scrolls its own content, so it needs
+   *  a track at least as tall as the prose it mirrors. */
+  let trackHeight = $state(0);
+
+  /** True while the reader has wheeled the margin away from the prose. The
+   *  next scroll of the draft takes the lead back. */
+  let peeking = false;
+  /** Set while we move the margin ourselves, so our own scroll event is not
+   *  mistaken for the reader's. */
+  let selfScroll = false;
+
+  /** The page the prose scrolls in. */
+  function pageEl(): HTMLElement | null {
+    return (app.editor?.view.dom.closest(".page") as HTMLElement | null) ?? null;
+  }
+
+  /** Notes are placed in the prose's own scroll coordinates, so the number
+   *  for a note does not change when either pane scrolls. To show a note
+   *  beside its sentence the band's scrollTop must lead the page's by the
+   *  distance between their tops. */
+  function alignedScrollTop(page: HTMLElement, el: HTMLElement): number {
+    return page.scrollTop + el.getBoundingClientRect().top - page.getBoundingClientRect().top;
+  }
+
+  /** Put the margin level with the prose. */
+  function align() {
+    const page = pageEl();
+    if (!page || !band) return;
+    const want = alignedScrollTop(page, band);
+    if (Math.abs(band.scrollTop - want) < 1) return;
+    selfScroll = true;
+    band.scrollTop = want;
+  }
 
   const GAP = 18;
 
@@ -24,14 +58,30 @@
    *  Without this the notes keep the positions they had before the first
    *  scroll and drift away from the sentences they point at. */
   $effect(() => {
-    const page = app.editor?.view.dom.closest(".page") as HTMLElement | null;
-    if (!page) return;
-    const bump = () => (moved += 1);
-    page.addEventListener("scroll", bump, { passive: true });
-    window.addEventListener("resize", bump);
+    const page = pageEl();
+    const el = band;
+    if (!page || !el) return;
+    // The prose leads: scrolling it brings the margin along, so a note stays
+    // beside its sentence.
+    const follow = () => {
+      peeking = false;
+      align();
+      moved += 1;
+    };
+    // Scrolling the margin by hand leads nowhere else, so you can read ahead
+    // without moving the draft. The next scroll of the draft re-aligns it.
+    const bump = () => {
+      if (selfScroll) selfScroll = false;
+      else peeking = true;
+      moved += 1;
+    };
+    page.addEventListener("scroll", follow, { passive: true });
+    el.addEventListener("scroll", bump, { passive: true });
+    window.addEventListener("resize", follow);
     return () => {
-      page.removeEventListener("scroll", bump);
-      window.removeEventListener("resize", bump);
+      page.removeEventListener("scroll", follow);
+      el.removeEventListener("scroll", bump);
+      window.removeEventListener("resize", follow);
     };
   });
 
@@ -51,7 +101,11 @@
       tops = {};
       return;
     }
-    const origin = band.getBoundingClientRect().top;
+    const page = pageEl();
+    if (!page) return;
+    // Measure against the prose's scroll content, not the viewport, so a
+    // number stays valid however either pane is scrolled.
+    const origin = page.getBoundingClientRect().top - page.scrollTop;
     const next: Record<number, number> = {};
     // Notes for text above the band are not pinned to its top edge. They are
     // let past it and clipped, or a long document's earlier notes would pile
@@ -71,12 +125,23 @@
     }
     tops = next;
 
+    // The track must cover the prose, so the margin can always scroll far
+    // enough to stay level with it, and cover the lowest note besides.
+    const lead = band.getBoundingClientRect().top - page.getBoundingClientRect().top;
+    trackHeight = Math.max(floor + GAP, page.scrollHeight + lead);
+
+    // Hold the margin level with the prose unless the reader has wheeled it.
+    if (!peeking) align();
+
+    // Only an end that actually cuts a note is faded.
+    const top = band.scrollTop;
     const height = band.clientHeight;
     let cutTop = false;
     let cutBottom = false;
     for (const [id, y] of Object.entries(next)) {
-      if (y < 0) cutTop = true;
-      if (y + (heights[Number(id)] ?? 56) > height) cutBottom = true;
+      const h = heights[Number(id)] ?? 56;
+      if (y + h > top && y < top) cutTop = true;
+      if (y < top + height && y + h > top + height) cutBottom = true;
     }
     fade = cutTop && cutBottom ? "both" : cutTop ? "top" : cutBottom ? "bottom" : "none";
   });
@@ -93,10 +158,14 @@
     void tick().then(() => reveal(id));
   });
 
+  /** Bring the focused note into the band. The prose leads the margin, so
+   *  this scrolls the draft and lets the margin follow; scrolling the margin
+   *  alone would leave the sentence off screen. */
   function reveal(id: number) {
-    const page = app.editor?.view.dom.closest(".page") as HTMLElement | null;
+    const page = pageEl();
     const card = band?.querySelector<HTMLElement>(`[data-note="${id}"]`);
     if (!page || !band || !card) return;
+    peeking = false;
     const edge = band.getBoundingClientRect();
     const note = card.getBoundingClientRect();
     // A faded end hides whatever sits under it, so treat it as out of view.
@@ -106,6 +175,7 @@
     const above = edge.top + head - note.top;
     if (below > 1) page.scrollTop += below;
     else if (above > 1) page.scrollTop -= above;
+    else align();
   }
 
   function toggle(id: number) {
@@ -114,7 +184,8 @@
 </script>
 
 <aside class="margin">
-  <div class="band" data-fade={fade} bind:this={band}>
+  <div class="band scroll" data-fade={fade} bind:this={band}>
+    <div class="track" style:height="{trackHeight}px">
     {#each app.visible as f (f.id)}
       <article
         bind:clientHeight={heights[f.id]}
@@ -152,6 +223,7 @@
         </button>
       </article>
     {/each}
+    </div>
 
     {#if app.visible.length === 0}
       <p class="empty">no findings</p>
@@ -178,7 +250,16 @@
     bottom: var(--band);
     left: 0;
     right: 2rem;
-    overflow: hidden;
+    /* The margin scrolls on its own. The prose leads it, so a note sits
+       beside its sentence, but the wheel over the margin moves only the
+       margin. Findings outrun the window often, and clipping them made the
+       text show more highlights than the margin showed notes. */
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+  .track {
+    position: relative;
+    width: 100%;
   }
   /* A note that runs past either end of the band is cut off. Fade the cut, or
      half a card reads as a rendering fault. Fade only the end that cuts one:
