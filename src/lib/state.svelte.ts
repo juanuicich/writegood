@@ -195,7 +195,7 @@ class App {
   step(delta: number) {
     const n = this.visible.length;
     if (n === 0) return;
-    this.cursor = (this.cursor + delta + n) % n;
+    this.cursor = nextCursor(this.cursor, delta, n);
     this.scrollToCurrent();
   }
 
@@ -324,6 +324,13 @@ class App {
       this.busy -= 1;
     }
   }
+}
+
+/** Step the focus through the list, wrapping at both ends. A cursor of -1
+ *  means nothing is focused yet, so stepping forward lands on the first. */
+export function nextCursor(cursor: number, delta: number, count: number): number {
+  if (count <= 0) return -1;
+  return (((cursor + delta) % count) + count) % count;
 }
 
 const RANK = { low: 0, medium: 1, high: 2 } as const;

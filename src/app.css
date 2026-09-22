@@ -69,6 +69,10 @@
   --lead: 1.66;
   --step: 1.55rem;
 
+  /* The space above and below the findings margin. Equal at both ends, and
+     deeper than the status bar, so the last note clears it. */
+  --band: 2.6rem;
+
   color-scheme: light;
 }
 

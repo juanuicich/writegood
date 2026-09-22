@@ -20,26 +20,32 @@
   async function submit() {
     const d = app.duel;
     if (!d || !app.config || !app.doc || d.busy) return;
+    const docId = app.doc.id;
     d.busy = true;
     d.error = "";
     try {
       const outcome = await runDuel(
         app.config,
-        app.doc.id,
+        docId,
         d.original,
         d.rewrite,
         d.findingId,
       );
+      // Esc during the call abandons the duel. The reply arrives anyway, so
+      // check that this is still the duel on screen before showing it.
+      if (app.duel !== d) return;
       d.result = outcome;
       app.say(describe(outcome));
-      record = tally(await store.duels(app.doc.id));
+      record = tally(await store.duels(docId));
     } catch (e) {
-      d.error = e instanceof Error ? e.message : String(e);
+      if (app.duel === d) d.error = e instanceof Error ? e.message : String(e);
     } finally {
       d.busy = false;
     }
   }
 
+  /** The sheet is a plain div, so it cannot take key events itself. Listen on
+   *  the window while the duel is open, the way the revision sheet does. */
   function keydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -51,9 +57,10 @@
   }
 </script>
 
+<svelte:window onkeydown={app.duel ? keydown : undefined} />
+
 {#if app.duel}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="sheet" onkeydown={keydown}>
+  <div class="sheet">
     <div class="inner">
       <p class="label">as it stands</p>
       <p class="original">{app.duel.original}</p>
