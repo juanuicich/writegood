@@ -266,3 +266,11 @@ export const cli = {
   run: (provider: Provider, prompt: string) =>
     invoke<string>("cli_run", { provider, prompt }),
 };
+
+/** The network provider call. It runs in Rust: a webview whose window is not
+ *  visible is suspended by macOS, which froze a pass mid-run when this lived
+ *  in the frontend. Keys never reach the webview either. */
+export const llm = {
+  chat: (provider: Provider, system: string, prompt: string) =>
+    invoke<string>("llm_chat", { provider, system, prompt }),
+};

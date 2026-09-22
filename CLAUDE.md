@@ -34,26 +34,28 @@ feature request that breaks one of them needs a conversation, not a patch.
 ## Stack
 
 Tauri v2 shell · Svelte 5 + TypeScript · TipTap 3 on ProseMirror · Rust core ·
-SQLite via `rusqlite` · Vercel AI SDK v7 · Bun toolchain.
+SQLite via `rusqlite` · `genai` for providers · Bun toolchain.
 
 Pinned versions are in `SPEC.md` §4.3, verified 21 September 2026. Check the
 registry rather than trusting a recalled version number.
 
 ## Conventions
 
-- **Boundary.** Rust owns durable state, the filesystem, subprocesses and string
-  matching. TypeScript owns the editor, model calls and position mapping.
-  Neither reaches across.
+- **Boundary.** Rust owns durable state, the filesystem, subprocesses, string
+  matching and every network call. TypeScript owns the editor, orchestration,
+  prompt building, parsing and position mapping. Neither reaches across.
+  Provider calls moved to Rust because macOS suspends a webview whose window is
+  not visible, which froze a pass mid-run.
 - **Offsets** are Unicode scalar values on both sides — not bytes, not UTF-16
   code units. TypeScript builds its table with `Array.from(text)`.
 - **Config is TOML**, including pass frontmatter. `serde_yaml` is deprecated and
   one config language is enough.
 - **Serde** structs use `#[serde(rename_all = "camelCase")]` so the TypeScript
   side reads idiomatic fields.
-- **AI SDK v7**: `streamText` with `Output.array({ element })`, consumed through
-  `elementStream`. Not `streamObject`.
-- **Provider calls** go through `fetch` from `@tauri-apps/plugin-http`, so CORS
-  never applies.
+- **Providers** are called from `llm.rs` with `genai`, which resolves the key,
+  the endpoint and the adapter from `config.toml`. The frontend only names a
+  provider; a missing key or model is Rust's to report, because Rust is what
+  tries.
 
 ## Prose in the app and in this repo
 
@@ -78,9 +80,16 @@ Both suites must pass before a commit. Neither needs a network or an API key.
 ## Checking work against a real model
 
 `bun dev/probe.ts <pass-slug> [provider]` runs one pass against a real provider
-without launching the app, using the app's own preamble, prompt builder and
-parser. `--raw` prints the unparsed reply. It found two real bugs on its first
-outing, so reach for it before assuming a pass prompt is the problem.
+without launching the app. It builds the prompt with the app's own preamble and
+prompt builder, hands it to the app's own client through
+`cargo run --example probe`, and reads the reply with the app's parser — so
+every part of the path is the part that ships. `--raw` prints the unparsed
+reply. `bun dev/probe-duel.ts [provider] --repeat N` does the same for the
+judge. They have found four real bugs between them, so reach for one before
+assuming a prompt is the problem.
+
+The probe lives in `src-tauri/examples/`, not `src/bin/`: a second binary under
+`src/bin` makes Tauri bundle the wrong one into the `.app`.
 
 To exercise the whole in-app path, including Tauri's HTTP plugin, set
 `VITE_WRITEGOOD_AUTORUN` to a pass slug or `all` and launch:

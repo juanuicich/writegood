@@ -259,3 +259,33 @@ opened with `open`, the app inherits no environment and starts in `/`, so the
 key must live in `~/.writegood/.env` or the keychain. Launched from the project
 directory it finds the repository's `.env` and works, which is what masked
 this. The error now says exactly what to do.
+
+## 2026-09-22 — provider calls moved into Rust
+
+**DONE — `genai` replaces the Vercel AI SDK.** Every network call now runs in
+`llm.rs` as a tokio task. The freeze is gone: four calls, window unfocused,
+sixty-two seconds, four findings. That is the exact condition that used to stop
+a pass after the first call with no error and no timeout.
+
+`genai` is the closest Rust equivalent of the AI SDK's core — one call shape
+across Anthropic, OpenAI, Gemini, DeepSeek, Ollama and OpenRouter, with a
+`ServiceTargetResolver` for the rest. `rig-core` is more popular but is an
+agent framework, far heavier than "send two strings, get text".
+
+I should have surfaced this in the original stack proposal. I weighted "best
+provider abstraction" heavily, chose the AI SDK on that basis, and never
+checked whether the runner-up was good enough. It was, and choosing it would
+have avoided the freeze entirely.
+
+Out: `ai`, three `@ai-sdk/*` packages, `@tauri-apps/plugin-http` and its
+capability entry. Keys no longer reach the webview at all.
+
+**DECISION — the probe drives the Rust client.** `dev/probe.ts` builds the
+prompt with the app's preamble and prompt builder, hands it to
+`cargo run --example probe`, and parses the reply with the app's parser. Every
+part of the path ships. Same for `dev/probe-duel.ts`.
+
+**FIXED — a second binary made Tauri bundle the wrong one.** The probe started
+life in `src-tauri/src/bin/`, and the `.app` then contained `probe` rather than
+`writegood`. It did not crash; it simply was not there, and an empty log was
+the only symptom. It lives in `examples/` now.

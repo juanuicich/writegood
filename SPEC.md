@@ -77,7 +77,7 @@ a button in the interface.
 | Editor | TipTap 3 on ProseMirror |
 | Native core | Rust: SQLite, anchoring, subprocess, keychain |
 | Storage | SQLite via `rusqlite` (bundled) |
-| Providers | Vercel AI SDK v7, plus a CLI subprocess backend |
+| Providers | `genai` in Rust, plus a CLI subprocess backend |
 | Toolchain | Bun |
 
 The editor decides the stack. A Notion-style prose editor with span-anchored
@@ -167,10 +167,7 @@ writegood/
 │   │   ├── passes/
 │   │   │   ├── run.ts            orchestration, fan-out, progress
 │   │   │   └── schema.ts         Zod finding schema + system preamble
-│   │   ├── providers/
-│   │   │   ├── index.ts          resolve a provider name → callable
-│   │   │   ├── api.ts            AI SDK backend
-│   │   │   └── cli.ts            subprocess backend (calls Rust)
+│   │   └── providers/index.ts   resolve a provider name (the call is Rust's)
 │   │   └── duel/Duel.svelte      A/B compare UI
 └── src-tauri/                    Rust
     └── src/
@@ -179,6 +176,8 @@ writegood/
         ├── db.rs                 schema, CRUD, transactions
         ├── anchors.rs            re-anchoring (§7)
         ├── config.rs             ~/.writegood config, rules, passes
+        ├── llm.rs                provider calls via genai (§9.2)
+        ├── log.rs                ~/.writegood/writegood.log
         ├── documents.rs          Markdown files on disk (§6.1)
         ├── runner.rs             CLI subprocess with timeout
         └── secrets.rs            macOS keychain via `keyring`
@@ -451,21 +450,28 @@ keywords.
 shells out. A pass names a provider or inherits `default_provider`. The header
 bar also has a provider override for the current session, which wins over both.
 
-### 9.2 API backend
+### 9.2 Network backend
 
-AI SDK v7, used to reach the provider and return text. `createAnthropic`,
-`createOpenAI`, `createGoogleGenerativeAI`, and `createOpenAICompatible` for
-DeepSeek, OpenRouter, Ollama and LM Studio. Every provider is
-constructed with `fetch` from `@tauri-apps/plugin-http`, so requests go through
-Rust's HTTP client and CORS never applies.
+`genai`, in `llm.rs`. It is the nearest Rust equivalent of the AI SDK's core:
+one call shape across Anthropic, OpenAI, Gemini, DeepSeek, Ollama, OpenRouter
+and the rest, with a `ServiceTargetResolver` for anything else. A provider's
+`kind` chooses the adapter, `base_url` overrides the endpoint for the
+`openai-compatible` kind, and `key_ref` supplies the key. `tokio::time::timeout`
+enforces `timeout_secs`.
 
-Keys live in the macOS keychain via the `keyring` crate, read on demand through
-a Rust command. `env:` refs are also accepted for keys you already export.
+**Why not in the frontend.** It was, through the AI SDK, and that was wrong.
+macOS suspends a WebKit process whose window is not visible, and a pass then
+stops mid-run: no request, no CPU, and the timer meant to enforce the timeout
+does not fire either. A tokio task is not suspended. Moving the call also keeps
+API keys out of the webview and makes the boundary rule in CLAUDE.md true
+rather than aspirational.
+
+The frontend still builds the prompt and parses the reply, so the preamble, the
+rules and the parser keep their tests.
 
 Cost is not a constraint. A 2,000-word draft is roughly 2,700 tokens. Twelve
 passes is about 36k input and 18k output tokens — under a dollar at
-`claude-opus-5` rates ($5 / $25 per million), less with prompt caching, since
-every pass sends the same draft.
+`claude-opus-5` rates ($5 / $25 per million).
 
 ### 9.3 CLI backend
 

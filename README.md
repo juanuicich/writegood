@@ -60,7 +60,7 @@ Everything is `⌘K`. There are no menus.
 
 ## Stack
 
-Tauri v2 · Svelte 5 · TipTap 3 · Rust · SQLite · Vercel AI SDK v7 · Bun.
+Tauri v2 · Svelte 5 · TipTap 3 · Rust · SQLite · `genai` · Bun.
 
 Roughly a 10 MB app on the system WebView. Providers are configured in
 `~/.writegood/config.toml` and switch by editing one line: Anthropic, OpenAI,

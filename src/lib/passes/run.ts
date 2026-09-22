@@ -3,8 +3,7 @@
  *  A pass is one prompt. Passes fan out across a small worker pool; findings
  *  are written to the database as each pass completes so a later failure never
  *  loses earlier work. */
-import { generateText } from "ai";
-import { log, store, type NewFinding, type Pass } from "../ipc";
+import { cli, llm, log, store, type NewFinding, type Pass } from "../ipc";
 import { app } from "../state.svelte";
 import { resolve, providerFor, ProviderError, type Resolved } from "../providers";
 import { preamble } from "./schema";
@@ -16,44 +15,27 @@ const MAX_PARALLEL = 4;
 /** Both backends end at the same place: a block of text that should contain a
  *  JSON array of findings.
  *
- *  The AI SDK's `Output.array` is tempting and does not survive provider
- *  switching. An endpoint without structured-output support — DeepSeek, most
- *  local servers — returns a bare array where the SDK expects a wrapper, and
- *  the result is silently zero findings. Parsing the text ourselves is one code
- *  path with one failure mode, and it works everywhere. The cost is that
- *  findings arrive per pass rather than one at a time. */
+ *  Both also run in Rust — `llm_chat` for the network, `cli_run` for a
+ *  subprocess — each with its own timeout. The deadline here is a second line
+ *  of defence with more slack, so Rust's clearer message normally wins. */
 async function collect(
   resolved: Resolved,
   system: string,
   prompt: string,
-  signal: AbortSignal,
 ): Promise<NewFinding[]> {
-  // A call with no ceiling can hang a pass for ever: the run row sits at
-  // `running`, nothing is reported, and the only way out is to quit the app.
-  // The CLI backend has always had `timeout_secs`; the API backend now shares
-  // it. The SDK's own `timeout` is passed as well, but it cannot be relied on
-  // alone: it works by aborting the request, and a fetch that ignores its
-  // abort signal leaves the promise pending for ever. The deadline below
-  // settles regardless of what the request does.
-  const totalMs = Math.max(resolved.provider.timeoutSecs, 30) * 1000;
-
+  const seconds = Math.max(resolved.provider.timeoutSecs, 30);
   void log.write(
     "info",
     `asking ${resolved.name} (${resolved.provider.model ?? resolved.provider.kind}), ` +
-      `${prompt.length} characters, ceiling ${totalMs / 1000}s`,
+      `${prompt.length} characters, ceiling ${seconds}s`,
   );
 
-  const call = resolved.runCli
-    ? resolved.runCli(`${system}\n\n${prompt}`)
-    : generateText({
-        model: resolved.model!,
-        system,
-        prompt,
-        abortSignal: signal,
-        timeout: { totalMs },
-      }).then((r) => r.text);
+  const call =
+    resolved.provider.kind === "cli"
+      ? cli.run(resolved.provider, `${system}\n\n${prompt}`)
+      : llm.chat(resolved.provider, system, prompt);
 
-  const text = await deadline(call, totalMs, resolved.name);
+  const text = await deadline(call, (seconds + 30) * 1000, resolved.name);
   void log.write("info", `${resolved.name} answered with ${text.length} characters`);
 
   return parseFindings(text, resolved.name);
@@ -90,7 +72,7 @@ export interface RunReport {
  */
 export async function runPasses(
   passes: Pass[],
-  options: { override?: string | null; signal?: AbortSignal } = {},
+  options: { override?: string | null } = {},
 ): Promise<RunReport[]> {
   const config = app.config;
   if (!config) throw new Error("config not loaded");
@@ -106,13 +88,12 @@ export async function runPasses(
   if (revisionId === undefined) throw new Error("no revision to run against");
 
   const system = preamble(config.rules);
-  const signal = options.signal ?? new AbortController().signal;
 
   const jobs = passes.map((pass) => async (): Promise<RunReport> => {
     const name = providerFor(config, pass.provider, options.override);
     let resolved: Resolved;
     try {
-      resolved = await resolve(config, name);
+      resolved = resolve(config, name);
     } catch (e) {
       const message = e instanceof ProviderError ? e.message : String(e);
       const run = await store.startRun(docId, revisionId, pass.slug, pass.name, name, null);
@@ -135,7 +116,7 @@ export async function runPasses(
       const chunks = pass.scope === "paragraph" ? paragraphs(draft) : [null];
       void log.write("info", `${pass.name}: ${chunks.length} call(s), ${pass.scope} scope`);
       for (const chunk of chunks) {
-        const found = await collect(resolved, system, buildPrompt(pass, draft, chunk), signal);
+        const found = await collect(resolved, system, buildPrompt(pass, draft, chunk));
         collected.push(...found);
       }
       if (collected.length > 0) {

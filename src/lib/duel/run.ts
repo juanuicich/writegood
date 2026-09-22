@@ -4,8 +4,7 @@
  *  says which version reads better, without being told which one you wrote
  *  second. The shuffle and the prompt live in `judge.ts`; this file is the part
  *  that talks to a provider and writes the result down. */
-import { generateText } from "ai";
-import { store, type Config, type Duel } from "../ipc";
+import { cli, llm, store, type Config, type Duel } from "../ipc";
 import { resolve, ProviderError, type Resolved } from "../providers";
 import { judgePrompt, originalWon, parseVerdict, shuffle, type Verdict } from "./judge";
 
@@ -46,7 +45,7 @@ export async function runDuel(
   const name = judgeName(config);
   let judge: Resolved;
   try {
-    judge = await resolve(config, name);
+    judge = resolve(config, name);
   } catch (e) {
     throw new Error(e instanceof ProviderError ? e.message : String(e));
   }
@@ -56,9 +55,10 @@ export async function runDuel(
 
   // A fresh call with no editing history. Nothing here tells the model that
   // one of these passages is a revision of the other.
-  const text = judge.runCli
-    ? await judge.runCli(`${system}\n\n${prompt}`)
-    : (await generateText({ model: judge.model!, system, prompt })).text;
+  const text =
+    judge.provider.kind === "cli"
+      ? await cli.run(judge.provider, `${system}\n\n${prompt}`)
+      : await llm.chat(judge.provider, system, prompt);
 
   const verdict = parseVerdict(text, name);
 

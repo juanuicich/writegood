@@ -15,18 +15,12 @@
     "test": "bun test src/lib"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.58",
-    "@ai-sdk/google": "^4.0.76",
-    "@ai-sdk/openai": "^4.0.72",
-    "@ai-sdk/openai-compatible": "^3.0.53",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.3",
-    "@tauri-apps/plugin-http": "^2.6.1",
     "@tauri-apps/plugin-opener": "^2.5.5",
     "@tiptap/core": "^3.31.3",
     "@tiptap/pm": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
-    "ai": "^7.0.108",
     "markdown-it": "^15.0.2",
     "prosemirror-markdown": "^1.13.8",
     "zod": "^4.6.5"

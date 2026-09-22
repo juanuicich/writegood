@@ -7,6 +7,7 @@ pub mod db;
 pub mod diff;
 pub mod documents;
 pub mod error;
+pub mod llm;
 pub mod log;
 pub mod runner;
 pub mod secrets;
@@ -170,7 +171,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_http::init())
         .setup(|app| {
             config::ensure_scaffold()?;
             let conn = db::open(&config::db_path())?;
@@ -192,6 +192,7 @@ pub fn run() {
             secrets::secret_has,
             secrets::key_resolve,
             runner::cli_run,
+            llm::llm_chat,
             documents::doc_list,
             documents::doc_read,
             documents::doc_write,

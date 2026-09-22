@@ -1,106 +1,37 @@
-/** Resolving a provider name from config.toml into something callable.
+/** Resolving a provider name from `config.toml`.
  *
- *  Two backends sit behind one interface: the AI SDK for anything with an API
- *  key, and a subprocess for the `cli` kind, which bills against a Claude or
- *  Codex subscription instead of API credits (SPEC 9.3). */
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import type { LanguageModel } from "ai";
-import { cli, secrets, type Config, type Provider } from "../ipc";
+ *  The call itself happens in Rust (`llm.rs` for the network, `runner.rs` for
+ *  the `cli` kind). This module only decides which provider a pass uses and
+ *  reports the mistakes that can be seen without asking anyone: a name that is
+ *  not in the config. Everything else — a missing key, a missing model, a
+ *  base URL an openai-compatible provider needs — is Rust's to report, because
+ *  Rust is what tries. */
+import type { Config, Provider } from "../ipc";
 
 export class ProviderError extends Error {}
 
 export interface Resolved {
   name: string;
   provider: Provider;
-  /** Present for API backends only. */
-  model?: LanguageModel;
-  /** Present for the cli backend only. */
-  runCli?: (prompt: string) => Promise<string>;
   /** Used to warn when the judge shares a vendor with the pass (SPEC 11). */
   vendor: string;
 }
-
-/** Only Anthropic gets a default. Guessing another vendor's current model id
- *  would fail at request time with a worse message than asking for one here. */
-const DEFAULT_MODEL: Record<string, string> = {
-  anthropic: "claude-opus-5",
-};
-
-/** Requests go through Rust's HTTP client, so CORS never applies. */
-const http = tauriFetch as unknown as typeof globalThis.fetch;
 
 export function providerNames(config: Config): string[] {
   return Object.keys(config.providers);
 }
 
-export async function resolve(config: Config, name: string): Promise<Resolved> {
+export function resolve(config: Config, name: string): Resolved {
   const provider = config.providers[name];
   if (!provider) {
-    throw new ProviderError(
-      `no provider named "${name}" in config.toml — have: ${providerNames(config).join(", ") || "none"}`,
-    );
+    const known = providerNames(config).join(", ") || "none";
+    throw new ProviderError(`no provider named "${name}" in config.toml — have: ${known}`);
   }
-
-  if (provider.kind === "cli") {
-    if (!provider.command) {
-      throw new ProviderError(`provider "${name}" is kind = "cli" but has no command`);
-    }
-    return {
-      name,
-      provider,
-      vendor: `cli:${provider.command}`,
-      runCli: (prompt: string) => cli.run(provider, prompt),
-    };
-  }
-
-  const apiKey = await secrets.resolve(provider.keyRef);
-  if (!apiKey) {
-    throw new ProviderError(
-      `provider "${name}" has no key. Set key_ref in config.toml to env:NAME or keychain:service/account.`,
-    );
-  }
-
-  const id = provider.model ?? DEFAULT_MODEL[provider.kind] ?? "";
-  if (!id) {
-    throw new ProviderError(
-      `provider "${name}" needs a model in config.toml, for example model = "..."`,
-    );
-  }
-
-  let model: LanguageModel;
-  switch (provider.kind) {
-    case "anthropic":
-      model = createAnthropic({ apiKey, fetch: http })(id);
-      break;
-    case "openai":
-      model = createOpenAI({ apiKey, fetch: http })(id);
-      break;
-    case "google":
-      model = createGoogleGenerativeAI({ apiKey, fetch: http })(id);
-      break;
-    case "openai-compatible":
-      if (!provider.baseUrl) {
-        throw new ProviderError(`provider "${name}" is openai-compatible but has no base_url`);
-      }
-      model = createOpenAICompatible({
-        name,
-        baseURL: provider.baseUrl,
-        apiKey,
-        fetch: http,
-      })(id);
-      break;
-    default:
-      throw new ProviderError(`unknown provider kind "${provider.kind}" for "${name}"`);
-  }
-
-  return { name, provider, model, vendor: provider.kind };
+  const vendor = provider.kind === "cli" ? `cli:${provider.command ?? "?"}` : provider.kind;
+  return { name, provider, vendor };
 }
 
-/** The pass provider for a given pass, honouring the session override. */
+/** The provider for a given pass, honouring the session override. */
 export function providerFor(
   config: Config,
   passProvider: string | null | undefined,
