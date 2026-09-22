@@ -1,14 +1,15 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, untrack } from "svelte";
   import { Editor } from "@tiptap/core";
   import StarterKit from "@tiptap/starter-kit";
   import { Placeholder } from "@tiptap/extensions";
   import { app } from "../state.svelte";
-  import { Findings, setFindings, type Mark } from "./findings";
+  import { Findings, setFindings, setFocus, type Mark } from "./findings";
 
   let host: HTMLDivElement;
   let editor: Editor | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let anchorTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
     editor = new Editor({
@@ -26,6 +27,11 @@
         // Autosave is quiet and frequent; consecutive minor saves collapse
         // into one revision row, so this does not bury flagged revisions.
         saveTimer = setTimeout(() => void app.save(false), 1200);
+        // ProseMirror moves the highlights as you type, but the stored
+        // offsets go stale. Re-anchor sooner than the save, so the store
+        // and the screen agree again before anything else reads them.
+        clearTimeout(anchorTimer);
+        anchorTimer = setTimeout(() => void app.reanchor(), 400);
       },
     });
     app.editor = editor;
@@ -33,14 +39,18 @@
 
   onDestroy(() => {
     clearTimeout(saveTimer);
+    clearTimeout(anchorTimer);
     editor?.destroy();
     app.editor = null;
   });
 
-  // Push decorations whenever the placed findings or the selection change.
+  // Positions. This runs when the findings change, which means the store has
+  // just re-anchored. The focused id is read without subscribing to it, so a
+  // focus change alone never repaints stored offsets over mapped ones.
   $effect(() => {
-    const current = app.current;
-    const marks: Mark[] = app.findings
+    const findings = app.findings;
+    const focused = untrack(() => app.current?.id);
+    const marks: Mark[] = findings
       .filter((f) => f.from !== null && f.to !== null && f.status !== "dismissed")
       .map((f) => ({
         id: f.id,
@@ -48,9 +58,15 @@
         to: f.to as number,
         severity: f.severity,
         stale: f.status === "stale",
-        current: current?.id === f.id,
+        current: focused === f.id,
       }));
     if (editor) setFindings(editor, marks);
+  });
+
+  // Focus only. Restyles the decorations where the mapping left them.
+  $effect(() => {
+    const id = app.current?.id ?? null;
+    if (editor) setFocus(editor, id);
   });
 </script>
 
