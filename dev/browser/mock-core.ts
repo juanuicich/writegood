@@ -165,6 +165,10 @@ export async function invoke(cmd: string, args: Record<string, unknown> = {}): P
         { kind: "insert", text: "they would decide" },
         { kind: "equal", text: " regarding the proposal." },
       ];
+    case "shell_open_path":
+      // Nothing to open in a browser. Say what the app asked for and move on.
+      console.log("shell_open_path", args.path);
+      return null;
     case "anchors_resolve":
       return resolveAnchors(args.text as string, args.selectors as { id: number; quote: string }[]);
     default:
