@@ -23,11 +23,10 @@ import { buildVerifyPrompt, parseVerdicts, tally, VERIFY_SYSTEM, VOTES } from ".
 import { windowOf, windows, type Window } from "./windows";
 import { documentKey, fingerprint, jevFingerprint, paragraphKey } from "./keys";
 import {
+  answerParagraphs,
   cannotRun,
   jevSettings,
   METHOD_FINGERPRINT,
-  paragraphFindings,
-  Unreadable,
   type Ask,
   type JevSettings,
 } from "./jev";
@@ -80,6 +79,8 @@ export interface RunReport {
   reused?: number;
   /** Replies that could not be read; those questions are asked next run. */
   unreadable?: number;
+  /** Jev requests that got no reply; those paragraphs are asked next run. */
+  unanswered?: number;
   error?: string;
 }
 
@@ -153,10 +154,10 @@ export async function runPasses(
     const using = settings;
 
     const calls: Call[] = [];
-    let failure: string | null = null;
     let stored = 0;
-    let unreadable = 0;
-    let unread: string | null = null;
+    // Set only when saving an answer fails. A paragraph whose request fails
+    // does not stop the pass (SPEC §8.4).
+    let stopped = false;
 
     const keys = await passKeys(pass, name, resolved, system, paras, draft);
     const saved = options.fresh ? new Set<string>() : new Set(await store.reviewedKeys(docId, pass.slug));
@@ -174,11 +175,11 @@ export async function runPasses(
     const starts = paragraphStarts(draft);
     const seconds = Math.max(resolved.provider.timeoutSecs, 1);
     // Each request is one call. It waits for a slot of its provider, then
-    // for a slot of the run, as every call does. After a failure the pass
-    // asks nothing more.
+    // for a slot of the run, as every call does. After an answer fails to
+    // save, the pass asks nothing more.
     const ask: Ask = (state, questions) =>
       limit(async () => {
-        if (failure !== null) return null;
+        if (stopped) return null;
         asking(pass.name, 1);
         try {
           const reply = await deadline(
@@ -193,38 +194,35 @@ export async function runPasses(
         }
       }, 1);
 
-    await Promise.all(
-      [...asked].map(async ([key, i]) => {
+    const { unreadable, unanswered, failure } = await answerParagraphs(
+      pass,
+      using,
+      [...asked].map(([key, i]) => ({ key, paragraph: paras[i]!, place: { points, start: starts[i]! } })),
+      ask,
+      async (key, found) => {
         try {
-          const found = await paragraphFindings(pass, using, paras[i]!, { points, start: starts[i]! }, ask);
-          if (found === null) return;
           await store.addFindings(run.id, docId, key, found);
           stored += found.length;
           if (found.length > 0) app.showMargin();
           await app.loadFindings();
         } catch (e) {
-          if (e instanceof Unreadable) {
-            unreadable += 1;
-            unread ??= e.message;
-            void log.write("error", `${pass.name}: ${e.message}; asked again next run`);
-            return;
-          }
-          failure ??= e instanceof Error ? e.message : String(e);
+          stopped = true;
+          throw e;
         }
-      }),
+      },
+      (message) => void log.write("error", `${pass.name}: ${message}; asked again next run`),
     );
-    if (asked.size > 0 && unreadable === asked.size) failure ??= unread;
 
     if (failure !== null) {
       await store.finishRun(run.id, "error", failure, total(calls));
       void log.write("error", `${pass.name}: ${failure}`);
-      return { pass: pass.name, findings: stored, reused, unreadable, error: failure };
+      return { pass: pass.name, findings: stored, reused, unreadable, unanswered, error: failure };
     }
     await store.retainFindings(run.id, keys);
     await app.loadFindings();
     await store.finishRun(run.id, "done", null, total(calls));
     void log.write("info", `${pass.name}: done, ${stored} new finding(s)`);
-    return { pass: pass.name, findings: stored, reused, unreadable };
+    return { pass: pass.name, findings: stored, reused, unreadable, unanswered };
   };
 
   const runOne = async (pass: Pass): Promise<RunReport> => {
@@ -508,6 +506,8 @@ export function summarise(reports: RunReport[]): string {
   if (reused > 0) found += ` · ${reused} answer${reused === 1 ? "" : "s"} reused`;
   const unreadable = reports.reduce((n, r) => n + (r.error ? 0 : (r.unreadable ?? 0)), 0);
   if (unreadable > 0) found += ` · ${unreadable} unreadable repl${unreadable === 1 ? "y" : "ies"} asked again next run`;
+  const unanswered = reports.reduce((n, r) => n + (r.error ? 0 : (r.unanswered ?? 0)), 0);
+  if (unanswered > 0) found += ` · ${unanswered} failed call${unanswered === 1 ? "" : "s"} asked again next run`;
   if (failed.length === 0) return found;
   return `${found} · ${failed.length} pass${failed.length === 1 ? "" : "es"} failed: ${failed[0].error}`;
 }

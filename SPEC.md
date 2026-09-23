@@ -650,7 +650,8 @@ the pass goes on with its other calls. The status bar counts these replies.
 The pass fails only when every reply it got was unreadable. A call that gets
 no reply at all, such as a network error or a missing key, still fails the
 pass and stops its remaining calls, because the next call would fail the
-same way.
+same way. A pass on Jev is different: a request with no reply fails only its
+paragraph (§8.4).
 
 A reply that cannot be read says which of four things went wrong, because each
 implies a different remedy:
@@ -920,17 +921,23 @@ in the fingerprint. A change to anything in it asks every paragraph again. A
 rerun replaces one answer at a time, as in §8.3. *run all passes afresh*
 asks every question again.
 
-**Failures** follow §8.3.
+**Failures** follow §8.3, except for a request with no reply.
 
 - A reply that cannot be read fails only the answer of its paragraph. This
   covers a body that is not JSON, a body with no `answers`, a missing
   answer, an answer of the wrong type, and a Choice outside the options. The runner does not save the
   answer, and the next run asks it again. The status bar counts it with the
-  unreadable replies. The pass fails only when every answer was unreadable.
-- A request with no reply fails the pass. This covers a network error, a
-  missing key and an HTTP error that retries did not clear (§9.5). The pass
-  starts no more requests. It keeps the answers already complete. The next
-  run asks the other paragraphs again.
+  unreadable replies.
+- A request with no reply also fails only the answer of its paragraph. This
+  covers a network error, a missing key and an HTTP error that retries did
+  not clear (§9.5). The runner does not save the answer, and the next run
+  asks it again. The pass goes on with its other paragraphs. The status bar
+  counts these as failed calls.
+- The pass fails only when every paragraph it asked about failed, by either
+  rule. It then keeps the answers already complete. A missing key fails
+  every request, so it still fails the pass.
+- An answer that the runner cannot save fails the pass. The pass then starts
+  no more requests.
 
 **Which passes.** Filler words runs on Jev. Sentence openings stays on the
 language model: method `across` scored below DeepSeek (above).
@@ -1404,7 +1411,7 @@ because Jev cannot write a verdict and a reason.
 at most 64,000 tokens, and 32,000 for the state and its longest question. A
 paragraph with one Noul per sentence carries the paragraph and the rule text
 once per sentence. The four scored drafts stayed below the limit. A request
-over the limit gets an HTTP error and fails the pass (§8.4, §15).
+over the limit gets an HTTP error and fails its paragraph (§8.4, §15).
 
 **Usage and cost.** The response gives `input_tokens` and `output_tokens`.
 They go into the usage of the call (§9.4) as input and output, with no cache
@@ -2081,7 +2088,9 @@ The first set of tests covers:
   span in the margin, with the pass's note and the draft's own words. Each
   request carries the paragraph and the rule text. The cost comes from the
   provider's `price`, because no catalog lists the fake. A rerun with no
-  edits asks Jev nothing.
+  edits asks Jev nothing. When the fake answers HTTP 503 for one paragraph,
+  only that paragraph goes without notes, the pass does not fail, and the
+  next run asks Jev about that paragraph alone.
 
 A test fails with the app's own log attached, read from the test home.
 

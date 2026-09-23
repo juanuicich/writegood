@@ -366,3 +366,62 @@ export async function paragraphFindings(
   );
   return stopped ? STOPPED : perSentence.flat();
 }
+
+/** One paragraph a Jev pass asks about, with the key of its answer. */
+export interface Asked {
+  key: string;
+  paragraph: string;
+  place: Place;
+}
+
+/** How the paragraphs of one Jev pass ended. */
+export interface Answered {
+  /** Paragraphs whose reply could not be read. */
+  unreadable: number;
+  /** Paragraphs with a request that got no reply. */
+  unanswered: number;
+  /** Why the pass failed, or null. */
+  failure: string | null;
+}
+
+/** Ask about each paragraph and save each answer (SPEC §8.4). A paragraph
+ *  whose reply cannot be read, or whose request gets no reply, fails alone.
+ *  Its answer is not saved, so the next run asks it again. The pass fails
+ *  when every paragraph failed, or when `save` fails. `note` receives the
+ *  message of each paragraph that failed. */
+export async function answerParagraphs(
+  pass: Pass,
+  settings: JevSettings,
+  asked: Asked[],
+  ask: Ask,
+  save: (key: string, found: NewFinding[]) => Promise<void>,
+  note: (message: string) => void,
+): Promise<Answered> {
+  let unreadable = 0;
+  let unanswered = 0;
+  let first: string | null = null;
+  let failure: string | null = null;
+  await Promise.all(
+    asked.map(async ({ key, paragraph, place }) => {
+      let found: NewFinding[] | null;
+      try {
+        found = await paragraphFindings(pass, settings, paragraph, place, ask);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (e instanceof Unreadable) unreadable += 1;
+        else unanswered += 1;
+        first ??= message;
+        note(message);
+        return;
+      }
+      if (found === STOPPED) return;
+      try {
+        await save(key, found);
+      } catch (e) {
+        failure ??= e instanceof Error ? e.message : String(e);
+      }
+    }),
+  );
+  if (asked.length > 0 && unreadable + unanswered === asked.length) failure ??= first;
+  return { unreadable, unanswered, failure };
+}

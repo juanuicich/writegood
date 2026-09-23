@@ -229,6 +229,9 @@ export interface JevCall {
 export interface FakeJev {
   url: string;
   calls: JevCall[];
+  /** A request whose state contains this text gets HTTP 503. Null answers
+   *  every request. */
+  failOn: string | null;
   stop(): void;
 }
 
@@ -237,6 +240,7 @@ export interface FakeJev {
  *  word and not yet quoted, else `none`. */
 export function fakeJev(): FakeJev {
   const calls: JevCall[] = [];
+  const jev: FakeJev = { url: "", calls, failOn: null, stop: () => {} };
   const server = Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
@@ -245,6 +249,9 @@ export function fakeJev(): FakeJev {
       if (req.method !== "POST" || url.pathname !== "/v1/systemone") return new Response("not found", { status: 404 });
       const body = (await req.json()) as JevCall["body"];
       calls.push({ authorization: req.headers.get("authorization"), body });
+      if (jev.failOn !== null && String(body.state).includes(jev.failOn)) {
+        return new Response("service unavailable", { status: 503 });
+      }
       const answers: Record<string, unknown> = {};
       for (const [key, q] of Object.entries(body.questions)) {
         const sentence = String(q.instructions.sentence ?? "");
@@ -260,7 +267,9 @@ export function fakeJev(): FakeJev {
       return Response.json({ model: "jev-1.13.0", answers, usage: JEV_USAGE });
     },
   });
-  return { url: `http://127.0.0.1:${server.port}/v1`, calls, stop: () => server.stop(true) };
+  jev.url = `http://127.0.0.1:${server.port}/v1`;
+  jev.stop = () => server.stop(true);
+  return jev;
 }
 
 // ------------------------------------------------------------------ the home

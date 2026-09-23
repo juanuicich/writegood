@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { JevReply, Pass, Provider } from "../ipc";
 import { paragraphs, paragraphStarts } from "./parse";
 import {
+  answerParagraphs,
   cannotRun,
   DEFAULT_KEEP,
   detectQuestions,
@@ -372,5 +373,72 @@ describe("method sentence", () => {
       throw new Error("jev: HTTP 401 Unauthorized");
     };
     await expect(paragraphFindings(pass(), jevSettings(pass(), provider()), PARA, PLACE, ask)).rejects.toThrow("401");
+  });
+});
+
+describe("answering paragraphs", () => {
+  const PARAS = ["It was very late.", "We left early.", "Nobody minded."];
+  const asked = PARAS.map((paragraph, i) => ({ key: `k${i}`, paragraph, place: { points: Array.from(paragraph), start: 0 } }));
+
+  /** No sentence is kept, except that a request whose state is in `fail`
+   *  throws and one in `garble` is unreadable. */
+  const jevWith = (fail: string[], garble: string[] = []): Ask => async (state, q) => {
+    if (fail.includes(state)) throw new Error("jev: HTTP 503 Service Unavailable");
+    if (garble.includes(state)) return reply(null, "jev returned a body that is not JSON");
+    return reply(Object.fromEntries(Object.keys(q).map((k) => [k, { type: "noul", noul: 0 }])));
+  };
+
+  const run = async (ask: Ask, save = async (_key: string) => {}) => {
+    const saved: string[] = [];
+    const notes: string[] = [];
+    const result = await answerParagraphs(
+      pass(),
+      jevSettings(pass(), provider()),
+      asked,
+      ask,
+      async (key) => {
+        await save(key);
+        saved.push(key);
+      },
+      (m) => notes.push(m),
+    );
+    return { ...result, saved: saved.sort(), notes };
+  };
+
+  test("a request with no reply fails only its paragraph, which is not saved", async () => {
+    const r = await run(jevWith([PARAS[1]!]));
+    expect(r.failure).toBeNull();
+    expect(r.unanswered).toBe(1);
+    expect(r.unreadable).toBe(0);
+    expect(r.saved).toEqual(["k0", "k2"]);
+    expect(r.notes).toEqual(["jev: HTTP 503 Service Unavailable"]);
+  });
+
+  test("an unreadable reply fails only its paragraph, which is not saved", async () => {
+    const r = await run(jevWith([], [PARAS[0]!]));
+    expect(r.failure).toBeNull();
+    expect(r.unreadable).toBe(1);
+    expect(r.saved).toEqual(["k1", "k2"]);
+  });
+
+  test("the pass fails when every paragraph failed, either way", async () => {
+    const r = await run(jevWith([PARAS[0]!, PARAS[2]!], [PARAS[1]!]));
+    expect(r.unanswered).toBe(2);
+    expect(r.unreadable).toBe(1);
+    expect(r.saved).toEqual([]);
+    expect(r.failure).not.toBeNull();
+  });
+
+  test("an answer that cannot be saved fails the pass", async () => {
+    const r = await run(jevWith([]), async (key) => {
+      if (key === "k1") throw new Error("database is locked");
+    });
+    expect(r.failure).toBe("database is locked");
+    expect(r.saved).toEqual(["k0", "k2"]);
+  });
+
+  test("no paragraphs to ask is not a failure", async () => {
+    const r = await answerParagraphs(pass(), jevSettings(pass(), provider()), [], jevWith([]), async () => {}, () => {});
+    expect(r).toEqual({ unreadable: 0, unanswered: 0, failure: null });
   });
 });
