@@ -203,6 +203,12 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     let builder = builder.menu(menu::build).on_menu_event(menu::on_event);
 
+    // Debug builds only: a WebDriver server on 127.0.0.1, so tests and
+    // dev/drive.ts can drive the window (SPEC §16). Any local process can use
+    // it to run code in the page, so a release build never has it.
+    #[cfg(debug_assertions)]
+    let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
+
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

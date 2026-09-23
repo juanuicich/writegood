@@ -69,7 +69,13 @@ bun run app:build   # a release .app bundle
 bun run browser     # the interface in a browser, no Tauri, no key
 bun test src/lib    # frontend unit tests
 bun run check       # svelte-check
+bun run e2e         # end-to-end tests against the real app, no key, no network
+bun dev/drive.ts    # drive a running dev build from the terminal
 ```
+
+A debug build carries a WebDriver server on 127.0.0.1:4445, which the
+end-to-end tests and `dev/drive.ts` use. A release build does not. SPEC §16
+has the details and the limits.
 
 On first launch it creates `~/.writegood` with a `config.toml` and nine starter
 passes. Put an API key where `config.toml` points — the macOS keychain, an

@@ -32,6 +32,9 @@ similar = "3.2"
 keyring = "4"
 thiserror = "2"
 tokio = { version = "1", features = ["process", "io-util", "time", "macros"] }
+# A WebDriver server inside the app, for tests and for driving a dev build
+# (SPEC §16). lib.rs registers it in debug builds only.
+tauri-plugin-wdio-webdriver = "1.4"
 
 [profile.release]
 codegen-units = 1

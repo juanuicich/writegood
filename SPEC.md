@@ -858,9 +858,17 @@ What it cannot do, on macOS:
   manual check.
 - **The clipboard.** A synthetic `⌘C` or `⌘V` does not reach WebKit's copy and
   paste commands. Copy and paste stay a manual check.
+- **A modifier on a named key.** The plugin sets `metaKey`, `ctrlKey`,
+  `altKey` and `shiftKey` only on letters and digits. `⌘S` and `⌘K` arrive
+  with ⌘ held; `⌘⏎`, `⌥↓` and `⌘⇧⏎` arrive as bare Enter and ArrowDown. This
+  is a defect in 1.4.0 and on its main branch as of 23 September 2026. Tests
+  run passes from the `⌘K` palette instead of `⌘⏎`.
 - **Typing into ProseMirror with `keys()`.** Key events insert no text in a
   contenteditable. `addValue()` on the editor element works, because the
   plugin inserts text with `execCommand("insertText")`.
+- **Placing the caret with a click.** A synthetic click does not move the
+  caret. Tests set the DOM selection first, which ProseMirror follows, and
+  then type.
 - **The window frame.** A screenshot is the page only.
 
 ### 16.2 End-to-end tests
@@ -895,9 +903,9 @@ The first set of tests covers:
   focus. The focused note is in view. `x` marks a finding addressed.
 - **Cost.** After a run, the status bar shows the cost that the fake model's
   token counts and rates give.
-- **Duel.** `⌘D` opens the duel. A typed rewrite goes to the judge, and the
-  result names the version the judge picked, whichever side it was shuffled
-  to.
+- **Duel.** Not built. The duel sends its rewrite only on `⌘⏎`, which the
+  plugin delivers without ⌘ (§16.1). It waits on a fix upstream or on a
+  decision to send the key another way.
 
 A test fails with the app's own log attached, read from the test home.
 
@@ -916,7 +924,9 @@ bun dev/drive.ts keys <key>...        send keys, e.g. Escape j j
 bun dev/drive.ts type '<text>'        insert text in the editor at the cursor
 ```
 
-`TAURI_WEBDRIVER_PORT` overrides the port. Each call opens a WebDriver session
+`keys` takes WebDriver key names: `Escape`, `Enter`, `ArrowDown`, `Command`.
+A modifier reaches letters only (§16.1). `TAURI_WEBDRIVER_PORT` overrides the
+port. Each call opens a WebDriver session
 and closes it after. Closing a session does not close the window.
 
 A dev build reads and writes the real `~/.writegood`. `click`, `keys` and

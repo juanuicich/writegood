@@ -73,9 +73,12 @@ bun run app:build    # tauri build
 bun test src/lib     # frontend unit tests
 bunx svelte-check --tsconfig ./tsconfig.json
 cd src-tauri && cargo test && cargo clippy --all-targets
+bun run e2e          # builds a debug binary, then drives the real app
 ```
 
-Both suites must pass before a commit. Neither needs a network or an API key.
+Both unit suites must pass before a commit. Neither needs a network or an API
+key. `bun run e2e` needs neither either: each test file launches the app with a
+throwaway home and a fake model served from the test process (SPEC §16.2).
 
 ## Checking work against a real model
 
@@ -98,8 +101,25 @@ To exercise the whole in-app path, including Tauri's HTTP plugin, set
 VITE_WRITEGOOD_AUTORUN=nominalization bun run app
 ```
 
-That hook exists because driving the window from a script needs accessibility
-permission a terminal does not have. `screencapture` fails for the same reason.
+That hook predates the WebDriver server below. `screencapture` still fails,
+because it needs accessibility permission a terminal does not have.
+
+## Driving the real window
+
+A debug build runs a WebDriver server on 127.0.0.1:4445 (SPEC §16).
+`bun dev/drive.ts` talks to it while `bun run app` is running:
+
+```
+bun dev/drive.ts shot /tmp/app.png     # screenshot of the page
+bun dev/drive.ts text                  # the editor's text
+bun dev/drive.ts eval 'document.title' # run JavaScript in the page
+bun dev/drive.ts keys Escape j         # send keys
+```
+
+A dev build uses the real `~/.writegood`. Before `click`, `keys` or `type`,
+start it with `WRITEGOOD_HOME` pointing at a scratch directory. The driver
+cannot reach the menu bar or the clipboard, and it drops ⌘ from Enter and the
+arrows. SPEC §16.1 lists the limits.
 
 ## Looking at the interface
 

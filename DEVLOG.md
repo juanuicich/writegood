@@ -367,3 +367,40 @@ read null, not zero.
 **NOTE — reasoning dominates the cost on deepseek-flash.** One probe call used
 445 input tokens and 17,478 output tokens, almost all of it reasoning. Output
 is over 99% of that call's cost.
+
+## 2026-09-23 — driving the real app
+
+**DONE — end-to-end tests and a driver for dev builds.** SPEC §16 has the
+design. `bun run e2e` builds a debug binary into `src-tauri/target/e2e` and
+runs eight tests in about 12 seconds, build included. `bun dev/drive.ts` drives
+a running `bun run app`.
+
+**DECISION — plain `webdriverio` from Bun, not the WDIO runner.** The trial
+with `@wdio/tauri-service` passed but needed Node, a second plugin, a frontend
+import and `withGlobalTauri`, and spent 60 of its 70 seconds in 5-second
+window-focus waits. `remote()` against the embedded plugin needs none of it.
+The same checks ran in 1.7 seconds.
+
+**DECISION — the fake model speaks the OpenAI protocol.** A CLI fake would skip
+the Rust HTTP client and report no usage. The HTTP fake goes through `genai`,
+the token count and the price lookup, so the cost label is checked with real
+arithmetic: 76 calls at $0.0014 showed as $0.106.
+
+**BLOCKED — the duel test.** The plugin sets modifier flags on letters and
+digits only. `⌘⏎` arrives as a bare Enter, and the duel submits only on `⌘⏎`.
+The bug is in 1.4.0 and on the plugin's main branch, with no issue filed.
+Passes are run from the `⌘K` palette instead, which does work.
+
+**NOTE — the plugin needs no capability permission.** It is an HTTP server, not
+a command surface. `wdio-webdriver:default` grants nothing and was left out.
+
+**NOTE — a synthetic click does not move the caret.** `addValue` then types at
+the start of the document. The tests set the DOM selection first.
+
+**NOTE — webdriverio adds 214 packages and 67 MB to `node_modules`.** It is a
+dev dependency.
+
+**UNVERIFIED — the release binary.** The plugin is registered under
+`#[cfg(debug_assertions)]`, so a release build does not start the server. The
+crate is still compiled in, and no release build has been inspected.
+
