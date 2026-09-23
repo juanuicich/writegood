@@ -40,6 +40,11 @@ You need [Bun](https://bun.sh) and a Rust toolchain.
 <details>
 <summary>Installing Bun and Rust</summary>
 
+The project is developed and tested on macOS only. The Linux and Windows steps
+are untested, and you use them at your own risk.
+
+**macOS**
+
 Install Bun with [mise](https://mise.jdx.dev). First install mise:
 
 ```
@@ -66,6 +71,56 @@ rustup default stable
 rustc --version
 cargo --version
 ```
+
+**Linux**
+
+Install mise with the same `curl https://mise.run | sh` command. For bash, the
+activation line goes in `~/.bashrc`:
+
+```
+echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
+```
+
+For zsh, use the macOS line. Open a new shell, then run
+`mise use -g bun@latest`. Install Rust with the same rustup command as on
+macOS.
+
+Tauri also needs system libraries such as WebKitGTK. The
+[Tauri prerequisites](https://v2.tauri.app/start/prerequisites/#linux) page
+lists the packages for each distribution. On Debian or Ubuntu:
+
+```
+sudo apt update
+sudo apt install libwebkit2gtk-4.1-dev \
+  build-essential \
+  curl \
+  wget \
+  file \
+  libxdo-dev \
+  libssl-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev
+```
+
+**Windows**
+
+Install mise with `winget install jdx.mise` or `scoop install mise`. Add this
+line to your PowerShell profile (`$PROFILE`):
+
+```
+(&mise activate pwsh) | Out-String | Invoke-Expression
+```
+
+Open a new PowerShell, then run `mise use -g bun@latest`.
+
+Install Rust with `winget install --id Rustlang.Rustup`, or run
+`rustup-init.exe` from [rustup.rs](https://rustup.rs). Choose the MSVC
+toolchain. If Rust is already installed, run `rustup default stable-msvc`.
+
+Tauri also needs the Microsoft C++ Build Tools and WebView2. Windows 10
+(version 1803 and later) includes WebView2. The
+[Tauri prerequisites](https://v2.tauri.app/start/prerequisites/#windows) page
+has the installer links.
 
 </details>
 
