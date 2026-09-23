@@ -111,6 +111,18 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
+    // "+" is the macOS key equivalent for bigger text. It answers ⌘⇧= on a
+    // US keyboard.
+    let view = Submenu::with_items(
+        app,
+        "View",
+        true,
+        &[
+            &MenuItem::with_id(app, "bigger", "Bigger text", true, Some("CmdOrCtrl++"))?,
+            &MenuItem::with_id(app, "smaller", "Smaller text", true, Some("CmdOrCtrl+-"))?,
+        ],
+    )?;
+
     let window = Submenu::with_items(
         app,
         "Window",
@@ -123,7 +135,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
-    Menu::with_items(app, &[&app_menu, &file, &edit, &review, &window])
+    Menu::with_items(app, &[&app_menu, &file, &edit, &view, &review, &window])
 }
 
 pub fn on_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {

@@ -657,6 +657,12 @@ measure of about 68 characters, and generous margins. `ui-serif` and Georgia
 follow it in the stack, and `[appearance] font` overrides the whole thing.
 Bundled rather than fetched, because the app must work with no network.
 
+**Size.** `⌘+` and `⌘-` change the text size by 1px, from 12px to 32px. The
+size is `[appearance] font_size`, and every change is saved to `config.toml`,
+so the next launch opens at the same size. The body, the margin and the
+chrome all scale together: the margin and the chrome are set in `em` and
+`rem` against the body size.
+
 **Colour is rationed.** Paper and ink carry everything, with one grey for
 anything secondary. There is exactly one accent: a muted vermilion, the red of
 a hanko seal. It means "you are here" and nothing else — the selected finding,
@@ -686,13 +692,14 @@ A command that needs an argument asks for it in the same field rather than
 opening a dialog.
 
 On macOS the same commands also appear in the system menu bar, in `menu.rs`:
-writegood, File, Edit, Review, Window. A menu item emits the id of a palette
+writegood, File, Edit, View, Review, Window. A menu item emits the id of a palette
 command, and the palette runs it, so the menu and the keyboard cannot drift
 apart. A command that needs an argument opens the palette on that command. The
 Edit submenu carries Undo, Redo, Cut, Copy, Paste and Select All: WKWebView
 takes those keystrokes from the menu, and without the items the editor cannot
 copy or paste. File > Open the writegood folder is handled in Rust, because
-Rust owns the filesystem.
+Rust owns the filesystem. View carries Bigger text (`⌘+`) and Smaller text
+(`⌘-`), where macOS apps put them.
 
 No menu item writes model words into the document. There is nothing to write
 (§2).
@@ -727,6 +734,7 @@ Always available:
 | `⌘⇧S` | save and flag a major revision (the bar asks what changed) |
 | `⌘D` | duel: rewrite the current paragraph |
 | `⌘Y` | revisions |
+| `⌘+` / `⌘-` | bigger / smaller text, saved to the config |
 | `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
 | `Esc` | review mode |
 

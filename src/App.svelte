@@ -9,6 +9,7 @@
   import { runPasses, summarise } from "./lib/passes/run";
   import { cfg, log, shell, store } from "./lib/ipc";
   import { label } from "./lib/usage";
+  import { nextSize } from "./lib/appearance";
 
   let booted = $state(false);
   let override = $state<string | null>(null);
@@ -86,6 +87,18 @@
         app.progress = null;
       }
     });
+  }
+
+  /** ⌘+ and ⌘-: the whole window's text, saved so the next launch keeps it
+   *  (SPEC §12.1). */
+  async function resize(step: 1 | -1) {
+    const config = app.config;
+    if (!config) return;
+    const size = nextSize(config.appearance.fontSize, step);
+    if (size === config.appearance.fontSize) return;
+    config.appearance.fontSize = size;
+    app.applyAppearance();
+    await cfg.save(config);
   }
 
   const commands: Command[] = [
@@ -186,6 +199,8 @@
         await cfg.save(app.config);
       },
     },
+    { id: "bigger", label: "bigger text", hint: "⌘+", run: () => resize(1) },
+    { id: "smaller", label: "smaller text", hint: "⌘-", run: () => resize(-1) },
     {
       id: "sidebar",
       label: "toggle the margin",
@@ -219,6 +234,18 @@
     if (app.paletteOpen) return;
     // The sheets cover everything and handle their own keys.
     if (app.duel || app.history) return;
+
+    // ⌘+ is ⌘⇧= on a US keyboard, so "=" counts as bigger too.
+    if (meta && (e.key === "+" || e.key === "=")) {
+      e.preventDefault();
+      void resize(1);
+      return;
+    }
+    if (meta && e.key === "-") {
+      e.preventDefault();
+      void resize(-1);
+      return;
+    }
 
     if (meta && e.key === "y") {
       e.preventDefault();

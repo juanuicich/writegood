@@ -86,6 +86,9 @@ is where macOS puts menus; nothing is painted inside the window. Windows and
 Linux draw a menu inside the window frame, over the text, so they get the
 keyboard and `⌘K` only.
 
+`⌘+` and `⌘-` change the text size, body and margin together, and save it to
+`config.toml`.
+
 ## Stack
 
 Tauri v2 · Svelte 5 · TipTap 3 · Rust · SQLite · `genai` · Bun.

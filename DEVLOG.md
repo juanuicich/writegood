@@ -423,3 +423,22 @@ and `⌘⇧⏎` opens the pass list.
 **CHANGE — `⌘⇧⏎` in the window now opens the pass list.** The key handler used
 to run every pass on `⌘⏎` with or without ⇧. That did not matter while the
 menu held `⌘⇧⏎`. It does now that the menu holds `⌘⇧R`.
+
+## 2026-09-23 — text size, and the palette keeps its row in view
+
+**DONE — `⌘+` and `⌘-` change the text size.** 1px a step, 12px to 32px,
+saved to `[appearance] font_size`. A new View menu carries both. The margin and
+the chrome already used `em` and `rem`, so they scale with the body; no
+stylesheet changed. An end-to-end test checks both sizes and the saved value.
+
+**DONE — the palette scrolls its selected row into view.** Arrow keys past the
+bottom of the list used to leave the selection out of sight. The row now stops
+above the list's bottom fade. An end-to-end test failed without the fix and
+passes with it.
+
+**NOTE — a size change rewrites `config.toml`.** The save serialises the whole
+config, so hand-written comments in the file are lost. Changing the theme from
+the palette already did the same.
+
+**UNVERIFIED — the View menu by hand.** The tests cannot reach the menu bar.
+Needs checking: View shows `⌘+` and `⌘-`, and both keys work from the menu.
