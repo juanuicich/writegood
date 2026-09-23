@@ -51,7 +51,7 @@ judge call yet.
 **DEFERRED — revision history has no viewer.** Revisions are recorded and can
 be flagged major from the palette, but nothing lists or diffs them.
 
-**NOTE — the app icon is a serif "w" over a rule.** Placeholder aesthetics.
+**NOTE — the app icon is a serif "wg" over a rule, in the dark palette.**
 Replace `src-tauri/icons/` whenever you like; regenerate with
 `bun x tauri icon <source>.png`.
 
