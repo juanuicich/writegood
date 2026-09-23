@@ -53,8 +53,11 @@ pub fn adapter_for(kind: &str) -> AppResult<AdapterKind> {
         "cli" => Err(AppError::invalid(
             "a cli provider is run as a subprocess, not through the network client",
         )),
+        "jev" => Err(AppError::invalid(
+            "a jev provider answers questions, not prompts; it runs only passes written for Jev",
+        )),
         other => Err(AppError::invalid(format!(
-            "unknown provider kind '{other}'; use anthropic, openai, google, openai-compatible or cli"
+            "unknown provider kind '{other}'; use anthropic, openai, google, openai-compatible, cli or jev"
         ))),
     }
 }
@@ -165,7 +168,8 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
 
     let tokens = Tokens::from_usage(&response.usage);
     let cost_usd = tokens.and_then(|t| {
-        prices::lookup(vendor(name, provider), &model).map(|rates| prices::cost(&rates, &t))
+        prices::rates_for(vendor(name, provider), &model, provider.price.as_ref())
+            .map(|rates| prices::cost(&rates, &t))
     });
 
     Ok(Reply {

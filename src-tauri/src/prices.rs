@@ -26,9 +26,14 @@ const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 pub struct Rates {
     pub input: f64,
     pub output: f64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    // The aliases read the snake_case keys of a `price` in `config.toml`.
+    #[serde(default, alias = "cache_read", skip_serializing_if = "Option::is_none")]
     pub cache_read: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "cache_write",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub cache_write: Option<f64>,
 }
 
@@ -167,6 +172,17 @@ pub fn lookup(vendor: &str, model: &str) -> Option<Rates> {
     ensure_loaded();
     let slot = LOADED.read().ok()?;
     slot.as_ref()?.vendors.get(vendor)?.get(model).copied()
+}
+
+/// The rates for a provider's model: the catalog's, else the `price` the
+/// provider sets in `config.toml`, else none (SPEC §9.4). The catalog wins,
+/// because it follows the vendor's changes and a hand-written price does not.
+pub fn rates_for(vendor: &str, model: &str, price: Option<&Rates>) -> Option<Rates> {
+    choose(lookup(vendor, model), price)
+}
+
+fn choose(catalog: Option<Rates>, price: Option<&Rates>) -> Option<Rates> {
+    catalog.or_else(|| price.copied())
 }
 
 /// Fetch a new copy when the one on disk is missing or a week old. Keeps the
@@ -333,6 +349,28 @@ mod tests {
                 cache_write: None
             }
         );
+    }
+
+    #[test]
+    fn the_catalog_price_wins_over_the_config_price() {
+        let own = Rates {
+            input: 0.042,
+            output: 0.0,
+            cache_read: None,
+            cache_write: None,
+        };
+        assert_eq!(choose(Some(opus()), Some(&own)), Some(opus()));
+        assert_eq!(choose(None, Some(&own)), Some(own));
+        assert_eq!(choose(None, None), None);
+    }
+
+    #[test]
+    fn a_config_price_reads_snake_case_keys() {
+        let r: Rates =
+            toml::from_str("input = 1.0\noutput = 2.0\ncache_read = 0.1\ncache_write = 1.5\n")
+                .unwrap();
+        assert_eq!(r.cache_read, Some(0.1));
+        assert_eq!(r.cache_write, Some(1.5));
     }
 
     #[test]

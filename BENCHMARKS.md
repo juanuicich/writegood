@@ -53,8 +53,8 @@ a probability. It cannot write text. The first attempt found candidates with
 hand-written English word lists and scored well. That broke a rule of the
 app: a pass's rule text must be its whole definition, and must work in any
 language. The second attempt used the rule text alone. Results in
-`2026-09-23-jev.md`, `2026-09-23-jev-nolist.md` and section 4 of
-`2026-09-23-followup.md`.
+`2026-09-23-jev.md`, `2026-09-23-jev-nolist.md`, section 4 of
+`2026-09-23-followup.md` and `2026-09-23-jev-across.md`.
 
 ## How it is measured
 
@@ -92,7 +92,8 @@ The limits:
 ## The setup I use
 
 DeepSeek Flash on DeepSeek's own API, thinking off, with the verifier, for the
-eight fast passes. Gemini 3.8 Flash at low effort for paragraph order.
+eight fast passes. Gemini 3.8 Flash at low effort for paragraph order. With a
+TypeSafe key, filler words runs on Jev instead ("Filler words on Jev", below).
 
 | | F1 | First findings | Per draft | Cost per draft |
 |---|---|---|---|---|
@@ -153,6 +154,46 @@ A pass's `provider` sends that pass to a different provider. The provider
 override in the header bar wins over it, and sends every pass to one
 provider. The starter passes ship with paragraph order on the default
 provider at thinking `high`, so this change is yours to make.
+
+### Filler words on Jev
+
+Filler words scores higher on Jev than on DeepSeek: 83.7% and 85.7%
+against 74.3% and 68.4%, for about $0.002 a draft (the Jev section below).
+To use it, add a `jev` provider to `config.toml`:
+
+```toml
+[providers.jev]
+kind          = "jev"
+model         = "jev-1.13.0"
+key_ref       = "env:TYPESAFE_API_KEY"
+max_in_flight = 8
+price         = { input = 0.042, output = 0 }
+```
+
+Then add `provider = "jev"` to the frontmatter of
+`~/.writegood/passes/04-filler-words.md`, above its `[jev]` table:
+
+```toml
++++
+name = "Filler words"
+category = "filler-words"
+scope = "paragraph"
+provider = "jev"
+enabled = true
+
+[jev]
+method = "sentence"
+keep = 0.5
+note = "A word or phrase that adds emphasis or hedging and no meaning."
++++
+```
+
+A home made before the Jev build has no `[jev]` table in this file. Add the
+table as shown. `model` names a version, so a new release of Jev does not
+change the answers without notice. `price` is there because models.dev does
+not list TypeSafe; the app uses it only when the catalog has no price. The
+provider override in the header bar sends a pass to Jev only when the pass
+has a `[jev]` table.
 
 ## Using a plan you already pay for
 
@@ -302,6 +343,11 @@ which needs no language setting. The pass's own rule text is the question.
   span of one to eight words, and a multiple-choice question picks the span
   the rule says to quote. Up to three more rounds look for another problem in
   the same sentence.
+- **Method `across`.** Method 2, plus one yes/no question per paragraph: does
+  the problem lie across two or more sentences? If yes, one multiple-choice
+  question picks the sentence that holds the quote, and one picks the span.
+  Here the spans also include every span that starts at the sentence's first
+  word, at any length. SPEC §8.4 defines it for sentence openings.
 
 Per pass, on the four drafts, two runs each:
 
@@ -311,16 +357,21 @@ Per pass, on the four drafts, two runs each:
 | filler-words | Method 2 | 83.7%, 85.7% | 74.3%, 68.4% | $0.0022 |
 | passive-actor | Method 1 | 66.7%, 73.7% | 60.0%, 57.1% | $0.0011 |
 | passive-actor | Method 2 | 73.7%, 70.0% | 60.0%, 57.1% | $0.0015 |
-| sentence-openings | Method 2 | 72.7%, 72.7% | 44%, 60% | $0.0017 |
-| sentence-openings | Method 2, clearer rule | 100%, 88.9% | 44%, 60% | $0.0018 |
+| sentence-openings | `across` | 66.7%, 61.5% | 66.7%, 66.7% | $0.0018 |
+| sentence-openings | `across`, clearer rule | 72.7%, 72.7% | 90.9%, 66.7% (clearer rule) | $0.0018 |
+| sentence-openings | old script, not rule text only | 72.7%, 72.7% | 44%, 60% | $0.0017 |
+| sentence-openings | old script, clearer rule, not rule text only | 100%, 88.9% | 44%, 60% | $0.0018 |
 | nominalization | Method 1 | 73% (mean) | 92% (earlier hybrid runs, mean) | about $0.001 |
 
-Sources: `2026-09-23-jev-nolist.md` and `2026-09-23-followup.md`.
+Sources: `2026-09-23-jev-nolist.md`, `2026-09-23-followup.md` and
+`2026-09-23-jev-across.md`. The DeepSeek column for the `across` rows ran
+sentence openings alone (`ds-so-rw`, `ds-so-jo`). The other DeepSeek numbers
+come from full runs.
 
-The two sentence-openings rows do not measure a rule-text-only method. The
-script `run-sentence-openings.ts` puts rule logic in code: questions that name
-the two problems, counting of runs by pairs, and a count of words before the
-subject.
+The two "old script" rows do not measure a rule-text-only method. The script
+`run-sentence-openings.ts` puts rule logic in code: questions that name the
+two problems, counting of runs by pairs, and a count of words before the
+subject. Method `across` (`run-across.ts`) replaces it.
 
 - Method 2 quotes exactly the reference words for all 18 filler-word hits.
   Method 1 always quotes the whole sentence, which the scorer accepts but a
@@ -329,9 +380,21 @@ subject.
   verb group without its short subject. The rule asks for the subject when
   it is short.
 - The clearer sentence-openings rule says that sentences sharing only a
-  first pronoun or article are not a run, with an example. Jev had flagged
-  "I left… I reached… I arrived" as a repeated opening. With the new wording
-  it flagged no such run in either run.
+  first pronoun or article are not a run, with an example. With the old
+  wording, Jev and DeepSeek both flagged runs such as "I left… I reached… I
+  arrived" and "She rang… She carried… She went". With the new wording
+  neither flagged one, in two runs each. DeepSeek's mean on the pass rose
+  from 66.7% to 78.8%.
+- Method `across` found the run "The board" and three of the four late
+  subjects in every run, and quoted the reference words each time. It never
+  found the late subject "By the time I reached the top of the hill that
+  February,". It flagged "It is… It is" twice in `on-writing.md`, where the
+  rule asks for three sentences. One `across` run scored 66.7% only because
+  the scorer placed its quote "I" inside a reference item by accident. The
+  finding pointed at another sentence. Without that hit it scores 50%.
+- Filler words with Method 2 on the 5,000-word chapter: 115 requests, 7.4
+  seconds, $0.013, no error. The largest request used 8,661 tokens, 14% of
+  Jev's limit of 64,000.
 - Spanish: a hand translation of the essay, with the English rule files
   unchanged. Method 1 on three passes scored 67%, against 74% on the English
   original. Filler words held up best.
@@ -339,14 +402,20 @@ subject.
   from one run to the next. Every keep threshold here is 0.45 or 0.5. The
   thresholds are a compromise and were not tuned.
 
-Recommendation. Jev is promising for filler words with Method 2. Keep the
-LLM for sentence openings, nominalization and missing actor for now. The
-method `across` in SPEC §8.4 is for sentence openings, and it is not yet
-measured.
-Jev is not in the app yet. A spec is being written.
+Recommendation. Use Jev for filler words with Method 2. Its mean is 13
+points above DeepSeek's, and it runs a chapter in 7.4 seconds for about a cent.
+Keep sentence openings on DeepSeek. Method `across` scored 72.7% twice with
+the clearer rule, against a DeepSeek mean of 78.8% with the same rule. Keep
+nominalization and missing actor on the LLM too. The starter rule for
+sentence openings now has the clearer wording. It removed the pronoun-only
+runs on both models and did not lower DeepSeek's score.
 
-The list-based code in `bench/scripts/jev/` scored higher on some passes and
-must not ship. It stays in the repository as a record.
+The app runs Method 2 as method `sentence` (SPEC §8.4). Method `across` is
+not built. "Filler words on Jev", above, shows the setup.
+
+The first Jev attempt found candidates with hand-written word lists. It broke
+the rule that a pass's rule text is its whole definition, so its code is
+deleted. `bench/results/2026-09-23-jev.md` records what it measured.
 
 ## Running the benchmark yourself
 

@@ -21,7 +21,7 @@ export interface Appearance {
 }
 
 export interface Provider {
-  kind: "anthropic" | "openai" | "google" | "openai-compatible" | "cli";
+  kind: "anthropic" | "openai" | "google" | "openai-compatible" | "cli" | "jev";
   model?: string | null;
   baseUrl?: string | null;
   keyRef?: string | null;
@@ -42,6 +42,18 @@ export interface Provider {
   /** How much a reasoning model thinks. Absent keeps the provider's default
    *  (SPEC §9.1). */
   thinking?: Thinking | null;
+  /** A jev provider: the keep threshold for its passes (SPEC §8.4). */
+  keep?: number | null;
+  /** US dollars per million tokens, used when the price catalog has no
+   *  price for the model (SPEC §9.4). */
+  price?: Rates | null;
+}
+
+export interface Rates {
+  input: number;
+  output: number;
+  cacheRead?: number | null;
+  cacheWrite?: number | null;
 }
 
 export type Thinking = "off" | "low" | "high" | "max";
@@ -75,6 +87,14 @@ export interface Pass {
   thinking?: Thinking | null;
   /** Overrides the provider's ceiling for this pass. */
   timeoutSecs?: number | null;
+  /** The `[jev]` table, as written. Only a jev provider reads it (SPEC §8.4). */
+  jev?: JevSettings | null;
+}
+
+export interface JevSettings {
+  method?: string | null;
+  keep?: number | null;
+  note?: string | null;
 }
 
 export interface DocumentRow {
@@ -125,6 +145,17 @@ export interface Reply {
   text: string;
   tokens: Tokens | null;
   costUsd: number | null;
+}
+
+/** A Jev reply (SPEC §9.5). Rust does not read `answers`; `jev.ts` does.
+ *  `unreadable` says why a body could not be read, and `answers` is then
+ *  null. `model` is the version that answered. */
+export interface JevReply {
+  answers: unknown;
+  tokens: Tokens | null;
+  costUsd: number | null;
+  model: string | null;
+  unreadable: string | null;
 }
 
 /** What a run or a duel used, summed over its calls. Null means not
@@ -351,6 +382,13 @@ export const cli = {
 export const llm = {
   chat: (name: string, provider: Provider, system: string, prompt: string) =>
     invoke<Reply>("llm_chat", { name, provider, system, prompt }),
+};
+
+/** A request to Jev, TypeSafe's decision model (SPEC §9.5). Rust makes it,
+ *  for the same reasons as `llm.chat`. */
+export const jev = {
+  ask: (name: string, provider: Provider, state: unknown, questions: unknown) =>
+    invoke<JevReply>("jev_ask", { name, provider, state, questions }),
 };
 
 /** Open a path with the system default application. Rust owns the filesystem,

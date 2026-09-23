@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { documentKey, fingerprint, paragraphKey } from "./keys";
+import { documentKey, fingerprint, jevFingerprint, paragraphKey } from "./keys";
 
 const base = {
   system: "You are a copyeditor.",
@@ -51,5 +51,39 @@ describe("keys", () => {
     const fp = await fingerprint(base);
     expect(await documentKey(fp, "One.\n\nTwo.")).not.toBe(await documentKey(fp, "One.\n\nTwo!"));
     expect(await documentKey(fp, "x")).not.toBe(await paragraphKey(fp, "x", null));
+  });
+});
+
+describe("the fingerprint of a pass on Jev", () => {
+  const jev = {
+    rule: "Find filler.",
+    category: "filler-words",
+    method: "sentence",
+    keep: 0.5,
+    note: "Adds nothing.",
+    provider: "jev",
+    model: "jev-1.13.0",
+    fixed: "question texts and constants",
+  };
+
+  test("changes with the rule, the settings, the provider and the method", async () => {
+    const fp = await jevFingerprint(jev);
+    expect(await jevFingerprint({ ...jev })).toBe(fp);
+    for (const change of [
+      { rule: "Find hedges." },
+      { category: "hedges" },
+      { method: "across" },
+      { keep: 0.45 },
+      { note: "Other." },
+      { provider: "jev2" },
+      { model: "jev-1.14.0" },
+      { fixed: "other texts" },
+    ]) {
+      expect(await jevFingerprint({ ...jev, ...change })).not.toBe(fp);
+    }
+  });
+
+  test("differs from a language-model fingerprint of the same pass", async () => {
+    expect(await jevFingerprint(jev)).not.toBe(await fingerprint(base));
   });
 });

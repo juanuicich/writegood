@@ -1,7 +1,8 @@
 # writegood — specification
 
 Status: built, 23 September 2026. The build order in §14 is done; §15 lists
-what is open. Passes on Jev (§8.4, §9.5) are specified and not built.
+what is open. Passes on Jev (§8.4, §9.5) are built with method `sentence`.
+Method `across` is specified and not built.
 
 ---
 
@@ -181,6 +182,7 @@ writegood/
 │   │   │   ├── keys.ts           keys for saved answers (§8.3)
 │   │   │   ├── filter.ts         code filters on candidates (§8.3)
 │   │   │   ├── verify.ts         the verifier's prompt and vote (§8.3)
+│   │   │   ├── jev.ts            passes on Jev: segments, spans, questions (§8.4)
 │   │   │   └── schema.ts         Zod finding schema + system preamble
 │   │   ├── providers/index.ts    resolve a provider name (the call is Rust's)
 │   │   ├── history/History.svelte  revisions sheet and word diff
@@ -196,6 +198,7 @@ writegood/
 │       ├── anchors.rs            re-anchoring (§7)
 │       ├── config.rs             ~/.writegood config, rules, passes
 │       ├── llm.rs                provider calls via genai (§9.2)
+│       ├── jev.rs                requests to Jev (§9.5)
 │       ├── prices.rs             the price catalog and cost per call (§9.4)
 │       ├── diff.rs               word-level diff for revisions
 │       ├── log.rs                ~/.writegood/writegood.log
@@ -718,7 +721,8 @@ saved answers and asks every question again.
 
 ### 8.4 Passes on Jev
 
-Status: specified on 23 September 2026. Not built.
+Status: method `sentence` built on 23 September 2026. Method `across` is
+specified and not built.
 
 Jev is TypeSafe's decision model (§9.5). It does not write text. It answers
 typed questions about a text that the caller sends as `state`. A Noul returns
@@ -776,7 +780,7 @@ note = "A word or phrase that adds emphasis or hedging and no meaning."
 **Method `sentence`.** The benchmark calls this Method 2. For each paragraph:
 
 1. **Detect.** One request, whose state is the paragraph. It holds one Noul
-   per sentence. Each Noul carries the rule text, the paragraph and the
+   per sentence, keyed `s0`, `s1` and on. Each Noul carries the rule text, the paragraph and the
    sentence. It asks whether the sentence itself shows the problem that the
    rule defines, with every exclusion in the rule applied. A sentence whose
    answer is below `keep` is done.
@@ -784,17 +788,24 @@ note = "A word or phrase that adds emphasis or hedging and no meaning."
    The options are every span of one to eight consecutive words of the
    sentence. The description of each option is the exact text of its span.
    The Choice asks which option is exactly the text that the rule says to
-   quote. A Choice takes at most 255 options. For a sentence with more spans
-   than that, the longest length leaves the list first, until the list fits.
+   quote. An option's key is the indices of its first and last word, such
+   as `3-5`. A Choice takes at most 255 options. For a sentence with more
+   spans than that, the longest length leaves the list first, until the list
+   fits. A sentence of more than 255 words keeps its first 255 single words.
+   Each later round removes at least the span it chose, so the list and
+   `none` still fit.
 3. **More instances.** A sentence can hold more than one problem. Up to three
    more rounds follow, one request each. Each round names the quotes already
    chosen, removes the spans that overlap them, and adds the option `none`. A
    round that picks `none` ends the sentence.
 
 The limit of eight words sets the longest quote. It does not decide what is
-flagged.
+flagged. The question texts are the ones the benchmark measured, in
+`run-rule-choice.ts`, word for word.
 
-**Method `across`.** This is the cross-sentence variant. It is for a rule
+**Method `across`.** Status: specified, not built. A pass with `method =
+"across"` fails at once, with a message that says so. This is the
+cross-sentence variant. It is for a rule
 whose problem can lie across sentences. Sentence openings uses it: a run of
 three sentences that open the same way is in no single sentence. It runs
 method `sentence` unchanged. It also asks, for each paragraph of two or more
@@ -819,8 +830,13 @@ The benchmark script for sentence openings differs from this variant in
 three ways, and each one put part of the definition in code. Its questions
 named the two problems of the sentence-openings rule. It found the length of
 a run with pairwise Nouls and a count. It counted the words before the
-subject against the rule's numbers. This spec removes all three, so the
-variant here has not been measured (§15).
+subject against the rule's numbers. This spec removes all three.
+
+The variant here was measured on 23 September 2026
+(`bench/results/2026-09-23-jev-across.md`). With the clearer wording below
+it scored 72.7% in both runs. DeepSeek, with the same wording, scored 90.9%
+and 66.7%, a mean of 78.8%. So sentence openings stays on the language
+model, and method `across` is not built.
 
 **Findings.** Each chosen span is one finding.
 
@@ -863,7 +879,8 @@ whole scalar values.
 these differences only:
 
 - A Jev pass has paragraph scope. A Jev pass with `scope = "document"` fails
-  at once, with a message that says so.
+  at once, with a message that says so. So does a `[jev]` table with an
+  unknown method or a keep outside 0 to 1.
 - One answer is one paragraph: every request for that paragraph. The runner
   saves the answer when its last request returns.
 - The state of each request is the paragraph alone. No window and no draft
@@ -898,8 +915,8 @@ asks every question again.
 **Failures** follow §8.3.
 
 - A reply that cannot be read fails only the answer of its paragraph. This
-  covers a body that is not JSON, a missing answer, an answer of the wrong
-  type, and a Choice outside the options. The runner does not save the
+  covers a body that is not JSON, a body with no `answers`, a missing
+  answer, an answer of the wrong type, and a Choice outside the options. The runner does not save the
   answer, and the next run asks it again. The status bar counts it with the
   unreadable replies. The pass fails only when every answer was unreadable.
 - A request with no reply fails the pass. This covers a network error, a
@@ -907,7 +924,8 @@ asks every question again.
   starts no more requests. It keeps the answers already complete. The next
   run asks the other paragraphs again.
 
-**Which passes.** Filler words and sentence openings run on Jev first.
+**Which passes.** Filler words runs on Jev. Sentence openings stays on the
+language model: method `across` scored below DeepSeek (above).
 Nominalization and missing actor stay on the language model for now. The
 other five starters have not been tried with the rule text alone.
 
@@ -919,6 +937,7 @@ Measured on the four scored drafts, two runs each, on 23 September 2026
 |---|---|---|---|---|---|
 | filler-words | `sentence`, keep 0.5 | 83.7%, 85.7% | 74.3%, 68.4% | 20 | $0.0022 |
 | sentence-openings | benchmark script, clearer wording | 100%, 88.9% | 44%, 60% | 40 | $0.0018 |
+| sentence-openings | `across`, clearer wording | 72.7%, 72.7% | 90.9%, 66.7% (clearer wording) | 19.5 | $0.0018 |
 | passive-actor | `sentence`, keep 0.45 | 73.7%, 70.0% | 60.0%, 57.1% | 13 | $0.0015 |
 | nominalization | one Noul per sentence, the quote is the sentence | 73% (mean) | 92% (earlier run) | ~9 | ~$0.0011 |
 
@@ -937,24 +956,31 @@ Jev's answers vary between runs with the same settings: 83.7% and 85.7% for
 filler words, 100% and 88.9% for sentence openings, 66.7% and 73.7% for
 missing actor with one Noul per sentence. Two runs are a small sample.
 
+Filler words on Jev also ran over the 5,038-word chapter: 115 requests in
+7.4 seconds for $0.013, with no error. The largest request used 8,661 input
+tokens, 14% of the limit.
+
 **The starter set.** `03-sentence-openings.md` takes the clearer exclusion
 wording measured above. A run by construction becomes "the same
 introductory phrase or clause before the subject". The exclusion becomes:
 sentences that share only their first word, when that word is an article or
 a pronoun, are not a run. It gives the example "He opened the door. He sat
 down. He waited." and says that a subject followed by its verb is not a
-shared construction. This also changes the pass on a language model.
+shared construction. This also changes the pass on a language model. On
+DeepSeek the new wording raised the mean F1 from 66.7% to 78.8% over two
+runs, and flagged no run that shares only a pronoun.
 
-`03-sentence-openings.md` gains a `[jev]` table with `method = "across"`.
-`04-filler-words.md` gains one with `method = "sentence"` and `keep = 0.5`.
-Neither starter names the `jev` provider, because a new home has no TypeSafe
-key. The author adds `provider = "jev"` to each. The starters are written
+`04-filler-words.md` gains a `[jev]` table with `method = "sentence"`,
+`keep = 0.5` and a note. It does not name the `jev` provider, because a new
+home has no TypeSafe key. The author adds `provider = "jev"`. Without it the
+pass runs on the default provider as a prompt, and the table is ignored.
+`03-sentence-openings.md` gains no `[jev]` table. The starters are written
 into a new home only, so an existing home keeps its pass files.
 
 The recommended setup names three providers:
 
 - `default_provider = "deepseek"` in `config.toml`, for the fast passes;
-- `provider = "jev"` in `03-sentence-openings.md` and `04-filler-words.md`;
+- `provider = "jev"` in `04-filler-words.md`;
 - `provider = "gemini"` in `06-paragraph-order.md`.
 
 Each pass already names its own provider (§8.1), so this needs no new
@@ -1019,6 +1045,12 @@ args    = ["-p", "{prompt}", "--output-format", "json"]
 json_path = "result"        # extract this field from stdout, then parse
 thinking = "off"            # not in the command; the pass runs with the verifier
 timeout_secs = 180
+
+[providers.jev]
+kind    = "jev"
+model   = "jev-1.13.0"
+key_ref = "env:TYPESAFE_API_KEY"
+price   = { input = 0.042, output = 0 }   # when models.dev has no price (§9.4)
 ```
 
 `[rules]` is the one place the two rules can be relaxed (§2). Turning
@@ -1032,7 +1064,7 @@ keywords.
 
 `kind` selects the backend. Anything with an API key goes through `genai` in
 `llm.rs` (§9.2); `cli` shells out; `jev` calls TypeSafe's endpoint from
-`jev.rs` (§9.5).
+`jev.rs` (§9.5). A `jev` provider runs only passes written for Jev (§8.4).
 
 `thinking` sets how much a reasoning model thinks before it answers: `off`,
 `low`, `high` or `max`. Left out, the provider's own default applies. A pass
@@ -1043,6 +1075,11 @@ which is its default. The other values go to the provider as its reasoning
 effort; an `openai-compatible` provider also gets `thinking: {"type":
 "enabled"}`. A `cli` provider passes the value to its command only through
 the `{thinking}` placeholder (§9.3), and otherwise ignores it.
+
+`price` gives the provider's rates, in US dollars per million tokens:
+`input` and `output`, and optionally `cache_read` and `cache_write`. The app
+uses it only when the price catalog has no price for the model (§9.4). Any
+provider can set it.
 
 `max_in_flight` caps how many calls to this provider run at once. Left out,
 it is 32. Calls to other providers do not count against it, and the run as a
@@ -1267,11 +1304,14 @@ file's running total:
 - some of each: `$0.042 · 3,100 tokens unpriced`
 
 The app never guesses a price. A model the catalog does not know, or a catalog
-that has never loaded, shows tokens and no money.
+that has never loaded, uses the provider's `price` from `config.toml` (§9.1).
+With no `price` either, the call shows tokens and no money. The catalog wins
+when it has a price, because it follows the vendor's changes and a price in
+`config.toml` does not.
 
 ### 9.5 Jev
 
-Status: specified on 23 September 2026. Not built.
+Status: built on 23 September 2026.
 
 Jev is TypeSafe's decision model. It answers Noul, Choice and Score
 questions about a `state`, and it writes no text. §8.4 says how a pass uses
@@ -1285,20 +1325,28 @@ key_ref       = "env:TYPESAFE_API_KEY"
 keep          = 0.45                 # optional; a pass's [jev] keep wins
 max_in_flight = 8
 timeout_secs  = 60
+price         = { input = 0.042, output = 0 }   # when models.dev has none
 ```
 
-**The call.** `jev.rs` makes it, through the command `jev_ask(provider,
-state, questions)`. Rust makes every network call (§5), and a tokio task is
+**The call.** `jev.rs` makes it, through the command `jev_ask(name,
+provider, state, questions)`. `name` is the provider's table name, which
+finds its price. Rust makes every network call (§5), and a tokio task is
 not suspended with the window (§9.2). The request is `POST
 https://api.typesafe.ai/v1/systemone` with the body `{state, model,
 questions}` and the key as a bearer token. `base_url` overrides the address.
-`genai` has no adapter for this API, which is not a chat API. `reqwest` makes
+`base_url` replaces `https://api.typesafe.ai/v1`, and the request goes to
+`{base_url}/systemone`. `genai` has no adapter for this API, which is not a
+chat API. `reqwest` makes
 the request. It is already a dependency, for the price catalog.
 
 Rust does not read the questions or the answers. It sends the questions as
 TypeScript built them. It returns the `answers` object as JSON, the token
 counts, the cost, and the `model` field of the response. TypeScript reads the
-answers (§8.4). Rust writes the answering model's version to the log.
+answers (§8.4). Rust writes the answering model's version to the log. A body
+that is not JSON, or that has no `answers` object, comes back with
+`answers` null and an `unreadable` message, so TypeScript counts it as an
+unreadable reply. A body with an `error` field that is not null fails the
+call.
 
 **The key** resolves as for every provider (§9.1): `keychain:service/account`,
 or `env:TYPESAFE_API_KEY` with the `.env` fallback. A missing key is Rust's to
@@ -1335,8 +1383,9 @@ They go into the usage of the call (§9.4) as input and output, with no cache
 counts. TypeSafe charges $0.042 per million input tokens, and output is free
 (Models page, 23 September 2026). The cost comes from the price catalog, as
 for every provider (§9.4). The vendor id is the table name, unless `catalog`
-names another. If models.dev does not list the model, the status bar shows
-tokens and no money.
+names another. models.dev did not list TypeSafe on 23 September 2026, so the
+example config sets `price`. Without either, the status bar shows tokens and
+no money.
 
 **Language.** English is Jev's main training language. TypeSafe says other
 languages are "handled but not equally well". The benchmark translated one
@@ -1810,20 +1859,14 @@ another (8.3).
   cost.
 - **Diff granularity in revision history.** Word-level diff is more useful than
   line-level for prose, and more work. Probably `similar` in Rust.
-- **Jev: the build waits for "build it".** §8.4 and §9.5 are a spec. No
-  code exists for them outside `bench/`.
-- **Jev: the sentence-openings variant is not measured.** Method `across`
-  (§8.4) leaves out the three parts of the benchmark script that put the
-  rule in code. Its score is unknown until the benchmark runs it, on the
-  four drafts and on the chapter. The recommendation for sentence openings
-  rests on the script, not on this variant.
+- **Jev: method `across` is not built.** Measured with the rule text alone,
+  it scored 72.7% on sentence openings, below DeepSeek's 78.8% mean with the
+  same rule (§8.4). It stays specified in case a later version of Jev or of
+  the rule changes that.
 - **Jev: severity is confidence.** It comes from the Noul probability, not
   from the severity bands in the rule. A Choice over the three severities,
   with the rule text as the criterion, would let the rule decide. It is not
   measured.
-- **Jev: the clearer sentence-openings wording is not measured on a
-  language model.** The starter change (§8.4) also changes the DeepSeek
-  pass.
 - **Jev: answers vary between runs.** Two runs per setting cannot separate a
   gain of a few points from noise. For missing actor, the gain over one
   Noul per sentence was smaller than the spread between runs.
@@ -1836,10 +1879,8 @@ another (8.3).
   `across` are not measured outside English.
 - **Jev: a long paragraph.** A request can pass the 64,000-token limit when
   a paragraph has many sentences, because each Noul carries the paragraph.
-  Splitting the detect request would avoid that. The chapter has not been
-  run through Jev.
-- **Jev: price.** The cost shows only if models.dev lists TypeSafe. The app
-  does not guess a price, and there is no price key in `config.toml`.
+  Splitting the detect request would avoid that. On the 5,000-word chapter
+  the largest request used 8,661 tokens.
 
 ---
 
@@ -1942,6 +1983,12 @@ The first set of tests covers:
 - **Duel.** `⌘D` opens the duel. A typed rewrite goes to the judge on `⌘R`,
   and the result names the version the judge picked, whichever side the
   shuffle put it on.
+- **Jev.** The test process also serves a fake Jev, and the home gets a
+  `jev` provider and a pass written for it. A run puts one note per chosen
+  span in the margin, with the pass's note and the draft's own words. Each
+  request carries the paragraph and the rule text. The cost comes from the
+  provider's `price`, because no catalog lists the fake. A rerun with no
+  edits asks Jev nothing.
 
 A test fails with the app's own log attached, read from the test home.
 

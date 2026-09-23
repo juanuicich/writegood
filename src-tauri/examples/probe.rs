@@ -10,8 +10,13 @@
 //!
 //! Usage:
 //!   probe --provider <name> --system <file> --prompt <file>
+//!   probe --provider <name> --jev <file>
+//!
+//! With `--jev`, the file holds `{"state": ..., "questions": ...}` as
+//! `src/lib/passes/jev.ts` built them. The request goes through `jev::ask`,
+//! as the app sends it, and the reply goes to stdout as JSON.
 
-use writegood_lib::{config, llm, prices};
+use writegood_lib::{config, jev, llm, prices};
 
 fn arg(args: &[String], flag: &str) -> Option<String> {
     args.iter()
@@ -47,6 +52,28 @@ async fn main() {
             None => String::new(),
         }
     };
+
+    if let Some(path) = arg(&args, "--jev") {
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            eprintln!("{path}: {e}");
+            std::process::exit(2);
+        });
+        let request: serde_json::Value = serde_json::from_str(&text).unwrap_or_else(|e| {
+            eprintln!("{path}: {e}");
+            std::process::exit(2);
+        });
+        if let Err(e) = prices::refresh_if_stale().await {
+            eprintln!("probe: {e}");
+        }
+        match jev::ask(&name, provider, &request["state"], &request["questions"]).await {
+            Ok(reply) => println!("{}", serde_json::to_string(&reply).unwrap()),
+            Err(e) => {
+                eprintln!("probe: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
 
     let system = read("--system");
     let prompt = read("--prompt");

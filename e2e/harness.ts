@@ -185,12 +185,90 @@ export function fakeModel(): FakeModel {
   return { url: `http://127.0.0.1:${server.port}/v1`, calls, stop: () => server.stop(true) };
 }
 
+// ------------------------------------------------------------- the fake Jev
+
+/** The Jev test pass (SPEC §8.4). Its rule text goes to Jev word for word. */
+export const JEV_RULE = "Find words that add emphasis and no meaning. Quote only the word.";
+export const JEV_NOTE = "A word that adds emphasis and no meaning.";
+export const JEV_CATEGORY = "jev-filler";
+
+const JEV_PASS = `+++
+name = "Jev filler"
+category = "${JEV_CATEGORY}"
+scope = "paragraph"
+provider = "jev"
+enabled = true
+
+[jev]
+keep = 0.5
+note = "${JEV_NOTE}"
++++
+
+${JEV_RULE}
+`;
+
+/** The words the fake Jev flags. A fixture of this test, not of the app. */
+export const JEV_WORDS = ["actually", "Unfortunately"];
+
+/** What one Jev call reports, and the price the config gives it: US dollars
+ *  per million input tokens. No catalog lists the fake, so the config price
+ *  applies (SPEC §9.4). A call costs 1000 × 10 / 1e6 = $0.01. */
+const JEV_USAGE = { input_tokens: 1000, output_tokens: 10 };
+const JEV_PRICE = 10;
+export const JEV_COST_PER_CALL = (JEV_USAGE.input_tokens * JEV_PRICE) / 1e6;
+
+export interface JevCall {
+  authorization: string | null;
+  body: {
+    state: unknown;
+    model: string;
+    questions: Record<string, { type: string; instructions: Record<string, unknown>; criteria: Record<string, string> }>;
+  };
+}
+
+export interface FakeJev {
+  url: string;
+  calls: JevCall[];
+  stop(): void;
+}
+
+/** A Jev endpoint on 127.0.0.1. A Noul says yes, at 0.9, for a sentence that
+ *  holds one of `JEV_WORDS`. A Choice picks the option whose text is such a
+ *  word and not yet quoted, else `none`. */
+export function fakeJev(): FakeJev {
+  const calls: JevCall[] = [];
+  const server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    async fetch(req) {
+      const url = new URL(req.url);
+      if (req.method !== "POST" || url.pathname !== "/v1/systemone") return new Response("not found", { status: 404 });
+      const body = (await req.json()) as JevCall["body"];
+      calls.push({ authorization: req.headers.get("authorization"), body });
+      const answers: Record<string, unknown> = {};
+      for (const [key, q] of Object.entries(body.questions)) {
+        const sentence = String(q.instructions.sentence ?? "");
+        if (q.type === "noul") {
+          answers[key] = { type: "noul", noul: JEV_WORDS.some((w) => sentence.includes(w)) ? 0.9 : 0.1 };
+          continue;
+        }
+        const already = (q.instructions.already_quoted as string[] | undefined) ?? [];
+        const hit = Object.entries(q.criteria).find(([, text]) => JEV_WORDS.includes(text) && !already.includes(text));
+        const choice = hit?.[0] ?? "none";
+        answers[key] = { type: "choice", choice, probabilities: { [choice]: 1 }, confidence: 1 };
+      }
+      return Response.json({ model: "jev-1.13.0", answers, usage: JEV_USAGE });
+    },
+  });
+  return { url: `http://127.0.0.1:${server.port}/v1`, calls, stop: () => server.stop(true) };
+}
+
 // ------------------------------------------------------------------ the home
 
 /** A fresh WRITEGOOD_HOME: a config pointing at the fake model, the draft, the
  *  test pass, and a price catalog dated now so the app does not fetch one.
  *  The app adds the starter passes itself; the fake answers them with []. */
-export function makeHome(modelUrl: string, options: LaunchOptions = {}): string {
+export function makeHome(modelUrl: string, options: LaunchOptions = {}, jevUrl?: string): string {
   const home = mkdtempSync(join(tmpdir(), "writegood-e2e-"));
   mkdirSync(join(home, "documents"));
   mkdirSync(join(home, "passes"));
@@ -199,6 +277,7 @@ export function makeHome(modelUrl: string, options: LaunchOptions = {}): string 
   // an untitled draft, and launch() opens the draft with ⌘O through this.
   writeFileSync(join(home, "pick.txt"), join(home, "documents", "committee.md"));
   writeFileSync(join(home, "passes", "00-e2e.md"), PASS);
+  if (jevUrl) writeFileSync(join(home, "passes", "00-e2e-jev.md"), JEV_PASS);
   writeFileSync(
     join(home, "config.toml"),
     `# Written by the e2e harness.
@@ -230,7 +309,19 @@ model    = "fake-judge"
 key_ref  = "env:WRITEGOOD_E2E_KEY"
 catalog  = "e2e"
 timeout_secs = 30
-`,
+${
+  jevUrl
+    ? `
+[providers.jev]
+kind     = "jev"
+base_url = "${jevUrl}"
+model    = "jev-1.13.0"
+key_ref  = "env:WRITEGOOD_E2E_KEY"
+max_in_flight = 8
+price    = { input = ${JEV_PRICE}, output = 0 }
+`
+    : ""
+}`,
   );
   writeFileSync(
     join(home, "prices.json"),
@@ -248,6 +339,8 @@ export interface App {
   browser: WebdriverIO.Browser;
   home: string;
   model: FakeModel;
+  /** The fake Jev, when the launch asked for one. */
+  jev?: FakeJev;
   /** The app's own log, from the test home. */
   log(): string;
   close(): Promise<void>;
@@ -275,6 +368,8 @@ async function waitFor(what: string, check: () => Promise<boolean>, ms: number) 
 export interface LaunchOptions {
   /** The fake provider's thinking setting. Off runs passes in two stages. */
   thinking?: "off" | "low" | "high" | "max";
+  /** Add a fake Jev, a jev provider and a pass written for it. */
+  jev?: boolean;
 }
 
 export async function launch(options: LaunchOptions = {}): Promise<App> {
@@ -282,7 +377,8 @@ export async function launch(options: LaunchOptions = {}): Promise<App> {
     throw new Error(`no test build at ${BINARY}. Run bun run e2e, which builds it first.`);
   }
   const model = fakeModel();
-  const home = makeHome(model.url, options);
+  const jev = options.jev ? fakeJev() : undefined;
+  const home = makeHome(model.url, options, jev?.url);
   const port = freePort();
 
   // Only what the app needs from this shell. Keys and other settings stay out.
@@ -310,6 +406,7 @@ export async function launch(options: LaunchOptions = {}): Promise<App> {
     await browser?.deleteSession().catch(() => {});
     proc.kill();
     model.stop();
+    jev?.stop();
     rmSync(home, { recursive: true, force: true });
   };
 
@@ -327,7 +424,7 @@ export async function launch(options: LaunchOptions = {}): Promise<App> {
     await close();
     throw new Error(`${e instanceof Error ? e.message : String(e)}\n--- app log ---\n${tail}`);
   }
-  return { browser, home, model, log, close };
+  return { browser, home, model, jev, log, close };
 }
 
 // ------------------------------------------------------------------- helpers
