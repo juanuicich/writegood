@@ -345,8 +345,9 @@ method `across` in SPEC §8.4 is for sentence openings, and it is not yet
 measured.
 Jev is not in the app yet. A spec is being written.
 
-The list-based code in `bench/scripts/jev/` scored higher on some passes and
-must not ship. It stays in the repository as a record.
+The first Jev attempt found candidates with hand-written word lists. It broke
+the rule that a pass's rule text is its whole definition, so its code is
+deleted. `bench/results/2026-09-23-jev.md` records what it measured.
 
 ## Running the benchmark yourself
 
