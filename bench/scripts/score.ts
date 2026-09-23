@@ -15,7 +15,9 @@
  *  --dump, writes the unmatched findings for a judge. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { paragraphs } from "../../src/lib/passes/parse";
 import { CORPUS, draftPath, stem, type Finding, type Result, type Tally } from "./lib";
+import type { JoinMap } from "./join";
 
 type Span = { from: number; to: number };
 
@@ -121,6 +123,68 @@ export function passesRun(r: Pick<Result, "calls">): Map<string, Set<string>> {
   return m;
 }
 
+/** A draft built by `join.ts` has a map beside it. */
+function mapOf(draft: string): JoinMap | null {
+  const file = join(CORPUS, `${stem(draft)}-map.json`);
+  return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
+}
+
+/** Move the findings on a joined draft back to the drafts they lie in. A
+ *  finding lies where its quote occurs in the paragraph its call examined,
+ *  or, without one, at the quote's first occurrence in the joined text. A
+ *  finding in the padding is dropped and counted as `outside`. A quote
+ *  found nowhere stays with the draft of its paragraph, where the scorer
+ *  counts it as unanchored. */
+export function unjoin(r: Pick<Result, "calls" | "findings">) {
+  const findings: Finding[] = [];
+  const run = new Map<string, Set<string>>();
+  let outside = 0;
+  for (const [draft, passes] of passesRun(r)) {
+    const map = mapOf(draft);
+    if (!map) {
+      run.set(draft, new Set([...(run.get(draft) ?? []), ...passes]));
+      findings.push(...r.findings.filter((x) => x.draft === draft));
+      continue;
+    }
+    for (const p of map.parts) if (p.scored) run.set(p.source, new Set([...(run.get(p.source) ?? []), ...passes]));
+    const text = readFileSync(draftPath(draft), "utf8");
+    const paras = paragraphs(text);
+    const starts: number[] = [];
+    let at = 0;
+    for (const p of paras) {
+      at = text.indexOf(p, at);
+      starts.push(at);
+      at += p.length;
+    }
+    const partAt = (i: number) => map.parts.find((p) => i >= p.from && i < p.to) ?? null;
+    for (const f of r.findings.filter((x) => x.draft === draft)) {
+      if (!passes.has(f.pass)) continue;
+      const chunk = f.chunk ?? null;
+      let pos: number | null = null;
+      if (chunk !== null) {
+        const inPara = locateAll(paras[chunk]!, f.quote)[0];
+        if (inPara) pos = starts[chunk]! + inPara.from;
+      }
+      pos ??= locateAll(text, f.quote)[0]?.from ?? null;
+      const part = partAt(pos ?? (chunk !== null ? starts[chunk]! : 0));
+      if (!part || !part.scored) {
+        outside++;
+        continue;
+      }
+      findings.push({ ...f, draft: part.source });
+    }
+  }
+  return { findings, passesRun: run, outside };
+}
+
+/** Score a result. Findings on a joined draft are scored on the drafts it
+ *  joins. */
+export function scoreResult(r: Pick<Result, "calls" | "findings">, skip: string[] = []) {
+  const u = unjoin(r);
+  for (const set of u.passesRun.values()) for (const p of skip) set.delete(p);
+  return { ...score(u.findings, u.passesRun), outside: u.outside };
+}
+
 const pct = (n: number) => (100 * n).toFixed(0).padStart(3) + "%";
 export function describe(label: string, s: NonNullable<ReturnType<typeof score>["scores"]>, byPass: boolean): string {
   const o = s.overall;
@@ -139,11 +203,10 @@ if (import.meta.main) {
   // did not have them.
   const si = process.argv.indexOf("--skip");
   const skip = si >= 0 ? process.argv[si + 1]!.split(",") : [];
-  const run = passesRun(r);
-  for (const set of run.values()) for (const p of skip) set.delete(p);
-  const { scores, unmatched } = score(r.findings, run);
+  const { scores, unmatched, outside } = scoreResult(r, skip);
   if (!scores) console.log(`${r.label}: no draft with reference findings`);
   else console.log(describe(r.label, scores, process.argv.includes("--by-pass")));
+  if (outside) console.log(`  ${outside} finding(s) in unscored padding`);
   const di = process.argv.indexOf("--dump");
   if (di >= 0) writeFileSync(process.argv[di + 1]!, JSON.stringify(unmatched, null, 2));
 }

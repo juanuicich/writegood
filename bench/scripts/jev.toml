@@ -1,0 +1,9 @@
+# The jev provider block from BENCHMARKS.md ("Filler words on Jev"), as the
+# author's config.toml has it. `run.ts --provider jev` writes it into a
+# throwaway home and sends each request through the app's `jev::ask`.
+[providers.jev]
+kind          = "jev"
+model         = "jev-1.13.0"
+key_ref       = "env:TYPESAFE_API_KEY"
+max_in_flight = 8
+price         = { input = 0.042, output = 0 }

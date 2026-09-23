@@ -33,7 +33,8 @@ grows with the square of the draft's length. A 5,000-word chapter sent about
 answers mean a rerun asks only about the paragraphs you changed. In the real
 app, a chapter took about 25 seconds the first time, about 3 seconds after
 editing one paragraph, and 1.5 seconds with no calls when nothing changed
-(`app-runs.md`).
+(`app-runs.md`). Windows did not lower the score on a joined draft of 18,000
+characters: 68.9% in windows, 68.0% sent whole (`2026-09-23-gaps.md`).
 
 **Run the calls in parallel.** The app keeps up to 32 calls in flight. A pass
 takes about as long as its slowest call, not the sum of its calls. A call
@@ -77,8 +78,9 @@ language. The second attempt used the rule text alone. Results in
 The limits:
 
 - Four small drafts. One reference item is 1.2 points of recall.
-- Two runs of the same configuration can differ by five or six F1 points.
-  Most configurations ran twice. Compare pairs, not single numbers.
+- Runs of the same configuration differ. Four runs of the current setup
+  scored 65.5% to 72.4% ("Baseline for rule changes", below). Most
+  configurations here ran twice. Compare pairs, not single numbers.
 - The reference is one model's reading of the rules. The judge found 22
   valid problems among 62 findings it had missed (`bench/judge/README.md`).
 - Paragraph order has six reference items. One finding moves its score by
@@ -86,8 +88,9 @@ The limits:
 - The chapter is `SPEC.md`, written to the same rules the passes check. It has
   few problems. DeepSeek refused 20 calls on it, because the draft describes
   the passes themselves.
-- All four scored drafts fit in one window. Nothing here measures quality
-  across windows.
+- All four scored drafts fit in one window. One test joins them, with
+  unscored padding, into a draft of five windows. It ran twice each way, on
+  six passes, so it would miss a loss of 5 points or less.
 
 ## The setup I use
 
@@ -117,6 +120,14 @@ scored 68.5% and 62.4% on the eight fast passes, against 70.2% and 70.5%
 the harness or noise. And the Gemini numbers were measured through
 OpenRouter, pinned to Google AI Studio. The app calls Google's API directly,
 which has not been measured.
+
+Through the app's own client, with OpenRouter as an `openai-compatible`
+provider and no pinning, paragraph order on Gemini low scored 80% in two
+runs, the same as pinned. It took about 4 seconds and $0.0025 a draft, and
+4.1 seconds and $0.007 on the chapter. Every OpenRouter endpoint for this
+model is Google's own, so an unpinned call reaches the same vendor. The
+`base_url` must end with a slash: `"https://openrouter.ai/api/v1/"`. Without
+it every call fails with 404 (`2026-09-23-gaps.md`, test 1).
 
 The config:
 
@@ -194,6 +205,39 @@ change the answers without notice. `price` is there because models.dev does
 not list TypeSafe; the app uses it only when the catalog has no price. The
 provider override in the header bar sends a pass to Jev only when the pass
 has a `[jev]` table.
+
+### Baseline for rule changes
+
+Use these numbers to judge a change to a rule. They are four runs on the
+four scored drafts of this configuration: the fast passes on DeepSeek direct
+with thinking off and the verifier, paragraph order on DeepSeek at high (the
+starter setting, not Gemini), and filler words on Jev as the app runs it. Rule set `2026-09-23-shipped`
+(`noise-1` to `-4`; `2026-09-23-gaps.md`, test 3).
+
+| Pass | Items | Mean F1 | SD | Range |
+|---|---|---|---|---|
+| filler-words (Jev) | 18 | 79.3% | 5.0 | 71.8–81.8% |
+| length | 6 | 54.2% | 11.7 | 40.0–66.7% |
+| nominalization | 14 | 88.5% | 4.4 | 84.6–92.3% |
+| paragraph-order | 6 | 80.2% | 5.1 | 75.0–85.7% |
+| passive-actor | 10 | 56.3% | 6.1 | 50.0–63.6% |
+| repeated-phrasing | 11 | 65.1% | 4.9 | 60.9–71.4% |
+| sentence-openings | 5 | 71.5% | 19.2 | 44.4–88.9% |
+| topic-flow | 5 | 30.0% | 11.4 | 19.0–44.4% |
+| unearned-metaphor | 7 | 84.3% | 6.4 | 76.9–92.3% |
+| **All passes** | 82 | **69.6%** | **3.1** | 65.5–72.4% |
+
+SD is in F1 points. Precision averaged 64.6% and recall 75.6%. First
+findings came in 4.3 to 5.5 seconds, and a draft cost $0.022 to $0.026.
+
+- One run with nothing changed can land 4 points from the mean. Two runs
+  differed by 7.
+- Run a changed rule four times and compare the means. A difference under
+  about 4.5 points on all passes is noise.
+- A pass with five or six items moved 11 to 45 points between runs. A change
+  to one of those rules needs more drafts than these four.
+- Filler words scored 81.8% in three runs. The fourth lost one paragraph to
+  a `503` from TypeSafe and scored 71.8%.
 
 ## Using a plan you already pay for
 
