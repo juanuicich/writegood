@@ -94,8 +94,8 @@ const CONFIG = {
     blindJudge: true,
   },
   appearance: {
-    font: "Literata, ui-serif, Georgia, serif",
-    fontSize: 18,
+    font: "Noto Serif, ui-serif, Georgia, serif",
+    fontSize: 16,
     measure: 68,
     theme: new URLSearchParams(location.search).get("theme") ?? "light",
     // ?cost shows the file's spending in the status bar.

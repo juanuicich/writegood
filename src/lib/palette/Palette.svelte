@@ -19,7 +19,7 @@
   let { commands }: { commands: Command[] } = $props();
 
   /** Menu commands that still run while a sheet is open. */
-  const SHEET_SAFE = new Set(["bigger", "smaller"]);
+  const SHEET_SAFE = new Set(["bigger", "smaller", "actual-size"]);
 
   let query = $state("");
   let selected = $state(0);
@@ -226,7 +226,7 @@
     font-size: 1.3rem;
     line-height: 1.5;
     padding: 0 0 0.5rem;
-    border-bottom: 1px solid var(--ink);
+    border-bottom: 1px solid var(--primary);
     flex: 0 0 auto;
   }
   input::placeholder { color: var(--ink-faint); }

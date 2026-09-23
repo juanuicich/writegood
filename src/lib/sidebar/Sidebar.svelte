@@ -301,7 +301,7 @@
     height: 100%;
     width: 23rem;
     flex: 0 0 23rem;
-    font-size: 0.7em;
+    font-size: 0.8em;
     line-height: 1.55;
     color: var(--ink-soft);
   }

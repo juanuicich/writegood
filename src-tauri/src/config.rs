@@ -183,10 +183,10 @@ pub struct Appearance {
 }
 
 fn default_font() -> String {
-    "Literata, ui-serif, Georgia, serif".to_string()
+    "Noto Serif, ui-serif, Georgia, serif".to_string()
 }
 fn default_font_size() -> u32 {
-    18
+    16
 }
 fn default_measure() -> u32 {
     68
@@ -372,8 +372,8 @@ forbid_praise       = true   # the no-encouragement preamble
 blind_judge         = true   # shuffle A/B, strip history, require a second vendor
 
 [appearance]
-font        = "Literata, ui-serif, Georgia, serif"
-font_size   = 18
+font        = "Noto Serif, ui-serif, Georgia, serif"
+font_size   = 16
 measure     = 68             # characters per line
 theme       = "light"        # light | dark | system
 show_cost   = false          # the file's running cost in the status bar

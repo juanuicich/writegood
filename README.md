@@ -87,7 +87,8 @@ Linux draw a menu inside the window frame, over the text, so they get the
 keyboard and `⌘K` only.
 
 `⌘+` and `⌘-` change the text size, body and margin together, and save it to
-`config.toml`.
+`config.toml`. `⌘0` returns it to the base size. The View menu and the palette
+switch between the light and dark themes.
 
 ## Stack
 

@@ -124,7 +124,7 @@
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.22em;
-    text-decoration-color: var(--accent);
+    text-decoration-color: var(--tertiary);
     color: var(--ink);
   }
 

@@ -162,7 +162,7 @@
     width: 100%;
     background: none;
     border: 0;
-    border-left: 1px solid var(--rule);
+    border-left: 1px solid var(--secondary);
     padding: 0 0 0 1.4rem;
     margin: 0 0 2.4rem;
     outline: none;

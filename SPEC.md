@@ -160,7 +160,7 @@ writegood/
 │   │   ├── text.ts               ProseMirror doc → plain text + position map
 │   │   ├── spans.ts              tidy the edges of drawn ranges (§12.3)
 │   │   ├── usage.ts              sum and word what calls cost (§9.4)
-│   │   ├── appearance.ts         text size steps (§12.1)
+│   │   ├── appearance.ts         text size steps, theme toggle (§12.1)
 │   │   ├── palette/Palette.svelte  the only chrome (§12.2)
 │   │   ├── editor/
 │   │   │   ├── Editor.svelte     TipTap instance
@@ -667,27 +667,59 @@ menu bar is outside the window, in the system bar, so it costs the document no
 space and the app fills it in (§12.2). Windows and Linux draw a menu inside the
 window frame, above the text, so those platforms get no menu at all.
 
-**Type.** Literata, bundled as a variable font in four woff2 subsets, about
-390 KB. It is a modern reading serif — softer and rounder than a bookface,
-drawn for screens, with optical sizing. Set at 18px on a 1.66 line, a fixed
-measure of about 68 characters, and generous margins. `ui-serif` and Georgia
-follow it in the stack, and `[appearance] font` overrides the whole thing.
-Bundled rather than fetched, because the app must work with no network.
+**Type.** Noto Serif, bundled as a variable font with weight and width axes,
+in four woff2 subsets (latin and latin-ext, roman and italic), about 915 KB.
+The body is 16px, width 100, weight 250, on a 1.66 line, with a fixed measure
+of about 68 characters and generous margins. `ui-serif` and Georgia follow it
+in the stack, and `[appearance] font` overrides the whole thing. Bundled
+rather than fetched, because the app must work with no network.
 
-**Size.** `⌘+` and `⌘-` change the text size by 1px, from 12px to 32px. The
-size is `[appearance] font_size`, and every change is saved to `config.toml`,
-so the next launch opens at the same size. The body, the margin and the
-chrome all scale together: the margin and the chrome are set in `em` and
-`rem` against the body size.
+Headings step from H1 down towards the body:
 
-**Colour is rationed.** Paper and ink carry everything, with one grey for
-anything secondary. There is exactly one accent: a muted vermilion, the red of
-a hanko seal. It means "you are here" and nothing else — the selected finding,
-the selected revision, additions in a diff, the duel's verdict, and the two
-states worth a glance from across the room, *working* and *unsaved*.
+| Level | Size | Width | Weight |
+|---|---|---|---|
+| H1 | 36px | 95 | 300 |
+| H2 | 30px | 96 | 290 |
+| H3 | 25px | 97 | 280 |
+| H4 | 21px | 98 | 270 |
+| H5 | 18px | 99 | 260 |
+| H6 | 17px | 100 | 250 |
 
-Severity is still carried by the weight of an underline, never by hue. Nothing
-in the text competes with the text.
+Sizes are set in `em` against the body, so the ratios hold at any text size.
+
+**Size.** `⌘+` and `⌘-` change the text size by 1px, from 12px to 32px. `⌘0`
+returns it to the base size, 16px. The size is `[appearance] font_size`, and
+every change is saved to `config.toml`, so the next launch opens at the same
+size. The body, the margin and the chrome all scale together: the margin and
+the chrome are set in `em` and `rem` against the body size.
+
+**Colour.** Each theme sets its accent colours from a palette. The light theme
+also takes its paper from its palette. The dark theme keeps its neutral dark
+paper, `#16161A`, and its greys.
+
+| Role | Light | Dark |
+|---|---|---|
+| Paper | `#FFF6DC` | `#16161A` |
+| Headings and list markers | `#425B9A` | `#FF467A` |
+| "You are here": the bar beside the selected note, its category, the selected revision and palette row, the duel's verdict, the working state | `#425B9A` | `#FFD51E` |
+| Caret | ink | `#FFD51E` |
+| Finding underlines | `#76C0EC`; `#425B9A` when high | `#AB03A9` |
+| Text selection | a wash of `#FF95A5` | `#5003C0` |
+| The selected finding's highlight | a wash of `#76C0EC` | `#5003C0` |
+| Quote bars, rules, link underlines | `#76C0EC` | `#AB03A9` |
+| The unsaved mark, additions in a diff | `#FF95A5` | `#FF467A` |
+
+Body text stays in ink, a near-black navy in light and a near-white in dark.
+No palette colour carries running text: the light `#76C0EC` and `#FF95A5` are
+too low in contrast on the cream paper.
+
+**Theme.** `[appearance] theme` is `light`, `dark` or `system`. The palette
+command *theme* sets it, and *switch light and dark* flips what is on screen;
+from `system` it moves to the opposite of what the system shows. Both are in
+the View menu. Every change is saved to `config.toml`.
+
+Severity is carried by the weight of an underline. In the light theme, a high
+finding also takes `#425B9A`.
 
 Three panes, but only one of them is ever furniture. Centre: the editor.
 Right: the sidebar, notes aligned to the vertical position of the text they
@@ -715,15 +747,16 @@ apart. A command that needs an argument opens the palette on that command. The
 Edit submenu carries Undo, Redo, Cut, Copy, Paste and Select All: WKWebView
 takes those keystrokes from the menu, and without the items the editor cannot
 copy or paste. File > Open the writegood folder is handled in Rust, because
-Rust owns the filesystem. View carries Bigger text (`⌘+`) and Smaller text
-(`⌘-`), where macOS apps put them.
+Rust owns the filesystem. View carries Bigger text (`⌘+`), Smaller text
+(`⌘-`) and Actual size (`⌘0`), where macOS apps put them, and the two theme
+commands.
 
 No menu item writes model words into the document. There is nothing to write
 (§2).
 
 ### 12.3 Findings in the text
 
-Open findings get a subtle underline, coloured by severity. The selected finding
+Open findings get a subtle underline, weighted by severity (§12.1). The selected finding
 gets a background highlight and its sidebar note expands. Stale findings are
 greyed with no underline. Dismissed findings are hidden unless you turn them on.
 
@@ -779,6 +812,7 @@ Always available:
 | `⌘D` | duel: rewrite the current paragraph |
 | `⌘Y` | revisions |
 | `⌘+` / `⌘-` | bigger / smaller text, saved to the config |
+| `⌘0` | text back to the base size, saved to the config |
 | `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
 | `Esc` | review mode |
 
@@ -810,8 +844,8 @@ It is not known which sees a ⌘ key first on macOS, the page or the menu bar.
 The app works in either order. While the duel or the revisions sheet is open,
 a menu command goes to the sheet, not to the palette: `Run all passes` asks
 the judge in the duel and does nothing in the revisions sheet. Text size is
-the exception: `⌘+` and `⌘-` work over either sheet, from the keyboard and
-from the menu.
+the exception: `⌘+`, `⌘-` and `⌘0` work over either sheet, from the keyboard
+and from the menu.
 
 The duel and the revisions sheet cover the window and take the keyboard while
 they are open: `Esc` closes, `⌘R` or `⌘⏎` asks the judge, `j` / `k` move between

@@ -1,69 +1,88 @@
 /* writegood — quiet, serif, text first.
    Reference points: iA Writer, and the restraint of Japanese minimalism.
 
-   Colour is rationed. The palette is paper and ink, plus one accent — a muted
-   vermilion, the red of a hanko seal — used only to say "you are here": the
-   selected finding, the selected revision, the unsaved mark. Severity is still
-   carried by the weight of an underline, never by hue, so nothing competes
-   with the text. */
+   Each theme has four colours, used in a fixed order of rank:
+   1. primary   — headings and list markers.
+   2. secondary — structure: rules, quotes and finding underlines.
+   3. tertiary  — small marks: the unsaved mark and additions in a diff.
+   The accent marks "you are here": the selected finding and its note, the
+   selected revision, the working state.
+   Light: #425B9A, #76C0EC, #FF95A5 on #FFF6DC paper. The accent is the
+          primary, and the selection and highlight are washes of the palette.
+   Dark:  #FF467A, #AB03A9, #FF467A on the neutral dark paper. The accent is
+          #FFD51E, which also colours the caret. #5003C0 fills the text
+          selection and the selected finding.
+   Body text stays in ink. No palette colour carries running text. */
 
-/* Literata: a modern reading serif, softer than a bookface and built for
-   screens. Bundled rather than fetched, because the app must work offline. */
+/* Noto Serif: a variable font with weight and width axes. Bundled rather than
+   fetched, because the app must work offline. */
 @font-face {
-  font-family: "Literata";
+  font-family: "Noto Serif";
   font-style: normal;
-  font-weight: 200 900;
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
   font-display: block;
-  src: url("./assets/fonts/literata-roman-latin.woff2") format("woff2");
+  src: url("./assets/fonts/noto-serif-roman-latin.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: "Literata";
+  font-family: "Noto Serif";
   font-style: normal;
-  font-weight: 200 900;
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
   font-display: block;
-  src: url("./assets/fonts/literata-roman-latin-ext.woff2") format("woff2");
+  src: url("./assets/fonts/noto-serif-roman-latin-ext.woff2") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
     U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
     U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: "Literata";
+  font-family: "Noto Serif";
   font-style: italic;
-  font-weight: 200 900;
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
   font-display: block;
-  src: url("./assets/fonts/literata-italic-latin.woff2") format("woff2");
+  src: url("./assets/fonts/noto-serif-italic-latin.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: "Literata";
+  font-family: "Noto Serif";
   font-style: italic;
-  font-weight: 200 900;
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
   font-display: block;
-  src: url("./assets/fonts/literata-italic-latin-ext.woff2") format("woff2");
+  src: url("./assets/fonts/noto-serif-italic-latin-ext.woff2") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
     U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
     U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 :root {
-  --paper:      #fcfbf8;
-  --ink:        #1b1a17;
-  --ink-soft:   #6a675e;
-  --ink-faint:  #a9a69b;
-  --rule:       #e8e5dc;
-  --wash:       #f0ede4;
-  --wash-deep:  #e4e0d4;
-  --accent:     #b04a2f;
-  --accent-wash:#f4e6df;
+  --primary:    #425b9a;
+  --secondary:  #76c0ec;
+  --tertiary:   #ff95a5;
+
+  --paper:      #fff6dc;
+  --ink:        #1e2640;
+  --ink-soft:   #56607e;
+  --ink-faint:  #9a9c9f;
+  --rule:       #d9dfd6;
+  --wash:       #e6ece0;
+  --wash-deep:  #cfe3e2;
+  --accent:     var(--primary);
+  --accent-wash:#c1dde3;
+  --selection:  #ffd4c9;
+  --underline:  var(--secondary);
+  --underline-strong: var(--primary);
+  --caret:      var(--ink);
 
   --measure: 68ch;
-  --size: 18px;
-  --serif: "Literata", ui-serif, Charter, Georgia, serif;
+  --size: 16px;
+  --serif: "Noto Serif", ui-serif, Charter, Georgia, serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
 
   --lead: 1.66;
@@ -77,6 +96,10 @@
 }
 
 :root[data-theme="dark"] {
+  --primary:    #ff467a;
+  --secondary:  #ab03a9;
+  --tertiary:   #ff467a;
+
   --paper:      #16161a;
   --ink:        #e5e3da;
   --ink-soft:   #97948a;
@@ -84,13 +107,20 @@
   --rule:       #2b2b31;
   --wash:       #202027;
   --wash-deep:  #2b2b33;
-  --accent:     #dd8467;
-  --accent-wash:#33241f;
+  --accent:     #ffd51e;
+  --accent-wash:#5003c0;
+  --selection:  #5003c0;
+  --underline-strong: var(--secondary);
+  --caret:      #ffd51e;
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --primary:    #ff467a;
+    --secondary:  #ab03a9;
+    --tertiary:   #ff467a;
+
     --paper:      #16161a;
     --ink:        #e5e3da;
     --ink-soft:   #97948a;
@@ -98,8 +128,11 @@
     --rule:       #2b2b31;
     --wash:       #202027;
     --wash-deep:  #2b2b33;
-    --accent:     #dd8467;
-    --accent-wash:#33241f;
+    --accent:     #ffd51e;
+    --accent-wash:#5003c0;
+    --selection:  #5003c0;
+    --underline-strong: var(--secondary);
+    --caret:      #ffd51e;
     color-scheme: dark;
   }
 }
@@ -113,7 +146,10 @@ html, body {
   color: var(--ink);
   font-family: var(--serif);
   font-size: var(--size);
+  font-weight: 250;
+  font-stretch: 100%;
   line-height: var(--lead);
+  caret-color: var(--caret);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-variant-numeric: oldstyle-num;
@@ -125,7 +161,7 @@ body { overflow: hidden; }
 
 #app { height: 100%; }
 
-::selection { background: var(--wash-deep); }
+::selection { background: var(--selection); }
 
 button {
   font: inherit;
@@ -171,23 +207,26 @@ input {
 .ProseMirror p { margin: 0 0 var(--step); }
 .ProseMirror > *:last-child { margin-bottom: 0; }
 
-.ProseMirror h1,
-.ProseMirror h2,
-.ProseMirror h3 {
-  font-weight: 600;
+/* H1 is 36px, width 95, weight 300 against a 16px body. Each level below
+   steps size, width and weight towards the body. Sizes are in em, so ⌘+ and
+   ⌘- keep the ratios. */
+.ProseMirror :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--primary);
   line-height: 1.25;
   margin: calc(var(--step) * 1.9) 0 var(--step);
-  letter-spacing: -0.012em;
 }
-.ProseMirror h1 { font-size: 1.62em; }
-.ProseMirror h2 { font-size: 1.28em; }
-.ProseMirror h3 { font-size: 1.07em; }
+.ProseMirror h1 { font-size: 2.25em;   font-stretch: 95%; font-weight: 300; }
+.ProseMirror h2 { font-size: 1.875em;  font-stretch: 96%; font-weight: 290; }
+.ProseMirror h3 { font-size: 1.5625em; font-stretch: 97%; font-weight: 280; }
+.ProseMirror h4 { font-size: 1.3125em; font-stretch: 98%; font-weight: 270; }
+.ProseMirror h5 { font-size: 1.125em;  font-stretch: 99%; font-weight: 260; }
+.ProseMirror h6 { font-size: 1.0625em; font-stretch: 100%; font-weight: 250; }
 .ProseMirror > h1:first-child { margin-top: 0; }
 
 .ProseMirror blockquote {
   margin: var(--step) 0;
   padding-left: 1.4em;
-  border-left: 1px solid var(--rule);
+  border-left: 2px solid var(--secondary);
   color: var(--ink-soft);
 }
 
@@ -212,14 +251,15 @@ input {
 
 .ProseMirror ul, .ProseMirror ol { padding-left: 1.3em; margin: 0 0 var(--step); }
 .ProseMirror li + li { margin-top: 0.35em; }
+.ProseMirror li::marker { color: var(--primary); }
 
 .ProseMirror hr {
   border: 0;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--secondary);
   margin: calc(var(--step) * 2) 0;
 }
 
-.ProseMirror a { color: inherit; text-decoration-color: var(--ink-faint); }
+.ProseMirror a { color: inherit; text-decoration-color: var(--secondary); }
 
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -230,20 +270,21 @@ input {
 }
 
 /* --- findings in the text --------------------------------------------
-   Severity is carried by the weight of the underline, never by colour. */
+   Severity is carried by the weight of the underline. In light, a high
+   finding also takes the primary colour, one rank above the rest. */
 
 .finding {
   text-decoration: underline;
-  text-decoration-color: var(--ink-faint);
+  text-decoration-color: var(--underline);
   text-underline-offset: 0.22em;
   text-decoration-thickness: 1px;
   cursor: pointer;
 }
-.finding-high   { text-decoration-thickness: 2px; text-decoration-color: var(--ink-soft); }
+.finding-high   { text-decoration-thickness: 2px; text-decoration-color: var(--underline-strong); }
 .finding-low    { text-decoration-style: dotted; }
 .finding-stale  { text-decoration: none; color: var(--ink-faint); }
 
-/* The one place colour earns its keep: where you are. */
+/* Where you are. */
 .finding-current {
   background: var(--accent-wash);
   box-shadow: 0 0 0 0.18em var(--accent-wash);

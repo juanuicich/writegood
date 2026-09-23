@@ -9,7 +9,7 @@
   import { runPasses, summarise } from "./lib/passes/run";
   import { cfg, log, shell, store } from "./lib/ipc";
   import { label } from "./lib/usage";
-  import { nextSize } from "./lib/appearance";
+  import { BASE_SIZE, nextSize, otherTheme } from "./lib/appearance";
 
   let booted = $state(false);
   let override = $state<string | null>(null);
@@ -88,14 +88,23 @@
     });
   }
 
-  /** ⌘+ and ⌘-: the whole window's text, saved so the next launch keeps it
+  /** ⌘+ and ⌘-: the whole window's text, and ⌘0 back to the base size, saved so the next launch keeps it
    *  (SPEC §12.1). */
-  async function resize(step: 1 | -1) {
+  async function resize(step: 1 | -1 | 0) {
     const config = app.config;
     if (!config) return;
-    const size = nextSize(config.appearance.fontSize, step);
+    const size = step === 0 ? BASE_SIZE : nextSize(config.appearance.fontSize, step);
     if (size === config.appearance.fontSize) return;
     config.appearance.fontSize = size;
+    app.applyAppearance();
+    await cfg.save(config);
+  }
+
+  /** Set the theme and save it, so the next launch keeps it. */
+  async function setTheme(theme: "light" | "dark" | "system") {
+    const config = app.config;
+    if (!config) return;
+    config.appearance.theme = theme;
     app.applyAppearance();
     await cfg.save(config);
   }
@@ -191,15 +200,20 @@
         { value: "dark", label: "dark" },
         { value: "system", label: "system" },
       ],
-      run: async (theme) => {
-        if (!app.config || !theme) return;
-        app.config.appearance.theme = theme as "light" | "dark" | "system";
-        app.applyAppearance();
-        await cfg.save(app.config);
+      run: (theme) => theme && setTheme(theme as "light" | "dark" | "system"),
+    },
+    {
+      id: "toggle-theme",
+      label: "switch light and dark",
+      run: () => {
+        const current = app.config?.appearance.theme ?? "light";
+        const systemDark = matchMedia("(prefers-color-scheme: dark)").matches;
+        return setTheme(otherTheme(current, systemDark));
       },
     },
     { id: "bigger", label: "bigger text", hint: "⌘+", run: () => resize(1) },
     { id: "smaller", label: "smaller text", hint: "⌘-", run: () => resize(-1) },
+    { id: "actual-size", label: "actual size", hint: "⌘0", run: () => resize(0) },
     {
       id: "sidebar",
       label: "toggle the margin",
@@ -241,6 +255,11 @@
     if (meta && e.key === "-") {
       e.preventDefault();
       void resize(-1);
+      return;
+    }
+    if (meta && e.key === "0") {
+      e.preventDefault();
+      void resize(0);
       return;
     }
 
@@ -394,5 +413,5 @@
 
   /* Two states worth a glance: something is happening, something is unsaved. */
   .live { color: var(--accent); }
-  .unsaved { color: var(--accent); font-size: 1.4em; line-height: 0; }
+  .unsaved { color: var(--tertiary); font-size: 1.4em; line-height: 0; }
 </style>

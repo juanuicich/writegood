@@ -488,3 +488,30 @@ third-party defect and has not been reported upstream.
 
 **NOTE — the palette e2e test failed once in a full run** and passed in six
 runs after. The cause was not found.
+
+**DECISION — Noto Serif and two four-colour palettes.** This replaces
+Literata and the single vermilion accent. Noto Serif is bundled as a variable
+font with weight and width axes. The body is 16px, width 100, weight 250. H1 is
+36px, width 95, weight 300, and each level below steps towards the body. Each
+theme ranks its four colours: primary, secondary, tertiary and paper. Light
+uses `#425B9A`, `#76C0EC`, `#FF95A5` on `#FFF6DC`. Dark keeps its neutral
+paper and greys and takes only accents from its palette: `#FF467A` for
+headings, `#5003C0` for the selection and the selected finding, `#AB03A9` for
+underlines, `#FFD51E` for the note bar, the note's category and the caret. A
+first version drew the dark paper from `#5003C0` too; it was reverted. SPEC
+§12.1 lists every role. Checked in both themes in the browser view.
+
+**CHANGED — margin notes are 0.8em of the body, up from 0.7em**: 12.8px at
+the 16px base.
+
+**DONE — `⌘0` resets the text size to 16px**, from the keyboard, the View menu
+and the palette, and over either sheet. **DONE — "switch light and dark"** in
+the palette and the View menu, beside the existing three-way theme command.
+
+**NOTE — a config written before this change keeps Literata.** The old default
+config wrote `font = "Literata, …"`. Literata is no longer bundled, so such a
+file falls back to `ui-serif` until the line is removed or changed.
+
+**UNVERIFIED — the new View items by hand.** The tests cannot reach the menu
+bar. Needs checking: View shows Actual size with `⌘0`, and both theme items
+work.
