@@ -23,7 +23,7 @@ import { draftPath, flag, quantiles, RESULTS, SCORED, words, type CallRecord, ty
 import { describe, passesRun, score } from "../score";
 import { sentencesOf } from "./segment";
 import { ruleText } from "./rule-text";
-import { askJev, checkBudget, totalCalls, totalCost, type NoulQuestion } from "./jev-client";
+import { askJev, checkBudget, totalCalls, totalCost, type NoulAnswer, type NoulQuestion } from "./jev-client";
 
 const label = flag("--label", `rulenoul-${new Date().toISOString().slice(0, 10)}`)!;
 const drafts = (flag("--drafts") ?? SCORED.join(",")).split(",");
@@ -96,7 +96,7 @@ async function runDraft(name: string) {
             rec.cost = usage.cost;
             rec.candidates = sentences.length;
             sentences.forEach((s, i) => {
-              const p = answers[`q${i}`]?.noul;
+              const p = (answers[`q${i}`] as NoulAnswer | undefined)?.noul;
               if (p === undefined || p < keepThreshold) return;
               findings.push({
                 draft: name, pass: slug, quote: s.text, severity: severity(p),

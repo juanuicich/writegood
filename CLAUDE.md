@@ -81,6 +81,8 @@ bun run app          # tauri dev
 bun run app:build    # tauri build
 bun test src/lib     # frontend unit tests
 bunx svelte-check --tsconfig ./tsconfig.json
+bun run check:bench  # type-checks bench/, which svelte-check does not cover
+bun test bench       # checks the bench's agy block against SPEC and the runner
 cd src-tauri && cargo test && cargo clippy --all-targets
 bun run e2e          # builds a debug binary, then drives the real app
 ```

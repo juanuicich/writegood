@@ -4,7 +4,7 @@
  *  The prompts, the preamble, the parser, the filters and the verifier come
  *  from the app (src/lib/passes). The benchmark changes the provider, the
  *  model and the rules, and nothing else. */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import type { Pass } from "../../src/lib/ipc";
