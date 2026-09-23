@@ -5,6 +5,7 @@
   import { Placeholder } from "@tiptap/extensions";
   import { app } from "../state.svelte";
   import { Findings, setFindings, setFocus, type Mark } from "./findings";
+  import { ActiveParagraph } from "./paragraph";
 
   let host: HTMLDivElement;
   let editor: Editor | null = null;
@@ -18,6 +19,7 @@
         StarterKit.configure({ link: { openOnClick: false } }),
         Placeholder.configure({ placeholder: "Start writing good" }),
         Findings.configure({ onSelect: (ids) => app.selectInText(ids) }),
+        ActiveParagraph,
       ],
       content: "",
       autofocus: "end",

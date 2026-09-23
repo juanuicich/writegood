@@ -269,6 +269,20 @@ input {
   pointer-events: none;
 }
 
+/* The paragraph the cursor sits in carries the duel's bar in the margin.
+   It sits outside the text, so the words do not move as the cursor does.
+   ::before belongs to the placeholder, so the bar uses ::after. */
+.ProseMirror .active-paragraph { position: relative; }
+.ProseMirror .active-paragraph::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1.4rem;
+  border-left: 1px solid color-mix(in srgb, var(--secondary) 50%, transparent);
+  pointer-events: none;
+}
+
 /* --- findings in the text --------------------------------------------
    Severity is carried by the weight of the underline. In light, a high
    finding also takes the primary colour, one rank above the rest. */
