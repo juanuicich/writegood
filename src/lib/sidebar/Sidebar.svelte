@@ -19,12 +19,20 @@
    *  a track at least as tall as the prose it mirrors. */
   let trackHeight = $state(0);
 
-  /** True while the reader has wheeled the margin away from the prose. The
-   *  next scroll of the draft takes the lead back. */
-  let peeking = false;
+  /** How far the margin sits past level with the prose. Zero keeps each note
+   *  beside its sentence. The reader's wheel sets it, and so does revealing a
+   *  note that is stacked further down than the draft can scroll. The next
+   *  scroll of the draft by the reader sets it back to zero. */
+  let offset = 0;
   /** Set while we move the margin ourselves, so our own scroll event is not
    *  mistaken for the reader's. */
   let selfScroll = false;
+  /** Set while we move the draft ourselves, so revealing a note does not
+   *  count as the reader taking the lead back. */
+  let revealing = false;
+  /** Where the first note starts and the last note ends, in the band's
+   *  coordinates. The reader's wheel stops there. */
+  let span = { first: 0, last: 0 };
 
   /** The page the prose scrolls in. */
   function pageEl(): HTMLElement | null {
@@ -39,14 +47,21 @@
     return page.scrollTop + el.getBoundingClientRect().top - page.getBoundingClientRect().top;
   }
 
-  /** Put the margin level with the prose. */
-  function align() {
+  /** Move the margin, marking the move as ours only if it happened: a value
+   *  the browser clamps to where it already is fires no scroll event, and a
+   *  flag left set would swallow the reader's next scroll. */
+  function setBand(top: number) {
+    if (!band) return;
+    const before = band.scrollTop;
+    band.scrollTop = top;
+    if (Math.abs(band.scrollTop - before) >= 1) selfScroll = true;
+  }
+
+  /** Put the margin where alignment and the offset say. */
+  function settle() {
     const page = pageEl();
     if (!page || !band) return;
-    const want = alignedScrollTop(page, band);
-    if (Math.abs(band.scrollTop - want) < 1) return;
-    selfScroll = true;
-    band.scrollTop = want;
+    setBand(alignedScrollTop(page, band) + offset);
   }
 
   const GAP = 18;
@@ -64,15 +79,26 @@
     // The prose leads: scrolling it brings the margin along, so a note stays
     // beside its sentence.
     const follow = () => {
-      peeking = false;
-      align();
+      if (revealing) revealing = false;
+      else offset = 0;
+      settle();
       moved += 1;
     };
     // Scrolling the margin by hand leads nowhere else, so you can read ahead
-    // without moving the draft. The next scroll of the draft re-aligns it.
+    // without moving the draft. It stops when the first or last note reaches
+    // the edge: the track is tall enough to stay level with any part of the
+    // draft, and the reader has no use for the empty stretch beyond the notes.
     const bump = () => {
-      if (selfScroll) selfScroll = false;
-      else peeking = true;
+      if (selfScroll) {
+        selfScroll = false;
+      } else {
+        const level = alignedScrollTop(page, el);
+        const lo = Math.min(level, span.first - GAP);
+        const hi = Math.max(level, span.last + GAP - el.clientHeight);
+        const top = Math.min(Math.max(el.scrollTop, lo), hi);
+        if (Math.abs(top - el.scrollTop) >= 1) setBand(top);
+        offset = top - level;
+      }
       moved += 1;
     };
     page.addEventListener("scroll", follow, { passive: true });
@@ -130,8 +156,13 @@
     const lead = band.getBoundingClientRect().top - page.getBoundingClientRect().top;
     trackHeight = Math.max(floor + GAP, page.scrollHeight + lead);
 
-    // Hold the margin level with the prose unless the reader has wheeled it.
-    if (!peeking) align();
+    const extents = Object.entries(next).map(([id, y]) => [y, y + (heights[Number(id)] ?? 56)]);
+    span = {
+      first: Math.min(...extents.map(([y]) => y)),
+      last: Math.max(...extents.map(([, end]) => end)),
+    };
+
+    settle();
 
     // Only an end that actually cuts a note is faded.
     const top = band.scrollTop;
@@ -158,14 +189,13 @@
     void tick().then(() => reveal(id));
   });
 
-  /** Bring the focused note into the band. The prose leads the margin, so
-   *  this scrolls the draft and lets the margin follow; scrolling the margin
-   *  alone would leave the sentence off screen. */
+  /** Bring the focused note into the band. The draft moves first, so the
+   *  sentence comes along. Stacking can put a note further down than the draft
+   *  can scroll, and then the margin moves by itself for the rest. */
   function reveal(id: number) {
     const page = pageEl();
     const card = band?.querySelector<HTMLElement>(`[data-note="${id}"]`);
     if (!page || !band || !card) return;
-    peeking = false;
     const edge = band.getBoundingClientRect();
     const note = card.getBoundingClientRect();
     // A faded end hides whatever sits under it, so treat it as out of view.
@@ -173,9 +203,15 @@
     const foot = fade === "bottom" || fade === "both" ? FADE : 0;
     const below = note.bottom - (edge.bottom - foot);
     const above = edge.top + head - note.top;
-    if (below > 1) page.scrollTop += below;
-    else if (above > 1) page.scrollTop -= above;
-    else align();
+    const delta = below > 1 ? below : above > 1 ? -above : 0;
+    if (delta === 0) return;
+
+    const want = band.scrollTop + delta;
+    const before = page.scrollTop;
+    page.scrollTop = before + delta;
+    if (Math.abs(page.scrollTop - before) >= 1) revealing = true;
+    offset = want - alignedScrollTop(page, band);
+    setBand(want);
   }
 
   function toggle(id: number) {
