@@ -35,3 +35,28 @@ export function limiter(max: number): Limit {
     }
   };
 }
+
+/** A limiter for each provider, under one limiter for the whole run (SPEC
+ *  §8.3). A provider's calls are bounded by its own cap, and all calls
+ *  together by `bound`. A job first waits for a slot of its provider, then
+ *  for a slot of the run, so a job held back by its provider's cap does not
+ *  hold a run slot. Both queues keep the job's priority.
+ *
+ *  `capOf` gives a provider's cap. A missing cap, one below 1, or one at or
+ *  above `bound` leaves the provider to the run's limiter alone. */
+export function pooled(bound: number, capOf: (name: string) => number | null | undefined): (name: string) => Limit {
+  const run = limiter(bound);
+  const own = new Map<string, Limit>();
+  return (name) => {
+    const known = own.get(name);
+    if (known) return known;
+    const cap = capOf(name);
+    let lim: Limit = run;
+    if (cap != null && cap >= 1 && cap < bound) {
+      const provider = limiter(Math.floor(cap));
+      lim = <T>(job: () => Promise<T>, priority?: number) => provider(() => run(job, priority), priority);
+    }
+    own.set(name, lim);
+    return lim;
+  };
+}

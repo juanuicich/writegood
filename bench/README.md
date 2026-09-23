@@ -182,6 +182,23 @@ Through DeepSeek directly, `--thinking off` sends `thinking: {"type":
 `reasoning_effort`. Cost comes from the price table in `lib.ts`, which copies
 the app's rates. A new DeepSeek model needs its rates added there.
 
+Through agy, Google's Antigravity CLI, on the author's Google AI plan:
+
+```
+bun bench/scripts/run.ts --provider agy --model gemini-3.8-flash \
+  --thinking off --agy-limit 8 --rules 2026-09-23-rewrite --pipeline hybrid --label agy-flash38-hybrid-1
+```
+
+- The thinking level picks agy's model variant: `off` and `low` take
+  `gemini-3.8-flash-low`, `medium` takes `-medium`, and `high` and `max` take
+  `-high`.
+- Each call runs agy as the app does (SPEC §9.3): in a new empty directory,
+  as a custom agent with no tools, behind a hook that denies every tool.
+- `--agy-limit` bounds the calls in flight across all four drafts. At 16,
+  agy returned rate-limit errors; at 8 it did not.
+- Cost is $0. Each call records `serviceSecs`, the time agy took without the
+  wait for a slot.
+
 To compare a model fairly, run it at least twice. Keep `--limit`, `--votes`
 and `--need` at their defaults unless the change under test is one of them.
 

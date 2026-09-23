@@ -525,14 +525,20 @@ chapter it took 145.
 The runner queues every call of every enabled pass at once: one call for a
 document-scope pass, one per paragraph for a paragraph-scope pass, less the
 calls whose answers are saved (below). One limit bounds the calls in flight
-across the whole run, at 32. A pass takes about
-as long as its slowest call, not the sum of its calls. Passes that think are
-queued first, because their calls are the slowest.
+across the whole run, at 32. Each provider also has its own limit, set by its
+`max_in_flight` (§9.1) and 32 when left out. A call waits first for a slot of
+its provider, then for a slot of the run, so a call held back by its
+provider's limit does not hold a run slot. A slow provider with a low limit
+therefore does not slow the passes on other providers. agy on a Google AI Pro
+plan returns rate-limit errors at 16 calls in flight, and not at 8 (§9.3). A
+pass takes about as long as its slowest call, not the sum of its calls.
+Passes that think are queued first, in both queues, because their calls are
+the slowest.
 
 **Two stages for a pass that does not think.** A model with thinking off
 answers in one or two seconds, finds nearly every real problem, and reports
 about two false ones for each real one. So a pass with thinking off runs in
-two stages:
+two stages. This holds for every provider kind, `cli` included:
 
 1. **Candidates.** The pass's calls run as usual. Two filters in code then
    drop what cannot be right. A paragraph-scope call keeps only the findings
@@ -783,7 +789,12 @@ provider gets DeepSeek's `thinking: {"type": "disabled"}` field, `openai` and
 `google` get the reasoning effort `none`, and `anthropic` gets no thinking,
 which is its default. The other values go to the provider as its reasoning
 effort; an `openai-compatible` provider also gets `thinking: {"type":
-"enabled"}`. A `cli` provider ignores the setting.
+"enabled"}`. A `cli` provider passes the value to its command only through
+the `{thinking}` placeholder (§9.3), and otherwise ignores it.
+
+`max_in_flight` caps how many calls to this provider run at once. Left out,
+it is 32. Calls to other providers do not count against it, and the run as a
+whole still never has more than 32 calls in flight (§8.3).
 
 ```toml
 [providers.deepseek]
@@ -833,6 +844,106 @@ parses stdout as JSON and takes that field, then extracts the first fenced JSON
 block from the text. Structured output is less reliable here than through the
 API, so the parser tolerates a preamble and trailing chatter, and a pass whose
 output will not parse fails cleanly rather than half-loading.
+
+**An empty working directory.** Every call of every `cli` provider runs in a
+new, empty temporary directory, `claude-cli` included, and `runner.rs` deletes
+it when the call ends. A command that is an
+agent, such as `agy`, reads rules and files from its working directory, and it
+must find none of the author's. The `{workdir}` placeholder in `args` is that
+directory's path.
+
+**Files in the directory.** `[providers.<name>.files]` maps a path inside the
+directory to the text written there before the command starts. A path must be
+relative and must not contain `..`. agy uses this for a custom agent with no
+tools and a hook that denies every tool.
+
+**Placeholders.** `{model}` is the provider's `model`. `{thinking}` is the
+call's thinking level: the pass's `thinking`, else the provider's (§8.1). The
+level goes to the command as written, so the args decide what it means. A
+call whose args use `{thinking}` or `{model}` with no value set fails with a
+message that names the missing key.
+
+**Thinking names.** `thinking_names` maps a level to the text that
+`{thinking}` becomes, for a command that names its levels differently or
+lacks one. A level with no entry goes to the command as written. agy has no
+`-off` and no `-max` model, so its config maps `off` to `low` and `max` to
+`high`. A pass with thinking `off` still counts as not thinking: it runs in
+two stages, with the verifier (§8.3).
+
+**Errors inside JSON.** Some commands exit with 0 and report a failure in their
+JSON. agy does this for a rate-limit error, and its `response` field may still
+hold a complete-looking `[]`. `json_error` names a field. When that field is
+present and is not `null`, `false` or an empty string, the call fails with its
+text. A failed call saves no answer, so the next run asks it again.
+
+**agy.** Google's Antigravity CLI runs Gemini on a Google AI subscription. It is
+an agent: by default it has a shell, file tools and the author's MCP servers,
+and it reads `GEMINI.md` and `AGENTS.md`. Without a workspace it writes to its
+own scratch folder, which the empty directory does not prevent. Two guards
+turn this off, and both come from files in the empty directory:
+
+- `--agent writegood` selects a custom agent with no tools, no MCP servers, no
+  inherited rules or skills, and none of agy's default prompt. That also cuts
+  the input of a call from about 15,000 tokens to the size of the prompt.
+- `.agents/hooks.json` denies every tool call, in case the agent file stops
+  being read.
+
+`--add-dir {workdir}` makes the directory agy's workspace, which it needs to
+read both files. A test prompt that asked for a shell command, a file write
+and a Linear lookup got a reply in words, and no file appeared.
+
+```toml
+[providers.agy]
+kind         = "cli"
+command      = "agy"
+model        = "gemini-3.8-flash"
+thinking     = "off"          # runs as gemini-3.8-flash-low, with the verifier
+thinking_names = { off = "low", max = "high" }
+args         = ["-p", "{prompt}", "--agent", "writegood", "--add-dir", "{workdir}",
+                "--model", "{model}-{thinking}", "--output-format", "json"]
+json_path    = "response"
+json_error   = "error"
+timeout_secs = 180
+max_in_flight = 8
+
+[providers.agy.files]
+".agents/agents/writegood/agent.md" = """
+---
+name: writegood
+description: Answers one prompt from its text alone.
+mainAgent: true
+subagent: false
+tools: []
+inheritMcp: false
+inheritCustomizations: false
+excludeDefaultComponents: true
+---
+Answer the user's message from its text alone. You have no tools.
+"""
+".agents/hooks.json" = '''
+{"writegood-no-tools": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command",
+ "command": "echo '{\"decision\":\"deny\",\"reason\":\"Tools are off.\"}'", "timeout": 5}]}]}}
+'''
+```
+
+agy's model names carry the thinking level: `gemini-3.8-flash-low`, `-medium`
+and `-high`. There is no level without thinking, but `-low` used no thinking
+tokens on a paragraph call. Without `thinking_names`, a pass whose `thinking`
+is `off` or `max` names a model agy does not have, and fails. Paragraph order
+sets `high` and runs on `-high`. Each call starts a new agy process, which
+adds about two seconds.
+
+Measured on the four scored drafts (bench, 23 September 2026), two runs:
+
+- Fast passes on `-low`, paragraph order on `-high`, with the verifier: F1
+  77–79%, against 71–72% for DeepSeek Flash in the same pipeline.
+- The same replies without the verifier: F1 68–69%, precision 54%, recall
+  91–95%. The app therefore verifies a `cli` pass that does not think, as it
+  does for any other provider.
+- A fast call takes about 4.6 seconds (median), against one to two for
+  DeepSeek. Paragraph order on `-high` takes 80 to 125 seconds.
+- 8 calls in flight gave no errors. 16 gave five rate-limit errors in 347
+  calls. The plan charges nothing per call.
 
 Both backends satisfy one interface:
 

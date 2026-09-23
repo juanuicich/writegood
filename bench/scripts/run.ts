@@ -4,9 +4,12 @@
  *  bun bench/scripts/run.ts --provider openrouter --model deepseek/deepseek-v4.1-flash \
  *    --thinking off --rules 2026-09-23-rewrite --pipeline hybrid --label v41-flash
  *
- *  --provider deepseek|openrouter      default deepseek
+ *  --provider deepseek|openrouter|agy  default deepseek
  *  --model ID                          deepseek: deepseek-flash, deepseek-v4-pro
  *                                      openrouter: vendor/model, as OpenRouter lists it
+ *                                      agy: the family, such as gemini-3.8-flash; the
+ *                                      thinking level picks -low, -medium or -high
+ *  --agy-limit N                       agy: calls in flight across all drafts. Default 4
  *  --or-provider SLUG                  openrouter: the only upstream provider allowed.
  *                                      Default: the model's vendor (deepseek/… → deepseek)
  *  --thinking off|none|on|low|medium|high|max|default   default off
@@ -42,14 +45,15 @@ import { limiter } from "../../src/lib/passes/limit";
 import { windowOf, windows } from "../../src/lib/passes/windows";
 import type { NewFinding, Pass } from "../../src/lib/ipc";
 import {
-  deepseek, draftPath, quick, firstParty, flag, loadRules, openrouter, quantiles, RESULTS, SCORED, words,
+  agy, deepseek, draftPath, quick, firstParty, flag, loadRules, openrouter, quantiles, RESULTS, SCORED, words,
   type CallRecord, type DraftRecord, type Finding, type Provider, type Result, type Thinking,
 } from "./lib";
 import { describe, passesRun, score } from "./score";
 
 const LEVELS = ["off", "none", "on", "low", "medium", "high", "max", "default"];
 const providerName = flag("--provider", "deepseek")!;
-const model = flag("--model", providerName === "deepseek" ? "deepseek-flash" : undefined);
+const model = flag("--model", providerName === "deepseek" ? "deepseek-flash" : providerName === "agy" ? "gemini-3.8-flash" : undefined);
+const agyLimit = Number(flag("--agy-limit", "4"));
 const thinking = flag("--thinking", "off") as Thinking;
 const rulesName = flag("--rules", "2026-09-23-rewrite")!;
 const pipeline = flag("--pipeline", "hybrid") as Result["config"]["pipeline"];
@@ -67,7 +71,7 @@ if (!model) throw new Error("--model is required");
 if (!label || !/^[\w.-]+$/.test(label)) throw new Error("--label is required: letters, digits, dot, dash, underscore");
 if (!LEVELS.includes(thinking)) throw new Error(`--thinking is one of ${LEVELS.join(", ")}`);
 if (!["plain", "fast", "hybrid"].includes(pipeline)) throw new Error("--pipeline is plain, fast or hybrid");
-if (!["deepseek", "openrouter"].includes(providerName)) throw new Error("--provider is deepseek or openrouter");
+if (!["deepseek", "openrouter", "agy"].includes(providerName)) throw new Error("--provider is deepseek, openrouter or agy");
 
 const outFile = join(RESULTS, `${date}-${label}.json`);
 if (existsSync(outFile) && !process.argv.includes("--force")) throw new Error(`${outFile} exists; pick another --label or pass --force`);
@@ -91,7 +95,10 @@ console.log(
 for (const p of passes) console.log(`  ${p.slug.padEnd(18)} ${p.scope.padEnd(9)} thinking ${levelOf(p)}${verifiedOf(p) ? ", verified" : ""}`);
 if (process.argv.includes("--dry")) process.exit(0);
 
-const provider: Provider = providerName === "deepseek" ? deepseek(model) : openrouter(model, orProvider!, cacheControl);
+const provider: Provider =
+  providerName === "deepseek" ? deepseek(model)
+  : providerName === "agy" ? agy(model, agyLimit)
+  : openrouter(model, orProvider!, cacheControl);
 
 const rules = { allowSuggestions: false, redactSuggestions: true, forbidPraise: true, blindJudge: true };
 
@@ -218,6 +225,7 @@ const result: Result = {
     provider: providerName, orProvider, model, thinking, thinkingPasses, pipeline, rules: rulesName, scope,
     limit, votes: pipeline === "plain" ? null : votes, need: pipeline === "plain" ? null : need, ceilingSecs: ceiling, drafts,
     ...(providerName === "openrouter" ? { cacheControl } : {}),
+    ...(providerName === "agy" ? { agyLimit } : {}),
     ...(note ? { note } : {}),
   },
   rules: rulesName,

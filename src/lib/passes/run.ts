@@ -1,7 +1,8 @@
 /** Running editing passes over a draft (SPEC 8.3).
  *
  *  A pass is one prompt, sent once for the draft or once per paragraph. Every
- *  call of every pass shares one bound on how many run at once. A paragraph
+ *  call of every pass shares one bound on how many run at once, and each
+ *  provider has its own bound under it. A paragraph
  *  call sends its window of the draft, not the whole draft, and a question
  *  whose answer is saved is not asked again.
  *
@@ -12,11 +13,11 @@
  *  write of a run replaces the findings of the pass's earlier runs. */
 import { cli, llm, log, store, type NewFinding, type Pass } from "../ipc";
 import { app } from "../state.svelte";
-import { resolve, providerFor, ProviderError, type Resolved } from "../providers";
+import { callLimits, resolve, providerFor, ProviderError, type Resolved } from "../providers";
 import { preamble } from "./schema";
 import { buildPrompt, paragraphs, readFindings, unfit } from "./parse";
 import { deadline } from "./deadline";
-import { limiter } from "./limit";
+import type { Limit } from "./limit";
 import { inParagraph, Repeats } from "./filter";
 import { buildVerifyPrompt, parseVerdicts, tally, VERIFY_SYSTEM, VOTES } from "./verify";
 import { windowOf, windows, type Window } from "./windows";
@@ -118,10 +119,13 @@ export async function runPasses(
     else inFlight.delete(pass);
     report();
   };
-  const limit = limiter(MAX_CALLS);
+  // Each provider has its own limit under the run's; agy hits rate limits
+  // at 16 calls, and DeepSeek should not wait for it.
+  const limits = callLimits(config, MAX_CALLS);
 
   const runOne = async (pass: Pass): Promise<RunReport> => {
     const name = providerFor(config, pass.provider, options.override);
+    const limit = limits(name);
     let resolved: Resolved;
     try {
       resolved = withPass(resolve(config, name), pass);
@@ -330,7 +334,7 @@ export function withPass(resolved: Resolved, pass: Pass): Resolved {
 
 /** A pass runs in two stages when its model does not think (SPEC §8.3). */
 function verifies(resolved: Resolved): boolean {
-  return resolved.provider.kind !== "cli" && resolved.provider.thinking === "off";
+  return resolved.provider.thinking === "off";
 }
 
 /** Three verifiers vote on a pass's candidates; the ones two keep survive.
@@ -341,7 +345,7 @@ async function verify(
   draft: string,
   candidates: NewFinding[],
   calls: Call[],
-  limit: ReturnType<typeof limiter>,
+  limit: Limit,
   asking: (pass: string, delta: 1 | -1) => void,
 ): Promise<NewFinding[]> {
   const prompt = buildVerifyPrompt(pass.prompt, draft, candidates);

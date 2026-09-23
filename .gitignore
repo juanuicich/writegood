@@ -16,3 +16,4 @@ src-tauri/gen/
 # scratch
 dist/
 issues.md
+.claude/worktrees/

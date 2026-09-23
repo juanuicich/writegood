@@ -1,13 +1,14 @@
 /** Shared parts of the benchmark: paths, keys, rule sets, drafts, and the
- *  two providers.
+ *  providers.
  *
  *  The prompts, the preamble, the parser, the filters and the verifier come
  *  from the app (src/lib/passes). The benchmark changes the provider, the
  *  model and the rules, and nothing else. */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import type { Pass } from "../../src/lib/ipc";
+import { limiter } from "../../src/lib/passes/limit";
 
 export const BENCH = resolve(import.meta.dir, "..");
 export const REPO = resolve(BENCH, "..");
@@ -102,10 +103,13 @@ export interface Usage {
   costSource: "reported" | "rates";
   /** The upstream provider that served the call, when the API says. */
   servedBy?: string;
+  /** agy: seconds from spawning the process to its exit, without the wait
+   *  for a slot. */
+  serviceSecs?: number;
 }
 
 export interface Provider {
-  name: "deepseek" | "openrouter";
+  name: "deepseek" | "openrouter" | "agy";
   model: string;
   /** OpenRouter only: the one upstream provider allowed to serve the call. */
   pinned?: string;
@@ -262,6 +266,110 @@ export function openrouter(model: string, pinned: string, cacheControl = false):
   };
 }
 
+/** A custom agent with no tools, no MCP servers, no inherited rules or
+ *  skills, and none of agy's default prompt. agy reads it from
+ *  `.agents/agents/writegood/agent.md` in its workspace and runs it with
+ *  `--agent writegood`. */
+export const AGY_AGENT = `---
+name: writegood
+description: Answers one prompt from its text alone.
+mainAgent: true
+subagent: false
+tools: []
+inheritMcp: false
+inheritCustomizations: false
+excludeDefaultComponents: true
+---
+Answer the user's message from its text alone. You have no tools.
+`;
+
+/** Write the agent and the hook into an empty directory. */
+export function agyWorkspace(dir: string) {
+  mkdirSync(join(dir, ".agents", "agents", "writegood"), { recursive: true });
+  writeFileSync(join(dir, ".agents", "agents", "writegood", "agent.md"), AGY_AGENT);
+  writeFileSync(join(dir, ".agents", "hooks.json"), AGY_DENY_HOOKS);
+}
+
+/** A second guard: a PreToolUse hook that denies every tool. agy reads it
+ *  from `.agents/hooks.json` in its workspace. */
+export const AGY_DENY_HOOKS = JSON.stringify({
+  "writegood-no-tools": {
+    PreToolUse: [{
+      matcher: "*",
+      hooks: [{
+        type: "command",
+        command: `echo '{"decision":"deny","reason":"Tools are off. Answer from the prompt alone."}'`,
+        timeout: 5,
+      }],
+    }],
+  },
+});
+
+/** Google's Antigravity CLI, on the author's Google AI subscription. `model`
+ *  is the family, such as `gemini-3.8-flash`; the thinking level picks the
+ *  variant, because agy has no way to turn thinking off. `off` and `low` both
+ *  take `-low`.
+ *
+ *  Every call runs in a fresh empty directory that agy treats as its
+ *  workspace, as a custom agent with no tools, behind a hook that denies
+ *  every tool. The prompt is an argument.
+ *  `maxInFlight` bounds the calls across all drafts, because the drafts run
+ *  side by side and each has its own limiter. */
+export function agy(model: string, maxInFlight: number): Provider {
+  const lim = limiter(maxInFlight);
+  const variant = (t: Thinking) => (t === "high" || t === "max" ? "high" : t === "medium" ? "medium" : "low");
+  return {
+    name: "agy",
+    model,
+    chat: (system, prompt, thinking, ceilingSecs) => lim(async () => {
+      const dir = mkdtempSync(join(tmpdir(), "writegood-agy-"));
+      try {
+        agyWorkspace(dir);
+        const t0 = performance.now();
+        const proc = Bun.spawn([
+          "agy", "-p", `${system}\n\n${prompt}`,
+          "--agent", "writegood",
+          "--model", `${model}-${variant(thinking)}`,
+          "--add-dir", dir,
+          "--output-format", "json",
+          "--print-timeout", `${ceilingSecs}s`,
+        ], { cwd: dir, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+        const timer = setTimeout(() => proc.kill(), (ceilingSecs + 15) * 1000);
+        const [out, err, code] = await Promise.all([
+          new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited,
+        ]);
+        clearTimeout(timer);
+        const agyError = err.split("\n").find((l) => l.startsWith("AGY_ERROR:"));
+        if (code !== 0) throw new Error(`agy exited with ${code}: ${(agyError ?? err.trim()).slice(-300)}`);
+        let j: any;
+        try {
+          j = JSON.parse(out);
+        } catch {
+          throw new Error(`agy did not print JSON: ${out.slice(0, 200)}`);
+        }
+        if (j.status !== "SUCCESS") throw new Error(`agy status ${j.status}: ${out.slice(0, 300)}`);
+        if (j.denied_actions?.length) throw new Error(`agy tried a tool: ${JSON.stringify(j.denied_actions)}`);
+        const u = j.usage ?? {};
+        return {
+          text: j.response ?? "",
+          usage: {
+            input: u.input_tokens ?? 0,
+            cacheRead: u.cache_read_tokens ?? 0,
+            output: (u.output_tokens ?? 0),
+            reasoning: u.thinking_tokens ?? 0,
+            cost: 0,
+            costSource: "rates",
+            servedBy: `agy ${model}-${variant(thinking)}`,
+            serviceSecs: (performance.now() - t0) / 1000,
+          },
+        };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }),
+  };
+}
+
 // ---------------------------------------------------------------- result files
 
 export interface CallRecord {
@@ -281,6 +389,7 @@ export interface CallRecord {
   cost: number;
   costSource?: "reported" | "rates";
   servedBy?: string;
+  serviceSecs?: number;
   /** Findings read from the reply, before filters and verifier. */
   candidates?: number;
   error?: string;
@@ -351,6 +460,8 @@ export interface Result {
     /** OpenRouter: whether prompts carried cache_control breakpoints. */
     cacheControl?: boolean;
     drafts: string[];
+    /** agy: calls in flight across all drafts. */
+    agyLimit?: number;
     note?: string;
   };
   rules: string;

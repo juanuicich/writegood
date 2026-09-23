@@ -228,6 +228,17 @@ pub struct Provider {
     pub args: Vec<String>,
     #[serde(default, alias = "json_path")]
     pub json_path: Option<String>,
+    /// A cli provider: a field of the JSON output that, when present and not
+    /// null, false or empty, means the call failed (SPEC §9.3).
+    #[serde(default, alias = "json_error")]
+    pub json_error: Option<String>,
+    /// A cli provider: files written into the call's empty working
+    /// directory, by relative path (SPEC §9.3).
+    #[serde(default)]
+    pub files: BTreeMap<String, String>,
+    /// The most calls to this provider in flight at once (SPEC §8.3).
+    #[serde(default, alias = "max_in_flight")]
+    pub max_in_flight: Option<u32>,
     #[serde(default = "default_timeout", alias = "timeout_secs")]
     pub timeout_secs: u64,
     /// This provider's vendor id in the price catalog, when it differs from
@@ -238,6 +249,10 @@ pub struct Provider {
     /// the provider's own default (SPEC §9.1).
     #[serde(default)]
     pub thinking: Option<String>,
+    /// A cli provider: the text that `{thinking}` becomes for a level, when
+    /// the command has another name for it or lacks it (SPEC §9.3).
+    #[serde(default, alias = "thinking_names")]
+    pub thinking_names: BTreeMap<String, String>,
 }
 
 fn default_timeout() -> u64 {
@@ -254,9 +269,13 @@ impl Default for Provider {
             command: None,
             args: Vec::new(),
             json_path: None,
+            json_error: None,
+            files: BTreeMap::new(),
+            max_in_flight: None,
             timeout_secs: default_timeout(),
             catalog: None,
             thinking: None,
+            thinking_names: BTreeMap::new(),
         }
     }
 }
@@ -309,11 +328,20 @@ mod wire {
         pub args: Vec<&'a str>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub json_path: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub json_error: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub max_in_flight: Option<u32>,
         pub timeout_secs: u64,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub catalog: Option<&'a str>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub thinking: Option<&'a str>,
+        // Last, because TOML writes a table after the plain keys.
+        #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+        pub files: BTreeMap<&'a str, &'a str>,
+        #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+        pub thinking_names: BTreeMap<&'a str, &'a str>,
     }
 
     pub fn borrow(cfg: &Config) -> WConfig<'_> {
@@ -358,9 +386,21 @@ mod wire {
             command: p.command.as_deref(),
             args: p.args.iter().map(String::as_str).collect(),
             json_path: p.json_path.as_deref(),
+            json_error: p.json_error.as_deref(),
+            max_in_flight: p.max_in_flight,
             timeout_secs: p.timeout_secs,
             catalog: p.catalog.as_deref(),
             thinking: p.thinking.as_deref(),
+            files: p
+                .files
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect(),
+            thinking_names: p
+                .thinking_names
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect(),
         }
     }
 }
@@ -419,6 +459,40 @@ key_ref = "keychain:writegood/anthropic"
 # args    = ["-p", "{prompt}", "--output-format", "json"]
 # json_path = "result"        # extract this field from stdout, then parse
 # timeout_secs = 180
+
+# Google's Antigravity CLI, on a Google AI plan. Each call runs in an empty
+# directory that holds an agent with no tools and a hook that denies them.
+# [providers.agy]
+# kind         = "cli"
+# command      = "agy"
+# model        = "gemini-3.8-flash"
+# thinking     = "off"          # agy has no -off model; see thinking_names
+# thinking_names = { off = "low", max = "high" }
+# args         = ["-p", "{prompt}", "--agent", "writegood", "--add-dir", "{workdir}",
+#                 "--model", "{model}-{thinking}", "--output-format", "json"]
+# json_path    = "response"
+# json_error   = "error"
+# timeout_secs = 180
+# max_in_flight = 8             # 16 at once hits rate limits
+#
+# [providers.agy.files]
+# ".agents/agents/writegood/agent.md" = """
+# ---
+# name: writegood
+# description: Answers one prompt from its text alone.
+# mainAgent: true
+# subagent: false
+# tools: []
+# inheritMcp: false
+# inheritCustomizations: false
+# excludeDefaultComponents: true
+# ---
+# Answer the user's message from its text alone. You have no tools.
+# """
+# ".agents/hooks.json" = '''
+# {"writegood-no-tools": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command",
+#  "command": "echo '{\"decision\":\"deny\",\"reason\":\"Tools are off.\"}'", "timeout": 5}]}]}}
+# '''
 "#;
 
 /// The starter pass library from SPEC.md §8.2, as (file name, contents). The
@@ -848,6 +922,41 @@ mod tests {
         assert_eq!(anthropic.timeout_secs, 180);
         // Only anthropic is live; the rest of §9.1 stays commented out.
         assert_eq!(cfg.providers.len(), 1);
+    }
+
+    #[test]
+    fn the_commented_agy_example_parses_once_uncommented() {
+        let start = DEFAULT_CONFIG.find("# [providers.agy]").unwrap();
+        let block: String = DEFAULT_CONFIG[start..]
+            .lines()
+            .map(|l| l.strip_prefix("# ").unwrap_or(l.trim_start_matches('#')))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let cfg: Config = toml::from_str(&format!("default_provider = \"agy\"\n{block}")).unwrap();
+        let agy = cfg.providers.get("agy").unwrap();
+        assert_eq!(agy.kind, "cli");
+        assert_eq!(agy.thinking.as_deref(), Some("off"));
+        assert_eq!(
+            agy.thinking_names.get("off").map(String::as_str),
+            Some("low")
+        );
+        assert_eq!(
+            agy.thinking_names.get("max").map(String::as_str),
+            Some("high")
+        );
+        assert_eq!(agy.max_in_flight, Some(8));
+        assert_eq!(agy.json_error.as_deref(), Some("error"));
+        let agent = agy.files.get(".agents/agents/writegood/agent.md").unwrap();
+        assert!(agent.contains("tools: []"), "{agent}");
+        assert!(agent.contains("excludeDefaultComponents: true"), "{agent}");
+        let hooks: serde_json::Value =
+            serde_json::from_str(agy.files.get(".agents/hooks.json").unwrap()).unwrap();
+        let hook = &hooks["writegood-no-tools"]["PreToolUse"][0];
+        assert_eq!(hook["matcher"], "*");
+        assert!(hook["hooks"][0]["command"]
+            .as_str()
+            .unwrap()
+            .contains("deny"));
     }
 
     #[test]

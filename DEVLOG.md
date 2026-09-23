@@ -595,3 +595,29 @@ are no markers and no status message.
 **CHANGED — the browser fixtures return saved-answer keys.** `mock-core.ts`
 computes the app's own keys for the open draft and leaves out two
 paragraphs, so `?show=review` shows two markers.
+
+## 2026-09-23 — agy as a cli provider
+
+**DECISION — every cli call runs in a new, empty directory.** This covers
+`claude-cli` too. agy is an agent: without guards it ran shell commands and
+wrote files. Its config writes a custom agent with no tools and a hook that
+denies every tool into that directory. SPEC §9.3 has the TOML, and
+`config.toml`'s template carries it commented out.
+
+**DECISION — a cli pass that does not think gets the verifier.** agy with
+the verifier scored F1 77–79% on the four drafts, and 68–69% without it.
+`verifies()` now looks only at the thinking level, not the provider kind.
+This changes the answer keys of cli passes, so their saved answers are asked
+again once.
+
+**DECISION — `thinking_names` renames a level for a cli command.** agy has no
+`-off` or `-max` model. Its config maps `off` to `low` and `max` to `high`,
+so a pass with thinking `off` runs on `-low` and still counts as not
+thinking.
+
+**DECISION — each provider has its own call limit.** `max_in_flight` bounds
+one provider's calls, and the run still never has more than 32 in flight. A
+call waits for its provider's slot before it takes a run slot, so agy's 8 do
+not slow DeepSeek passes in the same run.
+
+**UNVERIFIED — the duel judge through agy.** Not tested.

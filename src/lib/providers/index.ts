@@ -7,6 +7,7 @@
  *  base URL an openai-compatible provider needs — is Rust's to report, because
  *  Rust is what tries. */
 import type { Config, Provider } from "../ipc";
+import { pooled, type Limit } from "../passes/limit";
 
 export class ProviderError extends Error {}
 
@@ -38,4 +39,11 @@ export function providerFor(
   override?: string | null,
 ): string {
   return override ?? passProvider ?? config.defaultProvider;
+}
+
+/** The call limits of a run: one per provider, set by its `max_in_flight`,
+ *  under the run's own `bound` (SPEC §8.3). A name with no provider gets the
+ *  run's limit alone; the pass reports the missing name. */
+export function callLimits(config: Config, bound: number): (name: string) => Limit {
+  return pooled(bound, (name) => config.providers[name]?.maxInFlight);
 }

@@ -2,8 +2,11 @@
 //! takes a prompt and prints an answer, so passes can bill against a
 //! subscription instead of API credits.
 
+use std::collections::BTreeMap;
+use std::path::{Component, Path, PathBuf};
 use std::process::Stdio;
-use std::time::Duration;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::io::AsyncWriteExt;
 
@@ -26,6 +29,113 @@ pub fn substitute_args(args: &[String], prompt: &str) -> (Vec<String>, bool) {
         })
         .collect();
     (out, used)
+}
+
+/// Replace `{workdir}`, `{model}` and `{thinking}` in every argument. A
+/// placeholder whose value is not set is an error that names the key. Runs
+/// before `substitute_args`, so a prompt that contains one of these words is
+/// passed on as written.
+pub fn fill_placeholders(
+    args: &[String],
+    values: &[(&str, Option<&str>)],
+) -> AppResult<Vec<String>> {
+    args.iter()
+        .map(|a| {
+            let mut out = a.clone();
+            for (name, value) in values {
+                let tag = format!("{{{name}}}");
+                if !out.contains(&tag) {
+                    continue;
+                }
+                let v = value.ok_or_else(|| {
+                    AppError::invalid(format!(
+                        "the args use {tag}, but the provider sets no {name}"
+                    ))
+                })?;
+                out = out.replace(&tag, v);
+            }
+            Ok(out)
+        })
+        .collect()
+}
+
+/// An empty directory for one call, deleted when it is dropped. A command
+/// that is an agent reads its working directory, so it must find nothing of
+/// the author's there (SPEC §9.3).
+struct Workdir(PathBuf);
+
+impl Workdir {
+    fn new() -> AppResult<Self> {
+        static COUNT: AtomicU64 = AtomicU64::new(0);
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let name = format!(
+            "writegood-cli-{}-{nanos}-{}",
+            std::process::id(),
+            COUNT.fetch_add(1, Ordering::Relaxed)
+        );
+        let path = std::env::temp_dir().join(name);
+        // create_dir, not create_dir_all: a directory that already exists is
+        // not empty, and is an error.
+        std::fs::create_dir(&path)
+            .map_err(|e| AppError::other(format!("cannot create a working directory: {e}")))?;
+        Ok(Workdir(path))
+    }
+
+    /// Write the provider's files. A path must be relative and stay inside.
+    fn write(&self, files: &BTreeMap<String, String>) -> AppResult<()> {
+        for (rel, text) in files {
+            let path = Path::new(rel);
+            let inside = !rel.is_empty()
+                && path
+                    .components()
+                    .all(|c| matches!(c, Component::Normal(_) | Component::CurDir));
+            if !inside {
+                return Err(AppError::invalid(format!(
+                    "files: \"{rel}\" must be a relative path inside the working directory"
+                )));
+            }
+            let target = self.0.join(path);
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&target, text)?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for Workdir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+/// The text `{thinking}` becomes: the level's entry in `thinking_names`,
+/// else the level as written. agy has no `-off` or `-max` model, so its
+/// config maps them to `low` and `high` (SPEC §9.3).
+fn thinking_name(provider: &Provider) -> Option<&str> {
+    let level = provider.thinking.as_deref()?;
+    Some(
+        provider
+            .thinking_names
+            .get(level)
+            .map(String::as_str)
+            .unwrap_or(level),
+    )
+}
+
+/// True when a JSON value reports an error: anything but null, false or an
+/// empty string.
+fn is_error(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Null => false,
+        serde_json::Value::Bool(b) => *b,
+        serde_json::Value::String(s) => !s.trim().is_empty(),
+        _ => true,
+    }
 }
 
 /// The last `n` characters of a string. Used to keep an error message short
@@ -53,10 +163,23 @@ pub async fn cli_run(provider: Provider, prompt: String) -> AppResult<String> {
         .ok_or_else(|| AppError::invalid("a cli provider needs a command"))?
         .to_string();
 
-    let (args, prompt_in_args) = substitute_args(&provider.args, &prompt);
+    // Dropped when this function returns, which deletes the directory.
+    let workdir = Workdir::new()?;
+    workdir.write(&provider.files)?;
+    let dir = workdir.0.to_string_lossy().into_owned();
+    let filled = fill_placeholders(
+        &provider.args,
+        &[
+            ("workdir", Some(dir.as_str())),
+            ("model", provider.model.as_deref()),
+            ("thinking", thinking_name(&provider)),
+        ],
+    )?;
+    let (args, prompt_in_args) = substitute_args(&filled, &prompt);
 
     let mut cmd = tokio::process::Command::new(&command);
     cmd.args(&args)
+        .current_dir(&workdir.0)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .stdin(if prompt_in_args {
@@ -117,11 +240,32 @@ pub async fn cli_run(provider: Provider, prompt: String) -> AppResult<String> {
 
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
 
-    match provider.json_path.as_deref().filter(|f| !f.is_empty()) {
+    let error_field = provider.json_error.as_deref().filter(|f| !f.is_empty());
+    let json_path = provider.json_path.as_deref().filter(|f| !f.is_empty());
+    if error_field.is_none() && json_path.is_none() {
+        return Ok(stdout);
+    }
+    let value: serde_json::Value = serde_json::from_str(&stdout)
+        .map_err(|e| AppError::other(format!("{command} did not print JSON: {e}")))?;
+
+    // Some commands exit with 0 and report the failure in their JSON; agy
+    // does this for a rate limit (SPEC §9.3).
+    if let Some(field) = error_field {
+        if let Some(err) = value.get(field).filter(|v| is_error(v)) {
+            let text = err
+                .as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| err.to_string());
+            return Err(AppError::other(format!(
+                "{command} reported an error: {}",
+                tail(text.trim(), 500)
+            )));
+        }
+    }
+
+    match json_path {
         None => Ok(stdout),
         Some(field) => {
-            let value: serde_json::Value = serde_json::from_str(&stdout)
-                .map_err(|e| AppError::other(format!("{command} did not print JSON: {e}")))?;
             let found = value.get(field).ok_or_else(|| {
                 AppError::other(format!("{command} output has no \"{field}\" field"))
             })?;
@@ -363,6 +507,126 @@ mod tests {
         p.json_path = Some("result".into());
         let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("did not print JSON"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn the_command_runs_in_an_empty_directory_that_is_deleted_after() {
+        let p = sh("pwd -P; ls -A | wc -l", &[]);
+        let out = cli_run(p, "x".into()).await.unwrap();
+        let mut lines = out.lines();
+        let dir = lines.next().unwrap().to_string();
+        assert!(dir.contains("writegood-cli-"), "{dir}");
+        assert_eq!(lines.next().unwrap().trim(), "0");
+        assert!(!Path::new(&dir).exists(), "{dir} was not deleted");
+    }
+
+    #[tokio::test]
+    async fn two_calls_get_two_directories() {
+        let a = cli_run(sh("pwd", &[]), "x".into()).await.unwrap();
+        let b = cli_run(sh("pwd", &[]), "x".into()).await.unwrap();
+        assert_ne!(a, b);
+    }
+
+    #[tokio::test]
+    async fn the_provider_files_are_written_before_the_command_starts() {
+        let mut p = sh("cat .agents/agents/writegood/agent.md .agents/hooks.json", &[]);
+        p.files.insert(".agents/agents/writegood/agent.md".into(), "tools: []\n".into());
+        p.files.insert(".agents/hooks.json".into(), "{}".into());
+        assert_eq!(cli_run(p, "x".into()).await.unwrap(), "tools: []\n{}");
+    }
+
+    #[tokio::test]
+    async fn a_file_outside_the_directory_is_rejected() {
+        for bad in ["../escape", "/tmp/escape", "a/../../escape", ""] {
+            let mut p = sh("true", &[]);
+            p.files.insert(bad.into(), "x".into());
+            let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+            assert!(err.contains("relative path inside"), "{bad}: {err}");
+        }
+    }
+
+    #[tokio::test]
+    async fn workdir_model_and_thinking_reach_the_arguments() {
+        let mut p = sh(
+            "[ \"$(cd \"$1\" && pwd -P)\" = \"$(pwd -P)\" ] && printf '%s %s' \"$2\" \"$3\"",
+            &["sh", "{workdir}", "--model={model}-{thinking}", "{prompt}"],
+        );
+        p.model = Some("gemini-3.8-flash".into());
+        p.thinking = Some("high".into());
+        let out = cli_run(p, "the prompt".into()).await.unwrap();
+        assert_eq!(out, "--model=gemini-3.8-flash-high the prompt");
+    }
+
+    #[tokio::test]
+    async fn thinking_names_rename_a_level_and_leave_the_others() {
+        for (level, expected) in [
+            ("off", "low"),
+            ("max", "high"),
+            ("low", "low"),
+            ("high", "high"),
+        ] {
+            let mut p = sh("printf '%s' \"$1\"", &["sh", "--model={model}-{thinking}"]);
+            p.model = Some("gemini-3.8-flash".into());
+            p.thinking = Some(level.into());
+            p.thinking_names.insert("off".into(), "low".into());
+            p.thinking_names.insert("max".into(), "high".into());
+            let out = cli_run(p, "x".into()).await.unwrap();
+            assert_eq!(
+                out,
+                format!("--model=gemini-3.8-flash-{expected}"),
+                "{level}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_placeholder_without_a_value_names_the_missing_key() {
+        let mut p = sh("true", &["sh", "--model={model}-{thinking}"]);
+        p.model = Some("gemini-3.8-flash".into());
+        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        assert!(err.contains("{thinking}"), "{err}");
+        assert!(err.contains("no thinking"), "{err}");
+    }
+
+    #[test]
+    fn a_prompt_that_contains_a_placeholder_is_passed_on_as_written() {
+        let filled = fill_placeholders(
+            &args(&["{prompt}", "{model}"]),
+            &[("model", Some("m"))],
+        )
+        .unwrap();
+        let (out, _) = substitute_args(&filled, "write {model} here");
+        assert_eq!(out, args(&["write {model} here", "m"]));
+    }
+
+    #[tokio::test]
+    async fn json_error_fails_the_call_even_with_exit_code_zero() {
+        // What agy printed for a rate limit: status ERROR, exit code 0, and a
+        // response that looks like an empty answer.
+        let mut p = sh(
+            r#"printf '{"status": "ERROR", "response": "[]", "error": "RESOURCE_EXHAUSTED (code 429)"}'"#,
+            &[],
+        );
+        p.json_path = Some("response".into());
+        p.json_error = Some("error".into());
+        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        assert!(err.contains("reported an error"), "{err}");
+        assert!(err.contains("RESOURCE_EXHAUSTED"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn json_error_passes_when_the_field_is_absent_null_false_or_empty() {
+        for body in [
+            r#"{"response": "[]"}"#,
+            r#"{"response": "[]", "error": null}"#,
+            r#"{"response": "[]", "error": false}"#,
+            r#"{"response": "[]", "error": ""}"#,
+        ] {
+            let mut p = sh(&format!("printf '%s' '{body}'"), &[]);
+            p.json_path = Some("response".into());
+            p.json_error = Some("error".into());
+            assert_eq!(cli_run(p, "x".into()).await.unwrap(), "[]", "{body}");
+        }
     }
 
     #[test]

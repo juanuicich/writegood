@@ -28,6 +28,14 @@ export interface Provider {
   command?: string | null;
   args: string[];
   jsonPath?: string | null;
+  /** A cli provider: the JSON field that reports a failed call (SPEC §9.3). */
+  jsonError?: string | null;
+  /** A cli provider: files written into the call's empty directory. */
+  files?: Record<string, string>;
+  /** The most calls to this provider in flight at once (SPEC §8.3). */
+  maxInFlight?: number | null;
+  /** A cli provider: the text `{thinking}` becomes for a level (SPEC §9.3). */
+  thinkingNames?: Record<string, string>;
   timeoutSecs: number;
   /** The vendor id in the price catalog, when it differs from the name. */
   catalog?: string | null;
