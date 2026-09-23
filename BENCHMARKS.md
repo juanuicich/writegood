@@ -95,39 +95,20 @@ The limits:
 ## The setup I use
 
 DeepSeek Flash on DeepSeek's own API, thinking off, with the verifier, for the
-eight fast passes. Gemini 3.8 Flash at low effort for paragraph order. With a
-TypeSafe key, filler words runs on Jev instead ("Filler words on Jev", below).
+eight fast passes. Paragraph order on the same DeepSeek provider at thinking
+`high`, as the starter pass ships. Filler words on Jev, `jev-1.13.0`, method
+`sentence` ("Filler words on Jev", below). There is no Google provider.
 
 | | F1 | First findings | Per draft | Cost per draft |
 |---|---|---|---|---|
-| This setup (`H-dsdirect-gemlow-1`, `-2`) | 71.1%, 71.3% | 5.9 s, 6.1 s | 6.2 s, 6.1 s | $0.0195, $0.0188 |
-| Paragraph order on DeepSeek at high (`R-1`, `-2`) | 71.2%, 71.8% | 5.9 s, 6.1 s | 29.9 s, 39.7 s | $0.0215, $0.0225 |
+| This setup (`noise-1` to `-4`) | 65.5% to 72.4% | 4.3 to 5.5 s | 32 to 72 s | $0.022 to $0.026 |
 
-The two score the same. The difference is paragraph order: about 3 seconds on
-Gemini low, against 30 to 40 seconds on DeepSeek with thinking high. A draft
-is complete in about 6 seconds. Gemini's paragraph-order score is lower, 80%
-against 83–86%, which on six items is one finding.
-
-On the chapter, the fast passes took about 25 seconds and cost 10 to 17 cents
-in the app (`app-runs.md`; that cost includes paragraph order on DeepSeek).
-Gemini low answered paragraph order on the chapter in 2.7 seconds for $0.007.
-The app had taken 110 to 145 seconds for that pass.
-
-Two caveats. The fast-pass half of these hybrids came from an earlier harness.
-Two later runs of the same DeepSeek settings through the current harness
-scored 68.5% and 62.4% on the eight fast passes, against 70.2% and 70.5%
-(`2026-09-23-followup.md`, section 2). Two runs cannot tell whether that is
-the harness or noise. And the Gemini numbers were measured through
-OpenRouter, pinned to Google AI Studio. The app calls Google's API directly,
-which has not been measured.
-
-Through the app's own client, with OpenRouter as an `openai-compatible`
-provider and no pinning, paragraph order on Gemini low scored 80% in two
-runs, the same as pinned. It took about 4 seconds and $0.0025 a draft, and
-4.1 seconds and $0.007 on the chapter. Every OpenRouter endpoint for this
-model is Google's own, so an unpinned call reaches the same vendor. The
-`base_url` must end with a slash: `"https://openrouter.ai/api/v1/"`. Without
-it every call fails with 404 (`2026-09-23-gaps.md`, test 1).
+Four runs of this setup are the baseline for rule changes, below. The first
+findings arrive in about 5 seconds. Paragraph order at thinking high takes
+most of the time: 30 to 70 seconds a draft, and 110 to 145 seconds on the
+chapter (`app-runs.md`). On the chapter, the
+fast passes took about 25 seconds and cost 10 to 17 cents in the app, with
+paragraph order on DeepSeek included.
 
 The config:
 
@@ -140,14 +121,53 @@ base_url = "https://api.deepseek.com/v1"
 model    = "deepseek-flash"
 key_ref  = "env:DEEPSEEK_API_KEY"
 thinking = "off"
-
-[providers.google]
-kind     = "google"
-model    = "gemini-3.8-flash"
-key_ref  = "env:GEMINI_API_KEY"
 ```
 
-And the frontmatter of `~/.writegood/passes/06-paragraph-order.md`:
+Paragraph order keeps the starter frontmatter: no `provider`, so it runs on
+`deepseek`, and `thinking = "high"`, which overrides the provider's `off`.
+
+### A faster option for paragraph order
+
+Gemini 3.8 Flash at low effort answers paragraph order in about 4 seconds
+instead of 30 to 40. With it, a draft is complete in about 6 seconds. It is
+measured but not in use here.
+
+| | F1 | First findings | Per draft | Cost per draft |
+|---|---|---|---|---|
+| Paragraph order on Gemini low (`H-dsdirect-gemlow-1`, `-2`) | 71.1%, 71.3% | 5.9 s, 6.1 s | 6.2 s, 6.1 s | $0.0195, $0.0188 |
+| Paragraph order on DeepSeek at high (`R-1`, `-2`) | 71.2%, 71.8% | 5.9 s, 6.1 s | 29.9 s, 39.7 s | $0.0215, $0.0225 |
+
+These two rows share the rule set and the fast-pass settings, and filler
+words ran on DeepSeek. They score the same overall. Gemini's paragraph-order
+score is lower, 80% against 83–86%, which on six items is one finding. The
+Gemini half of these rows was measured through OpenRouter, pinned to Google
+AI Studio, and the fast-pass half came from an earlier harness. Two later
+runs of the same DeepSeek settings through the current harness scored 68.5%
+and 62.4% on the eight fast passes, against 70.2% and 70.5%
+(`2026-09-23-followup.md`, section 2). Two runs cannot tell whether that is
+the harness or noise.
+
+The app reaches Gemini through an OpenRouter provider. Through the app's own
+client, with OpenRouter as an `openai-compatible` provider and no pinning,
+paragraph order on Gemini low scored 80% in two runs, the same as pinned. It
+took about 4 seconds and $0.0025 a draft, and 4.1 seconds and $0.007 on the
+chapter (`2026-09-23-gaps.md`, test 1). Every OpenRouter endpoint for this
+model is Google's own, so an unpinned call reaches the same vendor. Those
+runs needed a slash at the end of `base_url`. The app now adds it, so the URL
+works either way.
+
+To use it, add the provider to `config.toml`:
+
+```toml
+[providers.openrouter]
+kind         = "openai-compatible"
+base_url     = "https://openrouter.ai/api/v1"
+model        = "google/gemini-3.8-flash"
+key_ref      = "env:OPENROUTER_API_KEY"
+timeout_secs = 300
+```
+
+And set the frontmatter of `~/.writegood/passes/06-paragraph-order.md`:
 
 ```toml
 +++
@@ -155,7 +175,7 @@ name = "Paragraph order"
 category = "paragraph-order"
 scope = "document"
 enabled = true
-provider = "google"
+provider = "openrouter"
 thinking = "low"
 timeout_secs = 300
 +++
@@ -163,8 +183,7 @@ timeout_secs = 300
 
 A pass's `provider` sends that pass to a different provider. The provider
 override in the header bar wins over it, and sends every pass to one
-provider. The starter passes ship with paragraph order on the default
-provider at thinking `high`, so this change is yours to make.
+provider.
 
 ### Filler words on Jev
 
@@ -210,8 +229,8 @@ has a `[jev]` table.
 
 Use these numbers to judge a change to a rule. They are four runs on the
 four scored drafts of this configuration: the fast passes on DeepSeek direct
-with thinking off and the verifier, paragraph order on DeepSeek at high (the
-starter setting, not Gemini), and filler words on Jev as the app runs it. Rule set `2026-09-23-shipped`
+with thinking off and the verifier, paragraph order on DeepSeek at high, and
+filler words on Jev as the app runs it: the setup I use. Rule set `2026-09-23-shipped`
 (`noise-1` to `-4`; `2026-09-23-gaps.md`, test 3).
 
 | Pass | Items | Mean F1 | SD | Range |
