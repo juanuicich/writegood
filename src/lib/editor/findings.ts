@@ -30,17 +30,23 @@ type Spec = Omit<Mark, "from" | "to">;
 
 type Message =
   | { kind: "marks"; marks: Mark[] }
-  | { kind: "focus"; id: number | null };
+  | { kind: "focus"; ids: number[] };
 
 export const findingsKey = new PluginKey<DecorationSet>("findings");
 
+/** Where findings overlap, ProseMirror draws one span for the shared text.
+ *  It joins the classes of every decoration there but keeps only one value
+ *  of any other attribute, so `data-finding` names one of them. The id
+ *  classes survive the join, and say which findings cover a span and which
+ *  of those are lit. */
 function attrs(spec: Spec) {
   return {
     class: [
       "finding",
       `finding-${spec.severity}`,
+      `finding-id-${spec.id}`,
       spec.stale ? "finding-stale" : "",
-      spec.current ? "finding-current" : "",
+      spec.current ? `finding-current finding-lit-${spec.id}` : "",
     ]
       .filter(Boolean)
       .join(" "),
@@ -56,17 +62,19 @@ export function build(doc: Node, marks: Mark[]): DecorationSet {
   return DecorationSet.create(doc, decos);
 }
 
-/** Redraw the set the mapping already holds, changing only which one is
- *  current. Positions are taken from the decorations, never from the store. */
-export function refocus(set: DecorationSet, doc: Node, id: number | null): DecorationSet {
+/** Redraw the set the mapping already holds, changing only which ones are
+ *  lit. Positions are taken from the decorations, never from the store. */
+export function refocus(set: DecorationSet, doc: Node, ids: number[]): DecorationSet {
   const decos = set.find().map((d) => {
-    const spec = { ...(d.spec as Spec), current: (d.spec as Spec).id === id };
+    const spec = { ...(d.spec as Spec), current: ids.includes((d.spec as Spec).id) };
     return Decoration.inline(d.from, d.to, attrs(spec), spec);
   });
   return DecorationSet.create(doc, decos);
 }
 
-export const Findings = Extension.create<{ onSelect?: (id: number) => void }>({
+/** A click hands over every finding under the pointer, so overlapping
+ *  findings light up together (SPEC §12.3). */
+export const Findings = Extension.create<{ onSelect?: (ids: number[]) => void }>({
   name: "findings",
 
   addOptions() {
@@ -87,7 +95,7 @@ export const Findings = Extension.create<{ onSelect?: (id: number) => void }>({
             const message = tr.getMeta(findingsKey) as Message | undefined;
             if (!message) return mapped;
             if (message.kind === "marks") return build(tr.doc, message.marks);
-            return refocus(mapped, tr.doc, message.id);
+            return refocus(mapped, tr.doc, message.ids);
           },
         },
         props: {
@@ -102,7 +110,7 @@ export const Findings = Extension.create<{ onSelect?: (id: number) => void }>({
               .map((d) => (d.spec as Spec)?.id)
               .filter((id): id is number => typeof id === "number");
             if (found && found.length > 0) {
-              onSelect(found[0]);
+              onSelect([...new Set(found)]);
               return true;
             }
             return false;
@@ -119,8 +127,8 @@ export function setFindings(editor: import("@tiptap/core").Editor, marks: Mark[]
   view.dispatch(state.tr.setMeta(findingsKey, { kind: "marks", marks } satisfies Message));
 }
 
-/** Move the highlight to another finding without moving any of them. */
-export function setFocus(editor: import("@tiptap/core").Editor, id: number | null) {
+/** Light other findings without moving any of them. */
+export function setFocus(editor: import("@tiptap/core").Editor, ids: number[]) {
   const { state, view } = editor;
-  view.dispatch(state.tr.setMeta(findingsKey, { kind: "focus", id } satisfies Message));
+  view.dispatch(state.tr.setMeta(findingsKey, { kind: "focus", ids } satisfies Message));
 }

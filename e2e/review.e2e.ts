@@ -5,20 +5,12 @@
 import { afterAll, beforeAll, expect } from "bun:test";
 import { Key } from "webdriverio";
 import { dollars } from "../src/lib/usage";
-import { COST_PER_CALL, e2e, FINDINGS, launch, statusText, until, type App } from "./harness";
+import { COST_PER_CALL, e2e, FINDINGS, launch, litInText, runPasses, statusText, until, type App } from "./harness";
 
 let app: App;
 beforeAll(async () => {
   app = await launch();
-  // ⌘R, not ⌘⏎: the plugin drops ⌘ from Enter (SPEC §16.1). A synthetic key
-  // never reaches the menu, so this is the window's own handler.
-  await app.browser.keys([Key.Command, "r"]);
-  // The run is over when the progress line is gone and every note is placed.
-  await until(app, "the run to finish", async () => {
-    const running = await app.browser.execute(() => !!document.querySelector("footer .right .live"));
-    const placed = await app.browser.execute(() => document.querySelectorAll(".margin .note").length);
-    return !running && placed === FINDINGS.length;
-  }, 30_000);
+  await runPasses(app);
 }, 90_000);
 afterAll(() => app?.close());
 
@@ -35,28 +27,30 @@ const notes = () =>
     [...document.querySelectorAll<HTMLElement>(".margin .note")].map((n) => ({
       id: n.dataset.note!,
       category: n.querySelector(".cat")?.textContent ?? "",
-      highlight: [...document.querySelectorAll(`.ProseMirror [data-finding="${n.dataset.note}"]`)]
+      highlight: [...document.querySelectorAll(`.ProseMirror .finding-id-${n.dataset.note}`)]
         .map((s) => s.textContent)
         .join(""),
     })),
   ) as Promise<Note[]>;
 
-const current = () =>
-  app.browser.execute(() => ({
-    note: document.querySelector<HTMLElement>(".margin .note.current")?.dataset.note ?? null,
-    highlight: document.querySelector<HTMLElement>(".ProseMirror .finding-current")?.dataset.finding ?? null,
-  }));
+const current = async () => {
+  const note = await app.browser.execute(
+    () => document.querySelector<HTMLElement>(".margin .note.current")?.dataset.note ?? null,
+  );
+  const words = await litInText(app.browser);
+  return { note, highlight: words.length === 1 ? words[0]! : words.length === 0 ? null : words.join(",") };
+};
 
 e2e("one note per finding, in document order", async () => {
   const found = await notes();
   expect(found.map((n) => n.category)).toEqual(FINDINGS.map((f) => f.category));
 }, () => app);
 
-e2e("each highlight covers exactly its quoted words", async () => {
+e2e("each highlight covers its quoted words, with the edges tidied", async () => {
   const found = await notes();
   for (const f of FINDINGS) {
     const note = found.find((n) => n.category === f.category);
-    expect(note?.highlight).toBe(f.quote);
+    expect(note?.highlight).toBe(f.drawn ?? f.quote);
   }
 }, () => app);
 
@@ -86,7 +80,7 @@ e2e("Esc then j and k move the focus, in the margin and in the text", async () =
 e2e("the focused note and its words are in view, far down the draft", async () => {
   const { browser } = app;
   const last = (await notes()).at(-1)!;
-  await browser.keys(["j", "j", "j"]);
+  await browser.keys(Array(FINDINGS.length - 1).fill("j"));
   await until(app, "the last note to take the focus", async () => (await current()).note === last.id);
 
   // The margin scrolls to follow the text; give it the frames it animates over.
@@ -101,7 +95,7 @@ e2e("the focused note and its words are in view, far down the draft", async () =
       const page = new DOMRect(0, 0, window.innerWidth, window.innerHeight);
       return {
         note: inside(document.querySelector(`.margin [data-note="${id}"]`), band),
-        words: inside(document.querySelector(`.ProseMirror [data-finding="${id}"]`), page),
+        words: inside(document.querySelector(`.ProseMirror .finding-id-${id}`), page),
       };
     }, last.id);
     return seen.note && seen.words;

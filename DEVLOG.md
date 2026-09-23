@@ -423,3 +423,28 @@ and `⌘⇧⏎` opens the pass list.
 **CHANGE — `⌘⇧⏎` in the window now opens the pass list.** The key handler used
 to run every pass on `⌘⏎` with or without ⇧. That did not matter while the
 menu held `⌘⇧⏎`. It does now that the menu holds `⌘⇧R`.
+
+## 2026-09-23 — clicks, overlaps and tidy edges
+
+**DONE — a click on a highlight lights every finding under it**, in the text
+and in the margin, and focuses the first in document order. The next `j` or
+`k` lights one again. SPEC §12.3.
+
+**DONE — a click in the text sets the margin level with the words.** The
+focused note's top moves level with the clicked highlight, and the draft stays
+where it is. `j` / `k` and clicks on a note still only bring it into view. The
+margin's track now runs a band's height past the last note, so a note low in
+the stack can rise that far. The wheel still stops at the last note.
+
+**DONE — drawn ranges are tidied** in `spans.ts`: no leading or trailing
+space, no leading comma, and overlapping ends that differ only by closing
+punctuation meet at the later one. The stored quote is unchanged.
+
+**FOUND — ProseMirror keeps one `data-finding` where findings overlap.** It
+joins the classes of overlapping decorations but keeps one value of any other
+attribute. A highlight fully inside another had no element of its own with its
+id. Each decoration now also carries `finding-id-N`, and `finding-lit-N` when
+lit, and the margin aligns by editor position rather than by that element.
+
+**FOUND — an element click in the WebDriver plugin sends only `click`, at
+0,0.** ProseMirror ignores it. Tests click with pointer actions instead.

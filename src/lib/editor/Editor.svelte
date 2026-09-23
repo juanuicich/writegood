@@ -17,7 +17,7 @@
       extensions: [
         StarterKit.configure({ link: { openOnClick: false } }),
         Placeholder.configure({ placeholder: "Write." }),
-        Findings.configure({ onSelect: (id) => app.select(id) }),
+        Findings.configure({ onSelect: (ids) => app.selectInText(ids) }),
       ],
       content: "",
       autofocus: "end",
@@ -49,7 +49,7 @@
   // focus change alone never repaints stored offsets over mapped ones.
   $effect(() => {
     const findings = app.findings;
-    const focused = untrack(() => app.current?.id);
+    const lit = untrack(() => app.lit);
     const marks: Mark[] = findings
       .filter((f) => f.from !== null && f.to !== null && f.status !== "dismissed")
       .map((f) => ({
@@ -58,15 +58,15 @@
         to: f.to as number,
         severity: f.severity,
         stale: f.status === "stale",
-        current: focused === f.id,
+        current: lit.includes(f.id),
       }));
     if (editor) setFindings(editor, marks);
   });
 
   // Focus only. Restyles the decorations where the mapping left them.
   $effect(() => {
-    const id = app.current?.id ?? null;
-    if (editor) setFocus(editor, id);
+    const lit = app.lit;
+    if (editor) setFocus(editor, lit);
   });
 </script>
 

@@ -10,7 +10,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { remote } from "webdriverio";
+import { Key, remote } from "webdriverio";
 
 export const BINARY = resolve(import.meta.dir, "../src-tauri/target/e2e/debug/writegood");
 
@@ -51,10 +51,24 @@ There was no vote. The chair said that a vote would be premature, and the member
 Some of us left the room with the feeling that nothing had been accomplished. It is a feeling that is familiar. It is a feeling that recurs.
 `;
 
-/** What the fake model reports for the test pass. Each quote appears once in
- *  the draft. The last is in the last paragraph, below the first screen. */
-export const FINDINGS = [
+/** What the fake model reports for the test pass, in the order the margin
+ *  lists them: by where the drawn range starts, then by severity. Each quote
+ *  appears once in the draft. `drawn` is what the highlight should cover once
+ *  its edges are tidied (SPEC §12.3), when that differs from the quote.
+ *
+ *  Three overlap on "really quite", with loose edges on purpose: one starts
+ *  with a space and stops short of the full stop, one takes the full stop.
+ *  The last finding is in the last paragraph, below the first screen. */
+export const FINDINGS: {
+  quote: string;
+  drawn?: string;
+  category: string;
+  severity: "low" | "medium" | "high";
+  note: string;
+}[] = [
   { quote: "a determination would be made", category: "nominalization", severity: "high", note: "The verb is buried in a noun." },
+  { quote: "was really quite unproductive.", category: "tone", severity: "medium", note: "The sentence judges the meeting and reports nothing." },
+  { quote: " really quite unproductive", drawn: "really quite unproductive.", category: "stacking", severity: "medium", note: "Two intensifiers stacked on one adjective." },
   { quote: "really quite", category: "filler", severity: "low", note: "Two intensifiers that add nothing." },
   { quote: "time had expired", category: "passive", severity: "medium", note: "The sentence hides who ended the meeting." },
   { quote: "It is a feeling that recurs.", category: "repetition", severity: "medium", note: "The same frame as the sentence before it." },
@@ -288,6 +302,50 @@ export const editorText = (b: WebdriverIO.Browser) =>
 
 export const statusText = (b: WebdriverIO.Browser) =>
   b.execute(() => document.querySelector("footer")?.textContent?.replace(/\s+/g, " ").trim() ?? "");
+
+/** The ids lit in the text. Overlapping findings share one span, so the ids
+ *  are read from the per-finding classes (findings.ts), not `data-finding`. */
+export const litInText = (b: WebdriverIO.Browser) =>
+  b.execute(() => {
+    const ids = new Set<string>();
+    for (const span of document.querySelectorAll(".ProseMirror .finding-current")) {
+      for (const c of span.classList) {
+        const m = c.match(/^finding-lit-(\d+)$/);
+        if (m) ids.add(m[1]!);
+      }
+    }
+    return [...ids].sort();
+  });
+
+/** Bring the first element `selector` matches into view, and return a point
+ *  10px inside its left edge, halfway down, in viewport coordinates. */
+export async function pointAt(b: WebdriverIO.Browser, selector: string): Promise<{ x: number; y: number }> {
+  return b.execute((sel: string) => {
+    const el = document.querySelector(sel);
+    if (!el) throw new Error(`nothing matches ${sel}`);
+    el.scrollIntoView({ block: "nearest" });
+    const r = el.getBoundingClientRect();
+    return { x: Math.round(r.left + Math.min(10, r.width / 2)), y: Math.round(r.top + r.height / 2) };
+  }, selector);
+}
+
+/** Click at a point with pointer actions. An element click sends only a
+ *  `click` event at 0,0, which ProseMirror ignores: it acts on mousedown
+ *  (SPEC §16.1). */
+export async function clickPoint(b: WebdriverIO.Browser, p: { x: number; y: number }) {
+  await b.action("pointer").move({ x: p.x, y: p.y, origin: "viewport" }).down().up().perform();
+}
+
+/** Run every enabled pass with ⌘R and wait until each finding has a note. */
+export async function runPasses(app: App) {
+  await app.browser.keys([Key.Command, "r"]);
+  // The run is over when the progress line is gone and every note is placed.
+  await until(app, "the run to finish", async () => {
+    const running = await app.browser.execute(() => !!document.querySelector("footer .right .live"));
+    const placed = await app.browser.execute(() => document.querySelectorAll(".margin .note").length);
+    return !running && placed === FINDINGS.length;
+  }, 30_000);
+}
 
 /** Put the caret at the end of the first element `selector` matches. A
  *  synthetic click does not move the caret, so the selection is set through

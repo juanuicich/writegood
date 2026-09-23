@@ -20,6 +20,7 @@ import {
 import { buildTextIndex, codePointRangeToPM, type TextIndex } from "./text";
 import type { DuelOutcome } from "./duel/run";
 import { markdownToJSON, jsonToMarkdown } from "./markdown";
+import { tidy } from "./spans";
 
 export interface HistoryState {
   revisions: Revision[];
@@ -84,6 +85,21 @@ class App {
 
   current = $derived(this.visible[this.cursor] ?? null);
 
+  /** The findings a click in the text lit together. Null when one finding is
+   *  lit, the focused one, which is every case but that click (SPEC §12.3). */
+  group = $state<number[] | null>(null);
+
+  /** What is lit, in the text and in the margin. */
+  lit = $derived.by(() => {
+    const shown = this.group?.filter((id) => this.visible.some((f) => f.id === id));
+    if (shown && shown.length > 0) return shown;
+    return this.current ? [this.current.id] : [];
+  });
+
+  /** Bumped on every focus change, with how it was made, so the margin can
+   *  align a note to a clicked highlight and only reveal it otherwise. */
+  focus = $state<{ seq: number; by: "text" | "other" }>({ seq: 0, by: "other" });
+
   showSidebar = $derived(this.sidebarForced || this.visible.length > 0);
 
   // ------------------------------------------------------------- lifecycle
@@ -124,6 +140,7 @@ class App {
     this.editor?.commands.setContent(markdownToContent(text));
     this.dirty = false;
     this.cursor = -1;
+    this.group = null;
     await this.loadFindings();
     await this.loadUsage();
     this.say(this.doc.title);
@@ -193,12 +210,20 @@ class App {
       })),
     );
     const byId = new Map(resolved.map((a) => [a.id, a]));
-    this.findings = this.findings.map((f) => {
+    // Tidy the drawn edges across every placed range at once, since the rule
+    // for overlapping ends needs to see them together (SPEC §12.3).
+    const placed = this.findings.map((f) => {
       const a = byId.get(f.id);
-      if (!a || a.from === null || a.to === null) {
+      return a && a.from !== null && a.to !== null ? { from: a.from, to: a.to } : null;
+    });
+    const drawn = tidy(idx.text, placed);
+    this.findings = this.findings.map((f, i) => {
+      const a = byId.get(f.id);
+      const r = drawn[i];
+      if (!a || !r) {
         return { ...f, from: null, to: null, exact: false, status: stale(f.status) };
       }
-      const pm = codePointRangeToPM(idx, a.from, a.to);
+      const pm = codePointRangeToPM(idx, r.from, r.to);
       return pm
         ? { ...f, from: pm.from, to: pm.to, exact: a.exact, status: unstale(f.status) }
         : { ...f, from: null, to: null, exact: false, status: stale(f.status) };
@@ -209,15 +234,36 @@ class App {
     const n = this.visible.length;
     if (n === 0) return;
     this.cursor = nextCursor(this.cursor, delta, n);
+    this.focused("other");
     this.scrollToCurrent();
   }
 
+  /** Focus one finding, from a click on its note in the margin. */
   select(id: number) {
     const i = this.visible.findIndex((f) => f.id === id);
     if (i >= 0) {
       this.cursor = i;
+      this.focused("other");
       this.scrollToCurrent();
     }
+  }
+
+  /** A click on a highlight in the text: light every finding under it, and
+   *  focus the first in document order. The draft stays where it is. */
+  selectInText(ids: number[]) {
+    const i = this.visible.findIndex((f) => ids.includes(f.id));
+    if (i < 0) return;
+    this.cursor = i;
+    this.focused("text", ids);
+    const f = this.current;
+    if (f?.from != null && this.editor) {
+      this.editor.commands.setTextSelection({ from: f.from, to: f.to ?? f.from });
+    }
+  }
+
+  private focused(by: "text" | "other", group: number[] | null = null) {
+    this.group = group && group.length > 1 ? group : null;
+    this.focus = { seq: this.focus.seq + 1, by };
   }
 
   scrollToCurrent() {

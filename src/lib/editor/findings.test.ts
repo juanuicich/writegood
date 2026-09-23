@@ -41,7 +41,7 @@ describe("finding decorations", () => {
     expect(set.find().map((d) => [d.from, d.to])).toEqual([[6, 10]]);
 
     // Focusing the finding must not drag it back to 11..15.
-    set = refocus(set, tr.doc, 7);
+    set = refocus(set, tr.doc, [7]);
     const [deco] = set.find();
     expect([deco.from, deco.to]).toEqual([6, 10]);
     expect(deco.spec).toMatchObject({ id: 7, current: true });
@@ -49,10 +49,22 @@ describe("finding decorations", () => {
 
   test("focusing another finding clears the current flag", () => {
     let set = build(docWith("AAAA BBBB CCCC"), marks);
-    set = refocus(set, docWith("AAAA BBBB CCCC"), 7);
+    set = refocus(set, docWith("AAAA BBBB CCCC"), [7]);
     expect(set.find()[0].spec).toMatchObject({ current: true });
-    set = refocus(set, docWith("AAAA BBBB CCCC"), 99);
+    set = refocus(set, docWith("AAAA BBBB CCCC"), [99]);
     expect(set.find()[0].spec).toMatchObject({ current: false });
+  });
+
+  test("several findings can be lit at once", () => {
+    const three: Mark[] = [
+      { id: 1, from: 1, to: 5, severity: "low", stale: false, current: false },
+      { id: 2, from: 3, to: 10, severity: "high", stale: false, current: false },
+      { id: 3, from: 11, to: 15, severity: "medium", stale: false, current: false },
+    ];
+    const doc = docWith("AAAA BBBB CCCC");
+    const set = refocus(build(doc, three), doc, [1, 2]);
+    const lit = Object.fromEntries(set.find().map((d) => [d.spec.id, d.spec.current]));
+    expect(lit).toEqual({ 1: true, 2: true, 3: false });
   });
 
   test("a mark outside the document is dropped", () => {

@@ -4,7 +4,7 @@ import { test, expect } from "bun:test";
 // defined. The store only needs them to hold plain values for these tests.
 const g = globalThis as Record<string, unknown>;
 g.$state = <T>(v: T) => v;
-g.$derived = <T>(v: T) => v;
+g.$derived = Object.assign(<T>(v: T) => v, { by: <T>(f: () => T) => f });
 
 const { nextCursor } = await import("./state.svelte");
 

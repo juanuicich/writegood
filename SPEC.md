@@ -906,6 +906,10 @@ What it cannot do, on macOS:
 - **Placing the caret with a click.** A synthetic click does not move the
   caret. Tests set the DOM selection first, which ProseMirror follows, and
   then type.
+- **Clicking an element.** An element click sends one `click` event at 0,0
+  and no `mousedown`. ProseMirror acts on `mousedown`, so a click on a
+  highlight does nothing. Pointer actions at coordinates send all three
+  events, and the tests click that way.
 - **The window frame.** A screenshot is the page only.
 
 ### 16.2 End-to-end tests

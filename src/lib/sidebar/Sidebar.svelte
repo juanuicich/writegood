@@ -152,9 +152,12 @@
     tops = next;
 
     // The track must cover the prose, so the margin can always scroll far
-    // enough to stay level with it, and cover the lowest note besides.
+    // enough to stay level with it, and cover the lowest note besides. It
+    // also leaves a band's height below the last note, so aligning any note
+    // to a clicked highlight can lift it as high as the highlight sits. The
+    // wheel stops at the last note, so the reader never scrolls into that.
     const lead = band.getBoundingClientRect().top - page.getBoundingClientRect().top;
-    trackHeight = Math.max(floor + GAP, page.scrollHeight + lead);
+    trackHeight = Math.max(floor + band.clientHeight, page.scrollHeight + lead);
 
     const extents = Object.entries(next).map(([id, y]) => [y, y + (heights[Number(id)] ?? 56)]);
     span = {
@@ -179,15 +182,40 @@
 
   /** Moving the focus must bring the focused note into the band. Stepping with
    *  j or k scrolls the prose, but stacking can still leave the note below the
-   *  foot of the band, and clicking a highlight moves the focus without
-   *  moving the prose at all. */
+   *  foot of the band. A click on a highlight goes further and sets the note
+   *  level with it (SPEC §12.3). Every focus change bumps `seq`, so clicking
+   *  the same highlight again aligns it again. */
   $effect(() => {
+    const { by } = app.focus;
     const id = app.current?.id;
     if (id === undefined) return;
     // Read the layout after the DOM has caught up, and outside the effect's
     // dependencies, so a scroll of our own does not retrigger this.
-    void tick().then(() => reveal(id));
+    void tick().then(() => (by === "text" ? align(id) : reveal(id)));
   });
+
+  /** Scroll the margin until the note's top is level with its highlight. The
+   *  draft stays put: the reader just clicked those words. The offset holds
+   *  until the reader next scrolls the draft. */
+  function align(id: number) {
+    const page = pageEl();
+    const card = band?.querySelector<HTMLElement>(`[data-note="${id}"]`);
+    const f = app.visible.find((x) => x.id === id);
+    if (!page || !band || !card || !app.editor || f?.from == null) return;
+    // By position, as the notes are placed: an overlapped highlight has no
+    // span of its own to measure.
+    let words: number;
+    try {
+      words = app.editor.view.coordsAtPos(f.from).top;
+    } catch {
+      return;
+    }
+    const delta = card.getBoundingClientRect().top - words;
+    if (Math.abs(delta) < 1) return;
+    const want = band.scrollTop + delta;
+    offset = want - alignedScrollTop(page, band);
+    setBand(want);
+  }
 
   /** Bring the focused note into the band. The draft moves first, so the
    *  sentence comes along. Stacking can put a note further down than the draft
@@ -227,7 +255,7 @@
         bind:clientHeight={heights[f.id]}
         data-note={f.id}
         class="note"
-        class:current={app.current?.id === f.id}
+        class:current={app.lit.includes(f.id)}
         class:stale={f.status === "stale"}
         class:done={f.status === "addressed"}
         style:top={tops[f.id] !== undefined ? `${tops[f.id]}px` : undefined}
