@@ -4,10 +4,10 @@ Read `SPEC.md` before doing anything. It is the design of record.
 
 ## Status
 
-The bones are up: editor, Markdown storage, anchoring, the pass runner and the
-provider layer all work, and one pass has been run against a real provider end
-to end. `SPEC.md` §14 has the build order; the duel and the revision viewer are
-not built. `DEVLOG.md` records the assumptions and gaps.
+All seven steps in `SPEC.md` §14 are built: editor, Markdown storage,
+anchoring, the pass runner, providers, revisions and the duel. Passes have run
+against a real provider end to end. `SPEC.md` §15 lists what is open, and
+`DEVLOG.md` records the assumptions and gaps.
 
 ## Working agreement
 
@@ -36,8 +36,8 @@ feature request that breaks one of them needs a conversation, not a patch.
 Tauri v2 shell · Svelte 5 + TypeScript · TipTap 3 on ProseMirror · Rust core ·
 SQLite via `rusqlite` · `genai` for providers · Bun toolchain.
 
-Pinned versions are in `SPEC.md` §4.3, verified 21 September 2026. Check the
-registry rather than trusting a recalled version number.
+Pinned versions are in `SPEC.md` §4.3, verified 21 and 23 September 2026.
+Check the registry rather than trusting a recalled version number.
 
 ## Conventions
 
@@ -94,8 +94,8 @@ assuming a prompt is the problem.
 The probe lives in `src-tauri/examples/`, not `src/bin/`: a second binary under
 `src/bin` makes Tauri bundle the wrong one into the `.app`.
 
-To exercise the whole in-app path, including Tauri's HTTP plugin, set
-`VITE_WRITEGOOD_AUTORUN` to a pass slug or `all` and launch:
+To run passes in the app at launch, against the real home and a real
+provider, set `VITE_WRITEGOOD_AUTORUN` to a pass slug or `all`:
 
 ```
 VITE_WRITEGOOD_AUTORUN=nominalization bun run app
@@ -135,10 +135,11 @@ state worth reviewing. Screenshot it with headless Chrome:
   "http://localhost:1421/?show=review"
 ```
 
-This is the only way to see the design. It has already caught paragraph
+This is the quickest way to see the design. It has already caught paragraph
 spacing that had been cancelled by a later rule, colliding margin notes, a
-clipped command bar and timestamps rendered in UTC. Look at the screenshot
-before claiming a visual change works.
+clipped command bar and timestamps rendered in UTC. To see the real WebKit
+window instead, use `bun dev/drive.ts shot` against a dev build. Look at a
+screenshot before claiming a visual change works.
 
 Keys come from the macOS keychain or from `env:NAME`, which falls back to a
 `.env` file. `.env` is in `.gitignore` and must stay there.

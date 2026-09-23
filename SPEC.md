@@ -1,6 +1,7 @@
 # writegood — specification
 
-Status: draft 1, 21 September 2026. Nothing is built yet.
+Status: built, 23 September 2026. The build order in §14 is done; §15 lists
+what is open.
 
 ---
 
@@ -157,6 +158,9 @@ writegood/
 │   │   ├── ipc.ts                typed wrappers over Tauri invoke
 │   │   ├── markdown.ts           Markdown ↔ ProseMirror (§6.1)
 │   │   ├── text.ts               ProseMirror doc → plain text + position map
+│   │   ├── spans.ts              tidy the edges of drawn ranges (§12.3)
+│   │   ├── usage.ts              sum and word what calls cost (§9.4)
+│   │   ├── appearance.ts         text size steps (§12.1)
 │   │   ├── palette/Palette.svelte  the only chrome (§12.2)
 │   │   ├── editor/
 │   │   │   ├── Editor.svelte     TipTap instance
@@ -166,22 +170,32 @@ writegood/
 │   │   │   └── redact.ts         Rule One guard (§10.3)
 │   │   ├── passes/
 │   │   │   ├── run.ts            orchestration, fan-out, progress
+│   │   │   ├── parse.ts          prompt builder, reply parser
+│   │   │   ├── deadline.ts       a second timeout behind Rust's
 │   │   │   └── schema.ts         Zod finding schema + system preamble
-│   │   └── providers/index.ts   resolve a provider name (the call is Rust's)
-│   │   └── duel/Duel.svelte      A/B compare UI
-└── src-tauri/                    Rust
-    └── src/
-        ├── lib.rs                builder, command registration
-        ├── error.rs              AppError → serialisable strings
-        ├── db.rs                 schema, CRUD, transactions
-        ├── anchors.rs            re-anchoring (§7)
-        ├── config.rs             ~/.writegood config, rules, passes
-        ├── llm.rs                provider calls via genai (§9.2)
-        ├── log.rs                ~/.writegood/writegood.log
-        ├── menu.rs               the macOS menu bar (§12.2)
-        ├── documents.rs          Markdown files on disk (§6.1)
-        ├── runner.rs             CLI subprocess with timeout
-        └── secrets.rs            macOS keychain via `keyring`
+│   │   ├── providers/index.ts    resolve a provider name (the call is Rust's)
+│   │   ├── history/History.svelte  revisions sheet and word diff
+│   │   └── duel/
+│   │       ├── Duel.svelte       A/B compare UI
+│   │       ├── judge.ts          shuffle, judge prompt, verdict parser
+│   │       └── run.ts            one duel: ask the judge, record the result
+├── src-tauri/                    Rust
+│   └── src/
+│       ├── lib.rs                builder, command registration
+│       ├── error.rs              AppError → serialisable strings
+│       ├── db.rs                 schema, CRUD, transactions
+│       ├── anchors.rs            re-anchoring (§7)
+│       ├── config.rs             ~/.writegood config, rules, passes
+│       ├── llm.rs                provider calls via genai (§9.2)
+│       ├── prices.rs             the price catalog and cost per call (§9.4)
+│       ├── diff.rs               word-level diff for revisions
+│       ├── log.rs                ~/.writegood/writegood.log
+│       ├── menu.rs               the macOS menu bar (§12.2)
+│       ├── documents.rs          Markdown files on disk (§6.1)
+│       ├── runner.rs             CLI subprocess with timeout
+│       └── secrets.rs            macOS keychain via `keyring`
+├── e2e/                          end-to-end tests against the real app (§16.2)
+└── dev/                          the browser fixture, the probes, drive.ts (§16.3)
 ```
 
 **Boundary rule.** Rust owns durable state, the filesystem, subprocesses,

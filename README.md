@@ -110,8 +110,9 @@ See [`SPEC.md` §4](./SPEC.md#4-stack) for why, including why not Elixir.
 ```
 ~/.writegood/
 ├── config.toml     providers and defaults
-├── writegood.db    drafts, revisions, findings, duels
+├── writegood.db    revisions, findings, runs, duels
 ├── prices.json     model prices from models.dev
+├── documents/      your drafts, Markdown, one per file
 └── passes/         your prompts, one per file
 ```
 

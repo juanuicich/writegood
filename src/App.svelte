@@ -30,10 +30,9 @@
     }
     booted = true;
 
-    // A development hook. GUI automation needs accessibility permission that a
-    // terminal does not have, so this is the only way to exercise the whole
-    // in-app path — including Tauri's HTTP plugin — without a human at the
-    // keyboard. VITE_WRITEGOOD_AUTORUN names a pass slug, or "all".
+    // A development hook: run passes at launch, with no one at the keyboard.
+    // It predates the WebDriver server (SPEC §16), which now drives the window
+    // too. VITE_WRITEGOOD_AUTORUN names a pass slug, or "all".
     const auto = import.meta.env.VITE_WRITEGOOD_AUTORUN;
     if (auto) {
       void log.write("info", `autorun: ${auto}`);
