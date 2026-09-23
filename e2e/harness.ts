@@ -178,7 +178,8 @@ export function makeHome(modelUrl: string): string {
   writeFileSync(join(home, "passes", "00-e2e.md"), PASS);
   writeFileSync(
     join(home, "config.toml"),
-    `default_provider = "fake"
+    `# Written by the e2e harness.
+default_provider = "fake"
 judge_provider = "judge"
 
 [rules]

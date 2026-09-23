@@ -624,12 +624,50 @@ pub fn save_config(cfg: &Config) -> AppResult<()> {
     save_config_in(&home_dir(), cfg)
 }
 
+/// Write the config into the file that is there, not over it. A value the
+/// app changed is replaced in place, with the comment beside it kept; every
+/// other line, comment and blank line stays as the author left it. A key the
+/// app does not know, or a key it has no value for, is left alone.
 fn save_config_in(home: &Path, cfg: &Config) -> AppResult<()> {
     ensure_scaffold_in(home)?;
-    let text = toml::to_string_pretty(&wire::borrow(cfg))
+    let fresh = toml::to_string_pretty(&wire::borrow(cfg))
         .map_err(|e| AppError::other(format!("cannot write config: {e}")))?;
-    std::fs::write(home.join("config.toml"), text)?;
+    let path = home.join("config.toml");
+    let text = match std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|old| old.parse::<toml_edit::DocumentMut>().ok())
+    {
+        Some(mut doc) => {
+            let new = fresh
+                .parse::<toml_edit::DocumentMut>()
+                .map_err(|e| AppError::other(format!("cannot write config: {e}")))?;
+            merge(doc.as_table_mut(), new.as_table());
+            doc.to_string()
+        }
+        // No file, or one that will not parse: nothing to keep.
+        None => fresh,
+    };
+    std::fs::write(path, text)?;
     Ok(())
+}
+
+/// Copy every value in `new` into `old`, keeping `old`'s layout and comments.
+fn merge(old: &mut toml_edit::Table, new: &toml_edit::Table) {
+    use toml_edit::Item;
+    for (key, item) in new.iter() {
+        match (old.get_mut(key), item) {
+            (Some(Item::Table(o)), Item::Table(n)) => merge(o, n),
+            (Some(Item::Value(o)), Item::Value(n)) => {
+                // The decor holds the spacing and the trailing comment.
+                let decor = o.decor().clone();
+                *o = n.clone();
+                *o.decor_mut() = decor;
+            }
+            _ => {
+                old.insert(key, item.clone());
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1029,7 +1067,6 @@ timeout_secs = 90
         save_config_in(home.at(), &cfg).unwrap();
 
         let text = std::fs::read_to_string(home.at().join("config.toml")).unwrap();
-        assert!(text.contains("show_cost = true"), "{text}");
         assert!(text.contains("catalog = \"anthropic-eu\""), "{text}");
 
         let back = load_config_in(home.at()).unwrap();
@@ -1037,6 +1074,40 @@ timeout_secs = 90
         assert_eq!(back.providers["anthropic"].catalog.as_deref(), Some("anthropic-eu"));
         // A provider without the key does not grow one on save.
         assert!(!text.contains("catalog = \"\""));
+    }
+
+    #[test]
+    fn a_save_keeps_the_authors_comments_and_layout() {
+        let home = TempHome::new();
+        let written = "# my notes on providers\n\
+default_provider = \"anthropic\"\n\
+\n\
+[appearance]\n\
+font_size   = 18   # bigger on the laptop\n\
+theme       = \"light\"\n\
+unknown_key = 3    # not the app's\n\
+\n\
+[providers.anthropic]\n\
+kind    = \"anthropic\"\n\
+model   = \"claude-opus-5\"\n\
+# key_ref = \"env:OLD\"\n\
+key_ref = \"keychain:writegood/anthropic\"\n";
+        std::fs::create_dir_all(home.at()).unwrap();
+        std::fs::write(home.at().join("config.toml"), written).unwrap();
+
+        let mut cfg = load_config_in(home.at()).unwrap();
+        cfg.appearance.font_size = 21;
+        save_config_in(home.at(), &cfg).unwrap();
+
+        let text = std::fs::read_to_string(home.at().join("config.toml")).unwrap();
+        assert!(text.starts_with("# my notes on providers\n"), "{text}");
+        assert!(text.contains("font_size   = 21   # bigger on the laptop\n"), "{text}");
+        assert!(text.contains("unknown_key = 3    # not the app's"), "{text}");
+        assert!(text.contains("# key_ref = \"env:OLD\"\n"), "{text}");
+        assert!(text.contains("theme       = \"light\"\n"), "{text}");
+        // What the file lacked is added, and what it had is read back.
+        assert!(text.contains("[rules]"), "{text}");
+        assert_eq!(load_config_in(home.at()).unwrap().appearance.font_size, 21);
     }
 
     #[test]

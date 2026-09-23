@@ -18,6 +18,9 @@
 
   let { commands }: { commands: Command[] } = $props();
 
+  /** Menu commands that still run while a sheet is open. */
+  const SHEET_SAFE = new Set(["bigger", "smaller"]);
+
   let query = $state("");
   let selected = $state(0);
   let pending = $state<Command | null>(null);
@@ -131,9 +134,10 @@
     let stop: (() => void) | null = null;
     let done = false;
     // An open sheet takes the menu, as it takes the keyboard (SPEC §12.4).
-    // The duel listens for itself; nothing runs behind either sheet.
+    // The duel listens for itself; nothing runs behind either sheet except
+    // the text size, which applies to the sheet too.
     void onMenuCommand((id) => {
-      if (app.duel || app.history) return;
+      if ((app.duel || app.history) && !SHEET_SAFE.has(id)) return;
       void runCommand(id);
     }).then((off) => {
       if (done) off();

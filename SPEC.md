@@ -397,7 +397,10 @@ stay visible, marked with the revision they came from.
 
 ### 9.1 Configuration
 
-`~/.writegood/config.toml`. Editable by hand; the palette opens it.
+`~/.writegood/config.toml`. Editable by hand; the palette opens it. When the
+app saves a setting, such as the theme or the text size, it changes that value
+in place. Comments, blank lines, key order and keys the app does not know stay
+as the author left them.
 
 Keys resolve from the keychain (`keychain:service/account`) or the environment
 (`env:NAME`). An `env:` reference also falls back to a `.env` file, looked for
@@ -792,7 +795,9 @@ is the key the author uses.
 It is not known which sees a ⌘ key first on macOS, the page or the menu bar.
 The app works in either order. While the duel or the revisions sheet is open,
 a menu command goes to the sheet, not to the palette: `Run all passes` asks
-the judge in the duel and does nothing in the revisions sheet.
+the judge in the duel and does nothing in the revisions sheet. Text size is
+the exception: `⌘+` and `⌘-` work over either sheet, from the keyboard and
+from the menu.
 
 The duel and the revisions sheet cover the window and take the keyboard while
 they are open: `Esc` closes, `⌘R` or `⌘⏎` asks the judge, `j` / `k` move between
@@ -968,7 +973,7 @@ bun dev/drive.ts shot [file]          screenshot of the page (default /tmp/write
 bun dev/drive.ts text [selector]      the text of an element (default the editor)
 bun dev/drive.ts html [selector]      the outer HTML of an element
 bun dev/drive.ts eval '<js>'          run JavaScript in the page, print the result
-bun dev/drive.ts click <selector>     click an element
+bun dev/drive.ts click <selector>     click the middle of an element
 bun dev/drive.ts keys <key>...        send keys, e.g. Escape j j
 bun dev/drive.ts type '<text>'        insert text in the editor at the cursor
 ```

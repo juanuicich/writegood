@@ -468,3 +468,23 @@ the palette already did the same.
 
 **UNVERIFIED — the View menu by hand.** The tests cannot reach the menu bar.
 Needs checking: View shows `⌘+` and `⌘-`, and both keys work from the menu.
+
+## 2026-09-23 — three loose ends
+
+**FIXED — a save no longer wipes the comments in `config.toml`.** The app used
+to write the whole file from its own settings. It now edits the file with
+`toml_edit`: a value it changed is replaced in place, with the comment beside
+it; everything else stays, including keys the app does not know. A key the app
+has no value for is left as it is, not removed.
+
+**FIXED — `⌘+` and `⌘-` work while the duel or the revisions sheet is open**,
+from the keyboard and from the View menu. Every other menu command still waits
+until the sheet closes.
+
+**FIXED — `bun dev/drive.ts click` clicks the way a hand does.** It sends
+pointer actions at the element's middle, so ProseMirror sees the mousedown and
+moves the caret. The plugin's own element click is unchanged. It is a
+third-party defect and has not been reported upstream.
+
+**NOTE — the palette e2e test failed once in a full run** and passed in six
+runs after. The cause was not found.

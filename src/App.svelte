@@ -232,10 +232,8 @@
       return;
     }
     if (app.paletteOpen) return;
-    // The sheets cover everything and handle their own keys.
-    if (app.duel || app.history) return;
-
-    // ⌘+ is ⌘⇧= on a US keyboard, so "=" counts as bigger too.
+    // ⌘+ is ⌘⇧= on a US keyboard, so "=" counts as bigger too. Text size
+    // applies over the sheets as well, so it comes before they take the keys.
     if (meta && (e.key === "+" || e.key === "=")) {
       e.preventDefault();
       void resize(1);
@@ -246,6 +244,9 @@
       void resize(-1);
       return;
     }
+
+    // The sheets cover everything and handle their own keys.
+    if (app.duel || app.history) return;
 
     if (meta && e.key === "y") {
       e.preventDefault();

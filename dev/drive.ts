@@ -8,7 +8,7 @@
  *    bun dev/drive.ts text [selector]    the text of an element (default the editor)
  *    bun dev/drive.ts html [selector]    the outer HTML of an element
  *    bun dev/drive.ts eval '<js>'        run JavaScript in the page, print the result
- *    bun dev/drive.ts click <selector>   click an element
+ *    bun dev/drive.ts click <selector>   click the middle of an element
  *    bun dev/drive.ts keys <key>...      send keys, e.g. Escape j j
  *    bun dev/drive.ts type '<text>'      insert text in the editor at the cursor
  *
@@ -77,9 +77,21 @@ try {
       console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2));
       break;
     }
-    case "click":
-      await browser.$(args[0]!).click();
+    case "click": {
+      // An element click sends only a click event at 0,0, which ProseMirror
+      // ignores. Pointer actions at the element's middle send mousedown,
+      // mouseup and click, as a hand would (SPEC §16.1).
+      const at = await browser.execute((sel: string) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        el.scrollIntoView({ block: "nearest" });
+        const r = el.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+      }, args[0]!);
+      if (!at) throw new Error(`nothing matches ${args[0]}`);
+      await browser.action("pointer").move({ ...at, origin: "viewport" }).down().up().perform();
       break;
+    }
     case "keys":
       await browser.keys(args.map(key));
       break;
