@@ -17,6 +17,15 @@ not permission to create project files. Wait for an explicit "build it".
 Research that informs the design is always fine: checking current package
 versions, reading an API reference, confirming an approach works.
 
+## This repository is public
+
+Anyone can read every commit, including the history. Commit only what can be
+shared. Never commit API keys, tokens, `.env` files, personal email
+addresses, local paths under a home directory, or the author's private
+writing. Benchmark drafts and model replies must come from text that is safe
+to publish. When unsure whether a file can be shared, leave it uncommitted and
+ask.
+
 ## Hard constraints
 
 These come from the two rules in `SPEC.md` §2. They are not preferences, and a
