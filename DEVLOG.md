@@ -621,3 +621,31 @@ call waits for its provider's slot before it takes a run slot, so agy's 8 do
 not slow DeepSeek passes in the same run.
 
 **UNVERIFIED — the duel judge through agy.** Not tested.
+
+## 2026-09-23 — passes on Jev, specified
+
+No code. SPEC §8.4 and §9.5 describe the design, and §15 lists what is open.
+The build waits for "build it".
+
+**DECISION — the rule text is the whole definition of a Jev pass.** Code
+splits text with `Intl.Segmenter`, lists word spans, turns a chosen span
+into a quote and removes overlaps. Nothing else. The word lists in
+`bench/scripts/jev/` must not ship.
+
+**DECISION — segmenting and span listing live in TypeScript.** They build
+the questions, which is prompt building. No quote is searched for, so no
+string matching leaves Rust. Rust makes the request in `jev.rs`.
+
+**DECISION — the note on a Jev finding is fixed text.** It is `jev.note` in
+the pass's frontmatter, or the pass's name. Jev writes no text.
+
+**DECISION — the sentence-openings variant drops its pass-specific code.**
+The benchmark script named the two problems in its questions and counted
+words and run lengths against the rule's numbers. Method `across` does
+none of this, so it is not the variant that was measured.
+
+**ASSUMPTION — severity from the Noul probability is acceptable.** It
+measures how sure Jev is, not how bad the problem is.
+
+**ASSUMPTION — the clearer sentence-openings wording goes into the starter.**
+It was measured on Jev only. The starter also serves the language model.
