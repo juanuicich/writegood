@@ -1,8 +1,36 @@
-# The agy provider's thinking settings, in the shape of the app's
-# config.toml (SPEC §9.3). The benchmark reads the mapping from here, so the
-# app's config and the benchmark keep one copy of it.
+# The agy provider block from SPEC §9.3, as it goes in the app's
+# config.toml. The benchmark runs agy through the app's own runner
+# (src-tauri/examples/cli.rs) with this block, so the command line, the
+# files and the timeout are the app's. bench/scripts/agy.test.ts checks that
+# this block matches SPEC §9.3 and the example in DEFAULT_CONFIG.
 [providers.agy]
-kind           = "cli"
-command        = "agy"
-thinking       = "off"
+kind         = "cli"
+command      = "agy"
+model        = "gemini-3.8-flash"
+thinking     = "off"          # runs as gemini-3.8-flash-low, with the verifier
 thinking_names = { off = "low", max = "high" }
+args         = ["-p", "{prompt}", "--agent", "writegood", "--add-dir", "{workdir}",
+                "--model", "{model}-{thinking}", "--output-format", "json"]
+json_path    = "response"
+json_error   = "error"
+timeout_secs = 180
+max_in_flight = 8
+
+[providers.agy.files]
+".agents/agents/writegood/agent.md" = """
+---
+name: writegood
+description: Answers one prompt from its text alone.
+mainAgent: true
+subagent: false
+tools: []
+inheritMcp: false
+inheritCustomizations: false
+excludeDefaultComponents: true
+---
+Answer the user's message from its text alone. You have no tools.
+"""
+".agents/hooks.json" = '''
+{"writegood-no-tools": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command",
+ "command": "echo '{\"decision\":\"deny\",\"reason\":\"Tools are off.\"}'", "timeout": 5}]}]}}
+'''

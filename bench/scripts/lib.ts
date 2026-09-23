@@ -283,65 +283,83 @@ export function openrouter(model: string, pinned: string, cacheControl = false):
   };
 }
 
-/** A custom agent with no tools, no MCP servers, no inherited rules or
- *  skills, and none of agy's default prompt. agy reads it from
- *  `.agents/agents/writegood/agent.md` in its workspace and runs it with
- *  `--agent writegood`. */
-export const AGY_AGENT = `---
-name: writegood
-description: Answers one prompt from its text alone.
-mainAgent: true
-subagent: false
-tools: []
-inheritMcp: false
-inheritCustomizations: false
-excludeDefaultComponents: true
----
-Answer the user's message from its text alone. You have no tools.
-`;
-
-/** Write the agent and the hook into an empty directory. */
-export function agyWorkspace(dir: string) {
-  mkdirSync(join(dir, ".agents", "agents", "writegood"), { recursive: true });
-  writeFileSync(join(dir, ".agents", "agents", "writegood", "agent.md"), AGY_AGENT);
-  writeFileSync(join(dir, ".agents", "hooks.json"), AGY_DENY_HOOKS);
-}
-
-/** A second guard: a PreToolUse hook that denies every tool. agy reads it
- *  from `.agents/hooks.json` in its workspace. */
-export const AGY_DENY_HOOKS = JSON.stringify({
-  "writegood-no-tools": {
-    PreToolUse: [{
-      matcher: "*",
-      hooks: [{
-        type: "command",
-        command: `echo '{"decision":"deny","reason":"Tools are off. Answer from the prompt alone."}'`,
-        timeout: 5,
-      }],
-    }],
-  },
-});
-
-/** agy's provider settings from `agy.toml`, in the app's config shape. */
-const AGY_CONFIG = (Bun.TOML.parse(readFileSync(join(import.meta.dir, "agy.toml"), "utf8")) as {
-  providers: { agy: { thinking: string; thinking_names: Record<string, string> } };
+/** agy's provider block, in the shape of the app's config.toml. It is the
+ *  block from SPEC §9.3, and `agy.test.ts` checks that the two agree. */
+export const AGY_TOML = join(import.meta.dir, "agy.toml");
+const AGY_CONFIG = (Bun.TOML.parse(readFileSync(AGY_TOML, "utf8")) as {
+  providers: { agy: { thinking: string; thinking_names: Record<string, string>; json_path: string } };
 }).providers.agy;
 
 /** The model variant for a thinking level, as the app's runner names it:
  *  the level's entry in `thinking_names`, else the level as written. The
- *  level `default` takes the provider's `thinking`. */
+ *  level `default` takes the provider's `thinking`. The result file records
+ *  it; the runner builds the real `--model` argument. */
 export function agyVariant(thinking: Thinking): string {
   const level = thinking === "default" ? AGY_CONFIG.thinking : thinking;
   return AGY_CONFIG.thinking_names[level] ?? level;
 }
 
+const SRC_TAURI = join(REPO, "src-tauri");
+const CLI_EXAMPLE = join(SRC_TAURI, "target", "debug", "examples", "cli");
+let built: Promise<void> | null = null;
+
+/** Build the app's `cli` example once per process. */
+export function buildCli(): Promise<void> {
+  built ??= (async () => {
+    const proc = Bun.spawn(["cargo", "build", "-q", "--example", "cli"], {
+      cwd: SRC_TAURI, stdin: "ignore", stdout: "inherit", stderr: "inherit",
+    });
+    if ((await proc.exited) !== 0) throw new Error("cargo build --example cli failed");
+  })();
+  return built;
+}
+
+/** Values that replace the block's for one call, as a pass's `thinking` and
+ *  `timeout_secs` do in the app. `command` is for tests. */
+export interface CliOverrides {
+  model?: string;
+  thinking?: string;
+  timeoutSecs?: number;
+  command?: string;
+}
+
+/** Run one prompt through the app's own runner, `runner::cli_run`, by way of
+ *  `src-tauri/examples/cli.rs`. The runner fills the placeholders, writes the
+ *  block's files into a new empty directory, runs the command there, applies
+ *  the timeout and `json_error`, and deletes the directory. The benchmark
+ *  builds no command line of its own. `stdout` is the command's whole
+ *  output, so the caller can read token counts too. */
+export async function runCli(configFile: string, name: string, prompt: string, o: CliOverrides = {}) {
+  await buildCli();
+  const dir = mkdtempSync(join(tmpdir(), "writegood-bench-"));
+  try {
+    const file = join(dir, "prompt.txt");
+    writeFileSync(file, prompt);
+    const argv = [CLI_EXAMPLE, "--config", configFile, "--provider", name, "--prompt", file, "--stdout"];
+    if (o.model !== undefined) argv.push("--model", o.model);
+    if (o.thinking !== undefined) argv.push("--thinking", o.thinking);
+    if (o.timeoutSecs !== undefined) argv.push("--timeout", String(Math.ceil(o.timeoutSecs)));
+    if (o.command !== undefined) argv.push("--command", o.command);
+    const t0 = performance.now();
+    const proc = Bun.spawn(argv, { stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited,
+    ]);
+    return { stdout, stderr, code, secs: (performance.now() - t0) / 1000 };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 /** Google's Antigravity CLI, on the author's Google AI subscription. `model`
  *  is the family, such as `gemini-3.8-flash`; the thinking level picks the
- *  variant through `agyVariant`, because agy has no way to turn thinking off.
+ *  variant through the block's `thinking_names`, because agy has no way to
+ *  turn thinking off.
  *
- *  Every call runs in a fresh empty directory that agy treats as its
- *  workspace, as a custom agent with no tools, behind a hook that denies
- *  every tool. The prompt is an argument.
+ *  Every call goes through the app's runner with the block in `agy.toml`:
+ *  a fresh empty directory that agy treats as its workspace, a custom agent
+ *  with no tools, and a hook that denies every tool. The system prompt and
+ *  the prompt go in one `{prompt}`, as `src/lib/passes/run.ts` sends them.
  *  `maxInFlight` bounds the calls across all drafts, because the drafts run
  *  side by side and each has its own limiter. */
 export function agy(model: string, maxInFlight: number): Provider {
@@ -350,50 +368,35 @@ export function agy(model: string, maxInFlight: number): Provider {
     name: "agy",
     model,
     chat: (system, prompt, thinking, ceilingSecs) => lim(async () => {
-      const dir = mkdtempSync(join(tmpdir(), "writegood-agy-"));
+      const { stdout: out, stderr: err, code, secs } = await runCli(AGY_TOML, "agy", `${system}\n\n${prompt}`, {
+        model,
+        thinking: thinking === "default" ? undefined : thinking,
+        timeoutSecs: ceilingSecs,
+      });
+      const agyError = err.split("\n").find((l) => l.startsWith("AGY_ERROR:"));
+      if (code !== 0) throw new Error((agyError ?? err.trim()).slice(-300));
+      let j: any;
       try {
-        agyWorkspace(dir);
-        const t0 = performance.now();
-        const proc = Bun.spawn([
-          "agy", "-p", `${system}\n\n${prompt}`,
-          "--agent", "writegood",
-          "--model", `${model}-${agyVariant(thinking)}`,
-          "--add-dir", dir,
-          "--output-format", "json",
-          "--print-timeout", `${ceilingSecs}s`,
-        ], { cwd: dir, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
-        const timer = setTimeout(() => proc.kill(), (ceilingSecs + 15) * 1000);
-        const [out, err, code] = await Promise.all([
-          new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited,
-        ]);
-        clearTimeout(timer);
-        const agyError = err.split("\n").find((l) => l.startsWith("AGY_ERROR:"));
-        if (code !== 0) throw new Error(`agy exited with ${code}: ${(agyError ?? err.trim()).slice(-300)}`);
-        let j: any;
-        try {
-          j = JSON.parse(out);
-        } catch {
-          throw new Error(`agy did not print JSON: ${out.slice(0, 200)}`);
-        }
-        if (j.status !== "SUCCESS") throw new Error(`agy status ${j.status}: ${out.slice(0, 300)}`);
-        if (j.denied_actions?.length) throw new Error(`agy tried a tool: ${JSON.stringify(j.denied_actions)}`);
-        const u = j.usage ?? {};
-        return {
-          text: j.response ?? "",
-          usage: {
-            input: u.input_tokens ?? 0,
-            cacheRead: u.cache_read_tokens ?? 0,
-            output: (u.output_tokens ?? 0),
-            reasoning: u.thinking_tokens ?? 0,
-            cost: 0,
-            costSource: "rates",
-            servedBy: `agy ${model}-${agyVariant(thinking)}`,
-            serviceSecs: (performance.now() - t0) / 1000,
-          },
-        };
-      } finally {
-        rmSync(dir, { recursive: true, force: true });
+        j = JSON.parse(out);
+      } catch {
+        throw new Error(`agy did not print JSON: ${out.slice(0, 200)}`);
       }
+      if (j.status !== "SUCCESS") throw new Error(`agy status ${j.status}: ${out.slice(0, 300)}`);
+      if (j.denied_actions?.length) throw new Error(`agy tried a tool: ${JSON.stringify(j.denied_actions)}`);
+      const u = j.usage ?? {};
+      return {
+        text: j[AGY_CONFIG.json_path] ?? "",
+        usage: {
+          input: u.input_tokens ?? 0,
+          cacheRead: u.cache_read_tokens ?? 0,
+          output: (u.output_tokens ?? 0),
+          reasoning: u.thinking_tokens ?? 0,
+          cost: 0,
+          costSource: "rates",
+          servedBy: `agy ${model}-${agyVariant(thinking)}`,
+          serviceSecs: secs,
+        },
+      };
     }),
   };
 }

@@ -7,8 +7,9 @@ result so far.
 
 The benchmark uses the app's own code for the preamble, the prompt builder, the
 parser, the code filters, the verifier, the call limiter and the windows
-(`src/lib/passes/`). Only the network call is the benchmark's own, so it can
-reach providers the app does not have yet.
+(`src/lib/passes/`). For agy it also uses the app's runner. Only the network
+call to DeepSeek and OpenRouter is the benchmark's own, so it can reach
+providers the app does not have yet.
 
 ## Layout
 
@@ -21,7 +22,9 @@ reach providers the app does not have yet.
 | `scripts/table.ts` | Prints the comparison table and writes `RESULTS.md` |
 | `scripts/merge.ts` | Composes a hybrid result from two runs |
 | `scripts/convert.ts` | Converted the runs made before this folder existed |
-| `scripts/lib.ts` | Keys, rule loading, the two providers, the result format |
+| `scripts/lib.ts` | Keys, rule loading, the three providers, the result format |
+| `scripts/agy.toml` | agy's provider block from SPEC §9.3 |
+| `scripts/agy.test.ts` | Checks the block and the command line the runner builds from it |
 | `results/<date>-<label>.json` | One result per run |
 | `results/raw/` | Model replies of new runs, and the original scratch runs and scripts |
 | `results/app-runs.md` | Timings measured in the real app |
@@ -191,12 +194,20 @@ bun bench/scripts/run.ts --provider agy --model gemini-3.8-flash \
   --thinking off --agy-limit 8 --rules 2026-09-23-rewrite --pipeline hybrid --label agy-flash38-hybrid-1
 ```
 
-- The thinking level picks agy's model variant through `thinking_names` in
-  `scripts/agy.toml`, as in the app (SPEC §9.3): `off` and `low` take
-  `gemini-3.8-flash-low`, `medium` takes `-medium`, and `high` and `max` take
-  `-high`.
-- Each call runs agy as the app does (SPEC §9.3): in a new empty directory,
-  as a custom agent with no tools, behind a hook that denies every tool.
+- Each call goes through the app's own runner, `runner::cli_run`, by way of
+  `src-tauri/examples/cli.rs`. The runner reads the `[providers.agy]` block
+  in `scripts/agy.toml`, which is the block from SPEC §9.3. It builds the
+  command line, runs agy in a new empty directory, writes the custom agent
+  with no tools and the hook that denies every tool, and applies the timeout.
+  The first call builds the example with cargo.
+- `--model`, the thinking level and the ceiling replace the block's `model`,
+  `thinking` and `timeout_secs`, as a pass's settings do in the app.
+- The thinking level picks agy's model variant through `thinking_names`:
+  `off` and `low` take `gemini-3.8-flash-low`, `medium` takes `-medium`, and
+  `high` and `max` take `-high`.
+- `bun test bench` checks that `agy.toml` matches SPEC §9.3 and the example
+  in the app's default config, and that the runner builds the command line and
+  files that SPEC §9.3 gives. A fake command stands in for agy.
 - `--agy-limit` bounds the calls in flight across all four drafts. At 16,
   agy returned rate-limit errors; at 8 it did not.
 - Cost is $0. Each call records `serviceSecs`, the time agy took without the
