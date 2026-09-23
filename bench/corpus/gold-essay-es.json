@@ -1,0 +1,10 @@
+[
+  {"category": "nominalization", "quote": "decisión de vender se tomó", "severity": "medium", "note": "El verbo \"decidir\" está enterrado en el sustantivo \"decisión\", llevado por el verbo vacío \"se tomó\"."},
+  {"category": "nominalization", "quote": "hice una evaluación", "severity": "medium", "note": "El verbo \"evaluar\" está enterrado en el sustantivo \"evaluación\", llevado por el verbo vacío \"hice\"."},
+  {"category": "nominalization", "quote": "había llegado a la conclusión", "severity": "medium", "note": "El verbo \"concluir\" está enterrado en el sustantivo \"conclusión\", llevado por el verbo débil \"había llegado a\"."},
+  {"category": "passive-actor", "quote": "La decisión de vender se tomó", "severity": "low", "note": "La cláusula no dice quién decidió; el lector debe inferir que fue quien escribe."},
+  {"category": "passive-actor", "quote": "La combinación fue olvidada", "severity": "low", "note": "La cláusula oculta quién olvidó la combinación; el lector debe inferir que fue un error de quien escribe."},
+  {"category": "filler-words", "quote": "Cabe señalar que", "severity": "high", "note": "La frase hecha \"Cabe señalar que\" retrasa la afirmación y no añade nada."},
+  {"category": "filler-words", "quote": "muy", "severity": "low", "note": "\"Muy\" solo añade énfasis."},
+  {"category": "filler-words", "quote": "básicamente", "severity": "medium", "note": "\"Básicamente\" es una muletilla vacía sobre una afirmación llana."}
+]

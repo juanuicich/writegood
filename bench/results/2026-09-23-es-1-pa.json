@@ -1,0 +1,251 @@
+{
+ "schema": 1,
+ "label": "es-1-pa",
+ "date": "2026-09-23",
+ "source": "bench/scripts/jev-nolist/run-rule-noul.ts",
+ "config": {
+  "provider": "jev",
+  "orProvider": null,
+  "model": "jev-latest",
+  "thinking": "default",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite (verbatim, sentence-scope)",
+  "scope": "native",
+  "limit": 8,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 60,
+  "drafts": [
+   "draft-essay-es.md"
+  ],
+  "note": "Method 1 (rule-as-criterion): one Noul per sentence, the pass's own rule text as instructions. Passes: passive-actor. Keep >= 0.45."
+ },
+ "rules": "jev-nolist-method1",
+ "drafts": [
+  {
+   "draft": "draft-essay-es.md",
+   "words": 578,
+   "paragraphs": 9,
+   "wall": 1.409807542,
+   "firstFindings": 1.409807542,
+   "calls": 9,
+   "input": 33053,
+   "cacheRead": 0,
+   "output": 682,
+   "reasoning": 0,
+   "cost": 0.0013882260000000002,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 1.217124167,
+    "p90": 1.406133541,
+    "max": 1.406133541
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 38,
+   "kept": 1
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 1,
+   "fp": 0,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 1,
+   "recall": 0.5,
+   "f1": 0.6666666666666666
+  },
+  "byPass": {
+   "passive-actor": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 0.5,
+    "f1": 0.6666666666666666
+   }
+  },
+  "byDraft": {
+   "draft-essay-es.md": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 0.5,
+    "f1": 0.6666666666666666
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "quote": "La combinación fue olvidada dos veces en la primera semana.",
+   "severity": "low",
+   "note": "Matches the pass rule \"passive-actor\" (Jev, sentence-level, no candidate list)."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 0,
+   "thinking": "default",
+   "start": 0.0031603330000000013,
+   "secs": 1.406133541,
+   "input": 950,
+   "cacheRead": 0,
+   "output": 21,
+   "reasoning": 0,
+   "cost": 0.00003990000000000001,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 1,
+   "thinking": "default",
+   "start": 0.004152541999999997,
+   "secs": 0.36665537500000006,
+   "input": 2576,
+   "cacheRead": 0,
+   "output": 55,
+   "reasoning": 0,
+   "cost": 0.00010819200000000001,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 2,
+   "thinking": "default",
+   "start": 0.004273582999999995,
+   "secs": 1.2175887500000002,
+   "input": 2506,
+   "cacheRead": 0,
+   "output": 55,
+   "reasoning": 0,
+   "cost": 0.00010525200000000001,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 3,
+   "thinking": "default",
+   "start": 0.0043634580000000015,
+   "secs": 1.4053668750000001,
+   "input": 4238,
+   "cacheRead": 0,
+   "output": 89,
+   "reasoning": 0,
+   "cost": 0.000177996,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 5
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 4,
+   "thinking": "default",
+   "start": 0.004515082999999997,
+   "secs": 1.2173275840000002,
+   "input": 3545,
+   "cacheRead": 0,
+   "output": 72,
+   "reasoning": 0,
+   "cost": 0.00014889000000000002,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 4
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 5,
+   "thinking": "default",
+   "start": 0.004613042,
+   "secs": 0.38009270900000003,
+   "input": 7321,
+   "cacheRead": 0,
+   "output": 140,
+   "reasoning": 0,
+   "cost": 0.00030748200000000004,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 8
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 6,
+   "thinking": "default",
+   "start": 0.004730832999999997,
+   "secs": 1.217124167,
+   "input": 4356,
+   "cacheRead": 0,
+   "output": 89,
+   "reasoning": 0,
+   "cost": 0.000182952,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 5
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 7,
+   "thinking": "default",
+   "start": 0.0048440420000000015,
+   "secs": 1.216823417,
+   "input": 4147,
+   "cacheRead": 0,
+   "output": 89,
+   "reasoning": 0,
+   "cost": 0.000174174,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 5
+  },
+  {
+   "draft": "draft-essay-es.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": 8,
+   "thinking": "default",
+   "start": 0.004954208000000002,
+   "secs": 0.31094029100000004,
+   "input": 3414,
+   "cacheRead": 0,
+   "output": 72,
+   "reasoning": 0,
+   "cost": 0.00014338800000000002,
+   "costSource": "reported",
+   "servedBy": "jev",
+   "candidates": 4
+  }
+ ],
+ "errors": []
+}
