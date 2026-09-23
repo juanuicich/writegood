@@ -1120,6 +1120,15 @@ and the rest, with a `ServiceTargetResolver` for anything else. A provider's
 `openai-compatible` kind, and `key_ref` supplies the key. `tokio::time::timeout`
 enforces `timeout_secs`.
 
+`genai` joins `chat/completions` onto `base_url` as a relative URL, which
+replaces the last segment of a path with no slash at the end. The app adds
+that slash before it hands the URL over. So `https://openrouter.ai/api/v1`
+and `https://openrouter.ai/api/v1/` both reach
+`https://openrouter.ai/api/v1/chat/completions`. Without the slash,
+OpenRouter answered 404 to every call. `https://api.deepseek.com/v1` reaches
+`https://api.deepseek.com/v1/chat/completions`, the endpoint `genai`'s own
+DeepSeek adapter uses.
+
 **Why not in the frontend.** It was, through the AI SDK, and that was wrong.
 macOS suspends a WebKit process whose window is not visible, and a pass then
 stops mid-run: no request, no CPU, and the timer meant to enforce the timeout

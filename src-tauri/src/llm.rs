@@ -99,6 +99,26 @@ pub fn thinking_options(kind: &str, thinking: Option<&str>) -> AppResult<ChatOpt
     })
 }
 
+/// A `base_url` as `genai` needs it: with a slash at the end of the path.
+///
+/// `genai` joins `chat/completions` onto the base URL as a relative URL. A
+/// relative URL replaces the last segment of a path that does not end with a
+/// slash, so `https://openrouter.ai/api/v1` became
+/// `https://openrouter.ai/api/chat/completions`, which answers 404. The slash
+/// makes both spellings of a base URL reach the same endpoint. A query string
+/// stays after the path.
+fn endpoint_base(url: &str) -> String {
+    let (path, rest) = match url.find(['?', '#']) {
+        Some(i) => url.split_at(i),
+        None => (url, ""),
+    };
+    if path.ends_with('/') {
+        url.to_string()
+    } else {
+        format!("{path}/{rest}")
+    }
+}
+
 /// Ask a provider one question. `name` is the provider's table name in
 /// `config.toml`, used to find its price.
 pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -> AppResult<Reply> {
@@ -119,7 +139,7 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
 
     let options = thinking_options(&provider.kind, provider.thinking.as_deref())?;
 
-    let base_url = provider.base_url.clone();
+    let base_url = provider.base_url.as_deref().map(endpoint_base);
     if provider.kind == "openai-compatible" && base_url.is_none() {
         return Err(AppError::invalid(
             "an openai-compatible provider needs a base_url in config.toml",
@@ -220,6 +240,36 @@ mod tests {
             adapter_for("openai-compatible").unwrap(),
             AdapterKind::OpenAI
         ));
+    }
+
+    /// The URL a chat request goes to, joined as `genai`'s OpenAI adapter
+    /// joins it.
+    fn chat_url(base_url: &str) -> String {
+        reqwest::Url::parse(&endpoint_base(base_url))
+            .unwrap()
+            .join("chat/completions")
+            .unwrap()
+            .to_string()
+    }
+
+    #[test]
+    fn a_base_url_reaches_the_same_endpoint_with_or_without_its_slash() {
+        let want = "https://openrouter.ai/api/v1/chat/completions";
+        assert_eq!(chat_url("https://openrouter.ai/api/v1"), want);
+        assert_eq!(chat_url("https://openrouter.ai/api/v1/"), want);
+        // DeepSeek's base URL as the starter config writes it. genai's own
+        // DeepSeek adapter uses the same endpoint.
+        let want = "https://api.deepseek.com/v1/chat/completions";
+        assert_eq!(chat_url("https://api.deepseek.com/v1"), want);
+        assert_eq!(chat_url("https://api.deepseek.com/v1/"), want);
+        assert_eq!(
+            chat_url("http://localhost:11434/v1"),
+            "http://localhost:11434/v1/chat/completions"
+        );
+        assert_eq!(
+            endpoint_base("https://example.com/v1?api-version=1"),
+            "https://example.com/v1/?api-version=1"
+        );
     }
 
     #[test]
