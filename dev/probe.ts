@@ -5,14 +5,20 @@
  *  calls `llm::chat` exactly as the app does. The reply comes back through the
  *  app's parser. Every part of the path is the part that ships.
  *
- *  Usage: bun dev/probe.ts [pass-slug] [provider] [--raw]
+ *  A pass on a `jev` provider runs through the app's own `jev.ts`, one
+ *  paragraph at a time, and each request goes through `jev::ask` in the
+ *  probe binary (SPEC §8.4).
+ *
+ *  Usage: bun dev/probe.ts [pass-slug] [provider] [--raw] [--draft <file>]
  */
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { preamble } from "../src/lib/passes/schema";
-import { buildPrompt, parseFindings } from "../src/lib/passes/parse";
-import type { Pass, Rules } from "../src/lib/ipc";
+import { buildPrompt, paragraphStarts, paragraphs, parseFindings } from "../src/lib/passes/parse";
+import { jevSettings, paragraphFindings, Unreadable, type Ask } from "../src/lib/passes/jev";
+import { limiter } from "../src/lib/passes/limit";
+import type { JevReply, NewFinding, Pass, Provider, Rules } from "../src/lib/ipc";
 
 const HOME = process.env.WRITEGOOD_HOME ?? join(homedir(), ".writegood");
 
@@ -59,6 +65,7 @@ function readPass(slug: string) {
     enabled: true,
     prompt: parts.slice(2).join("+++").trim(),
     path: join(dir, file),
+    jev: (Bun.TOML.parse(meta) as { jev?: Pass["jev"] }).jev ?? null,
   };
   return { file, pass };
 }
@@ -85,14 +92,101 @@ async function ask(provider: string | undefined, system: string, prompt: string)
   return text;
 }
 
+/** The probe binary, built once, so parallel requests do not wait on
+ *  cargo's lock. */
+const SRC_TAURI = join(import.meta.dir, "..", "src-tauri");
+async function probeBinary(): Promise<string> {
+  const build = Bun.spawn(["cargo", "build", "-q", "--example", "probe"], { cwd: SRC_TAURI, stderr: "inherit" });
+  if ((await build.exited) !== 0) throw new Error("cargo build --example probe failed");
+  return join(SRC_TAURI, "target", "debug", "examples", "probe");
+}
+
+/** Run a pass on a jev provider over every paragraph of the draft. */
+async function probeJev(pass: Pass, name: string, provider: Provider, draft: string) {
+  const binary = await probeBinary();
+  const dir = mkdtempSync(join(tmpdir(), "writegood-probe-jev-"));
+  const limit = limiter(provider.maxInFlight ?? 8);
+  let n = 0;
+  let cost = 0;
+  let priced = true;
+  let tokens = 0;
+  const models = new Set<string>();
+  const ask: Ask = (state, questions) =>
+    limit(async () => {
+      const file = join(dir, `request-${n++}.json`);
+      writeFileSync(file, JSON.stringify({ state, questions }));
+      const child = Bun.spawn([binary, "--provider", name, "--jev", file], { cwd: SRC_TAURI, stdout: "pipe", stderr: "pipe" });
+      const out = await new Response(child.stdout).text();
+      const err = await new Response(child.stderr).text();
+      if ((await child.exited) !== 0) throw new Error(err.trim() || "probe failed");
+      const reply = JSON.parse(out) as JevReply;
+      tokens += reply.tokens?.input ?? 0;
+      if (reply.costUsd === null) priced = false;
+      else cost += reply.costUsd;
+      if (reply.model) models.add(reply.model);
+      return reply;
+    });
+
+  const settings = jevSettings(pass, provider);
+  const paras = paragraphs(draft);
+  const starts = paragraphStarts(draft);
+  const points = Array.from(draft);
+  let unreadable = 0;
+  const found: NewFinding[][] = await Promise.all(
+    paras.map(async (p, i) => {
+      try {
+        return (await paragraphFindings(pass, settings, p, { points, start: starts[i]! }, ask)) ?? [];
+      } catch (e) {
+        if (!(e instanceof Unreadable)) throw e;
+        unreadable += 1;
+        console.log(`paragraph ${i + 1}: ${e.message}`);
+        return [];
+      }
+    }),
+  );
+  const all = found.flat();
+  all.forEach((f, i) => {
+    console.log(`${i + 1}. [${f.severity}] ${f.category}`);
+    console.log(`   \u201c${f.quote}\u201d  (after \u201c${f.prefix.slice(-20)}\u201d)`);
+    console.log(`   ${f.note}\n`);
+  });
+  const money = priced ? `$${cost.toFixed(5)}` : "no price";
+  console.log(
+    `${all.length} findings, ${paras.length} paragraphs, ${n} requests, ${tokens} input tokens, ${money}, ` +
+      `${unreadable} unreadable, model ${[...models].join(", ") || "unknown"}`,
+  );
+}
+
 const raw = process.argv.includes("--raw");
+const draftAt = process.argv.indexOf("--draft");
+const draftFlag = draftAt >= 0 ? process.argv[draftAt + 1] : undefined;
 const [slug = "nominalization", providerName] = process.argv
   .slice(2)
-  .filter((a) => !a.startsWith("--"));
+  .filter((a, i, all) => !a.startsWith("--") && all[i - 1] !== "--draft");
 
 const { file, pass } = readPass(slug);
-const draftPath = join(HOME, "documents", "on-writing.md");
+const draftPath = draftFlag ?? join(HOME, "documents", "on-writing.md");
 const draft = readFileSync(draftPath, "utf8");
+
+const config = Bun.TOML.parse(readFileSync(join(HOME, "config.toml"), "utf8")) as {
+  default_provider?: string;
+  providers?: Record<string, { kind?: string; keep?: number; max_in_flight?: number; model?: string }>;
+};
+const jevName = providerName ?? pass.provider ?? config.default_provider ?? "";
+const jevProvider = config.providers?.[jevName];
+if (jevProvider?.kind === "jev") {
+  console.log(`pass     ${pass.name}  (${file}) on ${jevName} (${jevProvider.model ?? "no model"})`);
+  console.log(`draft    ${draftPath}  ${draft.split(/\s+/).length} words\n`);
+  const started = Date.now();
+  await probeJev(
+    pass,
+    jevName,
+    { kind: "jev", args: [], timeoutSecs: 60, keep: jevProvider.keep ?? null, maxInFlight: jevProvider.max_in_flight ?? null },
+    draft,
+  );
+  console.log(`${((Date.now() - started) / 1000).toFixed(1)}s`);
+  process.exit(0);
+}
 
 console.log(`pass     ${pass.name}  (${file})`);
 console.log(`scope    whole draft in one call, whatever the pass declares`);
