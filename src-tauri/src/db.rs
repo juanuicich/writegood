@@ -1588,7 +1588,10 @@ mod tests {
         let path = dir.join("writegood.db");
         let _ = std::fs::remove_dir_all(&dir);
         record_action(&open(&path).unwrap(), "palette").unwrap();
-        assert_eq!(list_actions(&open(&path).unwrap()).unwrap(), vec!["palette"]);
+        assert_eq!(
+            list_actions(&open(&path).unwrap()).unwrap(),
+            vec!["palette"]
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }
