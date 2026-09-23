@@ -97,6 +97,11 @@ create table if not exists duels (
     cost_usd       real
 );
 create index if not exists duels_doc on duels(doc_id, id desc);
+
+create table if not exists actions (
+    name       text primary key,
+    done_at    text not null default (datetime('now'))
+);
 "#;
 
 pub fn open(path: &Path) -> AppResult<Connection> {
@@ -849,6 +854,26 @@ pub fn list_duels(conn: &Connection, doc_id: i64) -> AppResult<Vec<Duel>> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+// --------------------------------------------------------------- actions
+
+/// Record that the author has taken an action once. The hints in the status
+/// bar read this list to decide which step to show next (SPEC §12.7). A second
+/// record of the same action keeps the first time.
+pub fn record_action(conn: &Connection, name: &str) -> AppResult<()> {
+    conn.execute(
+        "insert or ignore into actions (name) values (?1)",
+        params![name],
+    )?;
+    Ok(())
+}
+
+/// Every action the author has taken, in the order first taken.
+pub fn list_actions(conn: &Connection) -> AppResult<Vec<String>> {
+    let mut stmt = conn.prepare("select name from actions order by done_at, rowid")?;
+    let rows = stmt.query_map([], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1545,5 +1570,25 @@ mod tests {
             1,
             "old findings are not superseded"
         );
+    }
+
+    #[test]
+    fn actions_are_recorded_once_and_listed_in_order() {
+        let conn = mem();
+        assert!(list_actions(&conn).unwrap().is_empty());
+        record_action(&conn, "palette").unwrap();
+        record_action(&conn, "run").unwrap();
+        record_action(&conn, "palette").unwrap();
+        assert_eq!(list_actions(&conn).unwrap(), vec!["palette", "run"]);
+    }
+
+    #[test]
+    fn actions_survive_reopening_the_database() {
+        let dir = std::env::temp_dir().join(format!("writegood-actions-{}", std::process::id()));
+        let path = dir.join("writegood.db");
+        let _ = std::fs::remove_dir_all(&dir);
+        record_action(&open(&path).unwrap(), "palette").unwrap();
+        assert_eq!(list_actions(&open(&path).unwrap()).unwrap(), vec!["palette"]);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

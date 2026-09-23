@@ -354,6 +354,12 @@ export const store = {
   usage: (docId: number) => invoke<DocUsage>("doc_usage", { docId }),
 };
 
+/** The actions the author has taken, which unlock the hints (SPEC §12.7). */
+export const actions = {
+  list: () => invoke<string[]>("actions_list"),
+  record: (name: string) => invoke<void>("action_record", { name }),
+};
+
 export const anchors = {
   resolve: (text: string, selectors: Selector[]) =>
     invoke<Anchor[]>("anchors_resolve", { text, selectors }),

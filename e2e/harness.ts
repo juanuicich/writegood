@@ -437,8 +437,14 @@ export function pick(app: App, path: string) {
 export const editorText = (b: WebdriverIO.Browser) =>
   b.execute(() => document.querySelector(".ProseMirror")?.textContent ?? "");
 
+/** The status bar without the hint (SPEC §12.7), whose wording would
+ *  otherwise match the words the tests look for. */
 export const statusText = (b: WebdriverIO.Browser) =>
-  b.execute(() => document.querySelector("footer")?.textContent?.replace(/\s+/g, " ").trim() ?? "");
+  b.execute(() => {
+    const footer = document.querySelector("footer")?.cloneNode(true) as HTMLElement | undefined;
+    footer?.querySelector(".hint")?.remove();
+    return footer?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  });
 
 /** The ids lit in the text. Overlapping findings share one span, so the ids
  *  are read from the per-finding classes (findings.ts), not `data-finding`. */

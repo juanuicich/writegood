@@ -164,6 +164,8 @@ writegood/
 │   │   ├── spans.ts              tidy the edges of drawn ranges (§12.3)
 │   │   ├── usage.ts              sum and word what calls cost (§9.4)
 │   │   ├── appearance.ts         text size steps, theme toggle (§12.1)
+│   │   ├── shortcuts.ts          shortcut labels and the modifier per platform (§12.7)
+│   │   ├── hints.ts              the hint steps in the status bar (§12.7)
 │   │   ├── palette/Palette.svelte  the only chrome (§12.2)
 │   │   ├── editor/
 │   │   │   ├── Editor.svelte     TipTap instance
@@ -263,6 +265,8 @@ reviews(doc_id→documents, pass_slug, chunk_key, run_id→runs, created_at)
 duels(id, doc_id, finding_id→findings, a_text, b_text, a_is_original,
       judge_provider, judge_model, verdict, original_won, reason, created_at,
       input_tokens, output_tokens, cost_usd)
+
+actions(name, done_at)
 ```
 
 `documents.path` is absolute and unique, and null for an untitled draft. The
@@ -291,6 +295,10 @@ answer the runner has saved, including the answers with no findings, so an
 unchanged paragraph is not sent again. Its key is `(doc_id, pass_slug,
 chunk_key)`. A review row is a cache entry, not a record: the app deletes the
 ones that no longer match the draft, and *clear findings* deletes them all.
+
+`actions` records each action the author has taken, once, with the time of
+the first. The hints in the status bar read it (§12.7). It belongs to the
+author, not to a document.
 
 `duels.original_won` is derived at write time from `verdict` and
 `a_is_original`, so the A/B shuffle never has to be unpicked later.
@@ -1624,7 +1632,8 @@ is not changed. The rules, in `spans.ts`:
 
 ### 12.4 Keyboard
 
-The app is driven from the keyboard.
+The app is driven from the keyboard. The keys here are written for macOS.
+On Linux and Windows, Ctrl takes the place of ⌘ (§12.7).
 
 A bare `n` has to type an "n", so the single-letter keys live in a **review
 mode**. `Esc` leaves the text and enters it; the editor dims and the margin
@@ -1796,6 +1805,70 @@ finding, a note or a model reply (§2).
 
 The palette has *find*, *find and replace*, *find next*, *find previous* and
 *replace all*. The Edit menu has a Find submenu with the first four.
+
+### 12.7 Hints and shortcuts on each platform
+
+**Hints.** The status bar shows the use of the app one step at a time. Each
+hint is one sentence that names one action and its key. It sits at the left
+of the status bar, after the review mark and the cost. The steps, in order:
+
+| Step | Hint (macOS) | Shows when |
+|---|---|---|
+| `palette` | Press ⌘K to open the command bar. | always |
+| `run` | Press ⌘R to run the passes. | a document is open |
+| `select` | Press ⌥↓ to go to the next finding. | there are findings |
+| `review` | Press Esc to enter review mode. | a finding is focused, writing mode |
+| `mark` | Press d to dismiss the finding, or x to mark it addressed. | a finding is focused, review mode |
+| `move` | Press j for the next finding and k for the previous. | there are findings, review mode |
+| `write` | Press i to go back to writing. | review mode |
+| `history` | Press ⌘Y to see the revisions. | a document is open, writing mode |
+| `duel` | Press ⌘D to duel the paragraph under the cursor. | a document is open, writing mode |
+| `find` | Press ⌘F to find text. | a document is open, writing mode |
+| `help` | Press ⌘? to open the help. | writing mode |
+
+The rules, in `hints.ts`:
+
+- The app records an action the first time the author takes it, by any
+  route: the key, the command bar or the menu. The record is made where the
+  action runs, not where the key is read. Opening the command bar counts
+  however it opens. `select` is any focus change: a step, a click on a
+  highlight, a click on a note. `move` is `j`, `k`, `n` or `p` in review
+  mode. `write` is any return to writing.
+- The hint is the first step whose action is not recorded. An action taken
+  early is recorded, and its step is skipped when its turn comes. It does
+  not skip the steps before it.
+- When the first step's action cannot work in the window as it stands, no
+  hint shows. A later step never shows in its place. For example, `select`
+  waits for a run that finds something.
+- When every action is recorded, no hint shows.
+
+The records are the `actions` table (§6.2): one row per action, with the
+time of the first. Rust writes them through `action_record` and reads them
+through `actions_list`. The frontend loads the list at boot and records each
+action once. The list belongs to the author, not to a document, so a new
+document does not start the hints again.
+
+**Shortcuts on each platform.** Every binding uses the platform's primary
+modifier: ⌘ on macOS, Ctrl on Linux and Windows. The window's key handler
+reads it through `isMod` in `shortcuts.ts`, so Ctrl on macOS stays with the
+text field. The editor's own keys use TipTap's `Mod-`. The macOS menu uses
+`CmdOrCtrl`.
+
+A shortcut is written once, as a spec in ProseMirror's notation: `Mod-k`,
+`Alt-Mod-f`, `Ctrl-Meta-s`. `Mod` is the primary modifier. `Meta` is ⌘, the
+Windows key or Super. `shortcut()` turns a spec into the label for the
+platform. macOS gets symbols in the spec's order: `⌘⇧R`. Linux and Windows
+get words joined by `+`, in the order Ctrl, Alt, Shift, then the Windows key
+or Super: `Ctrl+Shift+R`. A letter with a modifier is upper case. A bare
+letter keeps its case, because upper case would mean ⇧. Every label the app
+shows comes from `shortcut()`: the hints, the command bar and the duel. The
+help page is written with macOS labels, and the app rewrites the shortcuts in
+its code spans for Linux and Windows.
+
+The platform comes from the webview's navigator: `userAgentData.platform`
+where it exists, else `navigator.platform`. No plugin is needed. `?os=linux` or `?os=windows` overrides it, so
+the browser fixture can show another platform's labels. `?done=palette,run`
+in the browser fixture marks actions as taken.
 
 ---
 

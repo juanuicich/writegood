@@ -3,6 +3,7 @@
   import { runDuel, describe, judgeName } from "./run";
   import { onMenuCommand, store } from "../ipc";
   import { tally } from "./judge";
+  import { isMod, shortcut } from "../shortcuts";
 
   let field = $state<HTMLTextAreaElement | null>(null);
   let record = $state({ total: 0, original: 0, rewrite: 0, ties: 0 });
@@ -70,7 +71,7 @@
     if (e.key === "Escape") {
       e.preventDefault();
       app.closeDuel();
-    } else if ((e.key === "Enter" || e.key.toLowerCase() === "r") && (e.metaKey || e.ctrlKey)) {
+    } else if ((e.key === "Enter" || e.key.toLowerCase() === "r") && isMod(e)) {
       e.preventDefault();
       void submit();
     }
@@ -116,7 +117,7 @@
         {:else if app.duel.result}
           esc to close
         {:else}
-          ⌘R to ask {judgeName(app.config!)} · esc to abandon
+          {shortcut("Mod-r")} to ask {judgeName(app.config!)} · esc to abandon
         {/if}
         {#if record.total > 0}
           <span class="record"

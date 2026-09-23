@@ -206,6 +206,21 @@ fn duel_list(db: State<db::Db>, doc_id: i64) -> AppResult<Vec<db::Duel>> {
     db::list_duels(&conn, doc_id)
 }
 
+// --------------------------------------------------------------- actions
+
+/// The actions the author has taken, which unlock the hints (SPEC §12.7).
+#[tauri::command]
+fn actions_list(db: State<db::Db>) -> AppResult<Vec<String>> {
+    let conn = db.0.lock().unwrap();
+    db::list_actions(&conn)
+}
+
+#[tauri::command]
+fn action_record(db: State<db::Db>, name: String) -> AppResult<()> {
+    let conn = db.0.lock().unwrap();
+    db::record_action(&conn, &name)
+}
+
 // -------------------------------------------------------------- anchoring
 
 // -------------------------------------------------------------- the shell
@@ -320,6 +335,8 @@ pub fn run() {
             findings_reviewed,
             duel_record,
             duel_list,
+            actions_list,
+            action_record,
             anchors_resolve,
             shell_open_path,
             log::app_log,

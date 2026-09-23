@@ -5,6 +5,8 @@ import {
   cfg,
   files,
   store,
+  log,
+  actions as actionsApi,
   anchors as anchorApi,
   diff as diffApi,
   type Config,
@@ -23,6 +25,7 @@ import type { DuelOutcome } from "./duel/run";
 import { markdownToJSON, jsonToMarkdown } from "./markdown";
 import { tidy } from "./spans";
 import * as find from "./editor/search";
+import type { Action } from "./hints";
 
 export interface HistoryState {
   revisions: Revision[];
@@ -78,6 +81,9 @@ class App {
    *  when there are findings (SPEC §12.1). */
   margin = $state<boolean | null>(null);
 
+  /** The actions the author has taken, which unlock the hints (SPEC §12.7). */
+  actions = $state<string[]>([]);
+
   /** The find bar, when open. `seq` is bumped on every open, so the bar
    *  selects its field again (SPEC §12.6). */
   find = $state<{ replace: boolean; seq: number } | null>(null);
@@ -131,6 +137,7 @@ class App {
     this.paths = await cfg.paths();
     this.passes = await cfg.passes();
     this.applyAppearance();
+    this.actions = await actionsApi.list().catch(() => []);
     // Reopen the last document. With none, or with its file gone, start an
     // untitled draft (SPEC §6.3).
     await this.refreshRecent();
@@ -413,6 +420,7 @@ class App {
   }
 
   private focused(by: "text" | "step" | "note", group: number[] | null = null) {
+    this.did("select");
     this.group = group && group.length > 1 ? group : null;
     this.quiet = false;
     this.focus = { seq: this.focus.seq + 1, by };
@@ -468,6 +476,7 @@ class App {
   async mark(status: "addressed" | "dismissed") {
     const f = this.current;
     if (!f) return;
+    this.did("mark");
     await store.setFindingStatus(f.id, status);
     this.findings = this.findings.map((x) => (x.id === f.id ? { ...x, status } : x));
     if (this.cursor >= this.visible.length) this.cursor = this.visible.length - 1;
@@ -478,6 +487,7 @@ class App {
 
   async openHistory() {
     if (!this.doc) return;
+    this.did("history");
     const revisions = await store.revisions(this.doc.id);
     if (revisions.length === 0) {
       this.say("no revisions yet");
@@ -532,6 +542,7 @@ class App {
   }
 
   openDuel() {
+    this.did("duel");
     const original = this.paragraphAtCursor();
     if (!original) {
       this.say("put the cursor in a paragraph first");
@@ -559,6 +570,7 @@ class App {
    *  text input still lands there. So the draft is read-only until the help
    *  closes. No update is emitted, so nothing is marked unsaved. */
   openHelp() {
+    this.did("help");
     this.editor?.setEditable(false, false);
     (document.activeElement as HTMLElement | null)?.blur();
     this.help = true;
@@ -567,6 +579,7 @@ class App {
   /** Review mode: the single-letter keys act on the focus, so it is lit.
    *  Review mode works in the margin, so a hidden margin comes back. */
   enterReview() {
+    this.did("review");
     this.closeFind(false);
     this.mode = "review";
     this.quiet = false;
@@ -585,6 +598,7 @@ class App {
 
   /** Back to writing, with the margin quiet. */
   leaveReview() {
+    this.did("write");
     this.mode = "write";
     this.quiet = true;
     this.editor?.commands.focus();
@@ -598,6 +612,7 @@ class App {
   openFind(replace: boolean) {
     const editor = this.editor;
     if (!editor) return;
+    this.did("find");
     if (this.mode === "review") this.leaveReview();
     const selection = editor.state.selection;
     const { from, to } = selection;
@@ -660,6 +675,14 @@ class App {
   }
 
   // ----------------------------------------------------------------- chrome
+
+  /** Record an action the first time the author takes it. Rust stores it,
+   *  so the hint it unlocks survives a restart. */
+  did(action: Action) {
+    if (this.actions.includes(action)) return;
+    this.actions = [...this.actions, action];
+    actionsApi.record(action).catch((e) => void log.write("error", `record action ${action}: ${String(e)}`));
+  }
 
   say(message: string) {
     this.status = message;

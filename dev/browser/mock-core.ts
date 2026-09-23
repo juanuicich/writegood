@@ -218,6 +218,12 @@ export async function invoke(cmd: string, args: Record<string, unknown> = {}): P
       // Nothing to open in a browser. Say what the app asked for and move on.
       console.log("shell_open_path", args.path);
       return null;
+    // The hints (SPEC §12.7). ?done=palette,run marks those actions taken,
+    // so the status bar shows a later step.
+    case "actions_list":
+      return (new URLSearchParams(location.search).get("done") ?? "").split(",").filter(Boolean);
+    case "action_record":
+      return null;
     case "anchors_resolve":
       return resolveAnchors(args.text as string, args.selectors as { id: number; quote: string }[]);
     default:

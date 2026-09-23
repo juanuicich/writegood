@@ -4,6 +4,7 @@
   import { app } from "../state.svelte";
   import { markdownToJSON } from "../markdown";
   import { isHelpKey } from "./keys";
+  import { localiseMarkdown } from "../shortcuts";
   import text from "./help.md?raw";
 
   let host = $state<HTMLDivElement | null>(null);
@@ -16,7 +17,7 @@
     const editor = new Editor({
       element: host,
       extensions: [StarterKit.configure({ link: { openOnClick: false } })],
-      content: markdownToJSON(text),
+      content: markdownToJSON(localiseMarkdown(text)),
       editable: false,
     });
     return () => editor.destroy();

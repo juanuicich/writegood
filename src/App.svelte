@@ -15,6 +15,8 @@
   import { cfg, log, onMenuCommand, shell, store } from "./lib/ipc";
   import { label } from "./lib/usage";
   import { BASE_SIZE, nextSize, otherTheme } from "./lib/appearance";
+  import { isMod, shortcut } from "./lib/shortcuts";
+  import { hint } from "./lib/hints";
 
   let booted = $state(false);
   let override = $state<string | null>(null);
@@ -88,6 +90,24 @@
     app.config?.appearance.showCost && app.usage ? label(app.usage) : null,
   );
 
+  /** The next step of the hints, when its action can work now (SPEC §12.7). */
+  const tip = $derived(
+    booted
+      ? hint(app.actions, {
+          doc: app.doc !== null,
+          findings: app.visible.length > 0,
+          focused: app.current !== null,
+          mode: app.mode,
+        })
+      : null,
+  );
+
+  // Opening the command bar by any route counts: the key, or a menu item
+  // that opens it on a command.
+  $effect(() => {
+    if (app.paletteOpen) untrack(() => app.did("palette"));
+  });
+
   /** Name what the runner is waiting for. Four passes run at once, so the
    *  active ones are listed and the rest are counted. */
   function running(p: { done: number; total: number; active: string[] }): string {
@@ -101,6 +121,7 @@
   /** Run the enabled passes, or one. `fresh` ignores the saved answers and
    *  asks every question again (SPEC §8.3). */
   async function run(only?: string, fresh = false) {
+    app.did("run");
     const passes = app.passes.filter(
       (p) => p.enabled && (only === undefined || p.slug === only),
     );
@@ -176,7 +197,7 @@
   }
 
   const commands: Command[] = [
-    { id: "open", label: "open…", hint: "⌘O", run: () => app.openDialog() },
+    { id: "open", label: "open…", hint: shortcut("Mod-o"), run: () => app.openDialog() },
     {
       id: "open-recent",
       label: "open recent",
@@ -188,40 +209,40 @@
         })),
       run: (id) => id && app.reopen(Number(id)),
     },
-    { id: "new", label: "new document", hint: "⌘N", run: () => app.create() },
-    { id: "run", label: "run all passes", hint: "⌘R", run: () => run() },
+    { id: "new", label: "new document", hint: shortcut("Mod-n"), run: () => app.create() },
+    { id: "run", label: "run all passes", hint: shortcut("Mod-r"), run: () => run() },
     { id: "run-fresh", label: "run all passes afresh", run: () => run(undefined, true) },
     {
       id: "run-one",
       label: "run one pass",
-      hint: "⌘⇧R",
+      hint: shortcut("Mod-Shift-r"),
       choices: () =>
         app.passes.map((p) => ({ value: p.slug, label: p.name, hint: p.scope })),
       run: (slug) => run(slug),
     },
-    { id: "find", label: "find", hint: "⌘F", run: () => app.openFind(false) },
-    { id: "replace", label: "find and replace", hint: "⌥⌘F", run: () => app.openFind(true) },
-    { id: "find-next", label: "find next", hint: "⌘G", run: () => app.findStep(1) },
-    { id: "find-prev", label: "find previous", hint: "⌘⇧G", run: () => app.findStep(-1) },
-    { id: "replace-all", label: "replace all", hint: "⌥⏎", run: () => app.replaceAll() },
-    { id: "save", label: "save", hint: "⌘S", run: () => app.saveNow() },
-    { id: "save-as", label: "save as…", hint: "⌘⇧S", run: () => app.saveAs() },
+    { id: "find", label: "find", hint: shortcut("Mod-f"), run: () => app.openFind(false) },
+    { id: "replace", label: "find and replace", hint: shortcut("Alt-Mod-f"), run: () => app.openFind(true) },
+    { id: "find-next", label: "find next", hint: shortcut("Mod-g"), run: () => app.findStep(1) },
+    { id: "find-prev", label: "find previous", hint: shortcut("Mod-Shift-g"), run: () => app.findStep(-1) },
+    { id: "replace-all", label: "replace all", hint: shortcut("Alt-Enter"), run: () => app.replaceAll() },
+    { id: "save", label: "save", hint: shortcut("Mod-s"), run: () => app.saveNow() },
+    { id: "save-as", label: "save as…", hint: shortcut("Mod-Shift-s"), run: () => app.saveAs() },
     {
       id: "history",
       label: "revisions",
-      hint: "⌘Y",
+      hint: shortcut("Mod-y"),
       run: () => app.openHistory(),
     },
     {
       id: "duel",
       label: "paragraph duel",
-      hint: "⌘D",
+      hint: shortcut("Mod-d"),
       run: () => app.openDuel(),
     },
     {
       id: "major",
       label: "flag a major revision",
-      hint: "⌘⌥S",
+      hint: shortcut("Mod-Alt-s"),
       argument: "what changed",
       run: (label) => app.saveMajor(label || "major revision"),
     },
@@ -288,16 +309,16 @@
         return setTheme(otherTheme(current, systemDark));
       },
     },
-    { id: "bigger", label: "bigger text", hint: "⌘+", run: () => resize(1) },
-    { id: "smaller", label: "smaller text", hint: "⌘-", run: () => resize(-1) },
-    { id: "actual-size", label: "actual size", hint: "⌘0", run: () => resize(0) },
+    { id: "bigger", label: "bigger text", hint: shortcut("Mod-+"), run: () => resize(1) },
+    { id: "smaller", label: "smaller text", hint: shortcut("Mod--"), run: () => resize(-1) },
+    { id: "actual-size", label: "actual size", hint: shortcut("Mod-0"), run: () => resize(0) },
     {
       id: "sidebar",
       label: "show or hide the margin",
-      hint: "⌃⌘S",
+      hint: shortcut("Ctrl-Meta-s"),
       run: () => app.toggleMargin(),
     },
-    { id: "help", label: "help", hint: "⌘?", run: () => app.openHelp() },
+    { id: "help", label: "help", hint: shortcut("Mod-?"), run: () => app.openHelp() },
     {
       id: "folder",
       label: "open the writegood folder",
@@ -316,7 +337,7 @@
   ];
 
   function keydown(e: KeyboardEvent) {
-    const meta = e.metaKey || e.ctrlKey;
+    const meta = isMod(e);
 
     if (meta && e.key === "k") {
       e.preventDefault();
@@ -377,7 +398,7 @@
       return;
     }
     // ⌃⌘S shows or hides the margin (SPEC §12.1). It has to come before the
-    // save keys, which count ⌃ as ⌘.
+    // save keys, which Ctrl alone triggers off macOS.
     if (e.metaKey && e.ctrlKey && e.code === "KeyS") {
       e.preventDefault();
       void palette?.runCommand("sidebar");
@@ -428,11 +449,13 @@
       case "n":
       case "j":
         e.preventDefault();
+        app.did("move");
         app.step(1);
         break;
       case "p":
       case "k":
         e.preventDefault();
+        app.did("move");
         app.step(-1);
         break;
       case "x":
@@ -467,6 +490,7 @@
   <span class="left">
     {#if app.mode === "review"}<span class="live">review</span>{/if}
     {#if spent}<span class="spent" title="spent on this file">{spent}</span>{/if}
+    {#if tip}<span class="hint">{tip}</span>{/if}
   </span>
   <span class="right">
     {#if app.progress}<span class="live">{running(app.progress)}</span>
@@ -518,6 +542,8 @@
   .left { display: inline-flex; gap: 1.2em; }
   /* Standing information, not a change of state, so it keeps the faint ink. */
   .spent { font-variant-numeric: tabular-nums; }
+  /* A sentence, so it keeps its case; the key symbols read badly in small caps. */
+  .hint { font-variant-caps: normal; letter-spacing: 0; font-size: 1.1em; }
 
   /* Two states worth a glance: something is happening, something is unsaved. */
   .live { color: var(--accent); }
