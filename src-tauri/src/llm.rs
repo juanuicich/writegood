@@ -69,7 +69,9 @@ pub fn adapter_for(kind: &str) -> AppResult<AdapterKind> {
 pub fn thinking_options(kind: &str, thinking: Option<&str>) -> AppResult<ChatOptions> {
     // A reasoning model wraps its answer in its thinking. We want the answer.
     let options = ChatOptions::default().with_normalize_reasoning_content(true);
-    let Some(level) = thinking else { return Ok(options) };
+    let Some(level) = thinking else {
+        return Ok(options);
+    };
     let effort = match level {
         "off" => None,
         "low" => Some(ReasoningEffort::Low),
@@ -125,7 +127,9 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
     // endpoint only when the config names one.
     let target = ServiceTargetResolver::from_resolver_fn(
         move |service: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
-            let ServiceTarget { endpoint, model, .. } = service;
+            let ServiceTarget {
+                endpoint, model, ..
+            } = service;
             let endpoint = match &base_url {
                 Some(url) => Endpoint::from_owned(url.clone()),
                 None => endpoint,
@@ -138,7 +142,9 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
         },
     );
 
-    let client = Client::builder().with_service_target_resolver(target).build();
+    let client = Client::builder()
+        .with_service_target_resolver(target)
+        .build();
 
     let request = ChatRequest::default()
         .with_system(system)
@@ -162,7 +168,11 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
         prices::lookup(vendor(name, provider), &model).map(|rates| prices::cost(&rates, &t))
     });
 
-    Ok(Reply { text, tokens, cost_usd })
+    Ok(Reply {
+        text,
+        tokens,
+        cost_usd,
+    })
 }
 
 #[tauri::command]
@@ -180,17 +190,32 @@ mod tests {
     use super::*;
 
     fn provider(kind: &str) -> Provider {
-        Provider { kind: kind.into(), ..Provider::default() }
+        Provider {
+            kind: kind.into(),
+            ..Provider::default()
+        }
     }
 
     #[test]
     fn every_network_kind_has_an_adapter() {
-        assert!(matches!(adapter_for("anthropic").unwrap(), AdapterKind::Anthropic));
-        assert!(matches!(adapter_for("openai").unwrap(), AdapterKind::OpenAI));
-        assert!(matches!(adapter_for("google").unwrap(), AdapterKind::Gemini));
+        assert!(matches!(
+            adapter_for("anthropic").unwrap(),
+            AdapterKind::Anthropic
+        ));
+        assert!(matches!(
+            adapter_for("openai").unwrap(),
+            AdapterKind::OpenAI
+        ));
+        assert!(matches!(
+            adapter_for("google").unwrap(),
+            AdapterKind::Gemini
+        ));
         // An OpenAI-compatible endpoint speaks the OpenAI protocol; only its
         // base URL differs, and that is supplied separately.
-        assert!(matches!(adapter_for("openai-compatible").unwrap(), AdapterKind::OpenAI));
+        assert!(matches!(
+            adapter_for("openai-compatible").unwrap(),
+            AdapterKind::OpenAI
+        ));
     }
 
     #[test]
@@ -237,7 +262,10 @@ mod tests {
     #[test]
     fn thinking_off_turns_deepseek_thinking_off() {
         let o = thinking_options("openai-compatible", Some("off")).unwrap();
-        assert_eq!(o.extra_body, Some(serde_json::json!({ "thinking": { "type": "disabled" } })));
+        assert_eq!(
+            o.extra_body,
+            Some(serde_json::json!({ "thinking": { "type": "disabled" } }))
+        );
         assert!(o.reasoning_effort.is_none());
     }
 
@@ -245,7 +273,10 @@ mod tests {
     fn thinking_on_sets_the_effort_and_deepseek_switch() {
         let o = thinking_options("openai-compatible", Some("high")).unwrap();
         assert!(matches!(o.reasoning_effort, Some(ReasoningEffort::High)));
-        assert_eq!(o.extra_body, Some(serde_json::json!({ "thinking": { "type": "enabled" } })));
+        assert_eq!(
+            o.extra_body,
+            Some(serde_json::json!({ "thinking": { "type": "enabled" } }))
+        );
         let o = thinking_options("openai", Some("low")).unwrap();
         assert!(matches!(o.reasoning_effort, Some(ReasoningEffort::Low)));
         assert!(o.extra_body.is_none());
@@ -269,7 +300,9 @@ mod tests {
 
     #[test]
     fn an_unknown_thinking_value_names_the_valid_ones() {
-        let err = thinking_options("openai", Some("medium")).unwrap_err().to_string();
+        let err = thinking_options("openai", Some("medium"))
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("off, low, high or max"), "{err}");
     }
 

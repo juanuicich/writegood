@@ -207,7 +207,10 @@ mod tests {
     fn an_absent_name_or_file_yields_nothing() {
         let p = env_file("absent", "FOO=bar\n");
         assert_eq!(read_env_file(&p, "MISSING"), None);
-        assert_eq!(read_env_file(std::path::Path::new("/nope/.env"), "FOO"), None);
+        assert_eq!(
+            read_env_file(std::path::Path::new("/nope/.env"), "FOO"),
+            None
+        );
     }
 
     #[test]

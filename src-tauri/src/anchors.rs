@@ -49,7 +49,13 @@ pub struct Anchor {
 
 impl Anchor {
     fn stale(id: i64) -> Self {
-        Anchor { id, from: None, to: None, score: 0.0, exact: false }
+        Anchor {
+            id,
+            from: None,
+            to: None,
+            score: 0.0,
+            exact: false,
+        }
     }
 }
 
@@ -60,7 +66,11 @@ pub fn resolve_all(text: &str, selectors: &[Selector]) -> Vec<Anchor> {
     // `to_lowercase` can change the length of the string for a few characters
     // (e.g. 'İ'). Fall back to the original when that happens so the two
     // indexes stay aligned.
-    let lower = if lower.len() == chars.len() { lower } else { chars.clone() };
+    let lower = if lower.len() == chars.len() {
+        lower
+    } else {
+        chars.clone()
+    };
 
     selectors
         .iter()
@@ -112,7 +122,8 @@ fn resolve_one(chars: &[char], lower: &[char], sel: &Selector) -> Anchor {
                 continue;
             }
             let window: String = chars[start..end].iter().collect();
-            let qsim = strsim::normalized_levenshtein(&window.to_lowercase(), &sel.quote.to_lowercase());
+            let qsim =
+                strsim::normalized_levenshtein(&window.to_lowercase(), &sel.quote.to_lowercase());
             if qsim < MIN_QUOTE_SIM {
                 continue;
             }
@@ -240,7 +251,12 @@ mod tests {
     use super::*;
 
     fn sel(quote: &str, prefix: &str, suffix: &str) -> Selector {
-        Selector { id: 1, quote: quote.into(), prefix: prefix.into(), suffix: suffix.into() }
+        Selector {
+            id: 1,
+            quote: quote.into(),
+            prefix: prefix.into(),
+            suffix: suffix.into(),
+        }
     }
 
     fn one(text: &str, s: Selector) -> Anchor {
@@ -250,7 +266,10 @@ mod tests {
     #[test]
     fn places_an_exact_quote() {
         let text = "The committee made a determination that the proposal was sound.";
-        let a = one(text, sel("made a determination", "The committee ", " that the"));
+        let a = one(
+            text,
+            sel("made a determination", "The committee ", " that the"),
+        );
         assert!(a.exact);
         assert_eq!(a.from, Some(14));
         assert_eq!(a.to, Some(34));
@@ -269,19 +288,30 @@ mod tests {
         let text = "alpha: the same words here. beta: the same words here.";
         let a = one(text, sel("the same words", "beta: ", " here."));
         assert!(a.exact);
-        assert!(a.from.unwrap() > 27, "expected the second occurrence, got {:?}", a.from);
+        assert!(
+            a.from.unwrap() > 27,
+            "expected the second occurrence, got {:?}",
+            a.from
+        );
     }
 
     #[test]
     fn survives_a_small_edit_inside_the_quote() {
         let original = "The committee made a determination that the proposal was sound.";
         let edited = "The committee made a determination that this proposal was sound.";
-        let s = sel("a determination that the proposal", "committee made ", " was sound.");
+        let s = sel(
+            "a determination that the proposal",
+            "committee made ",
+            " was sound.",
+        );
         let before = one(original, s.clone());
         assert!(before.exact);
         let after = one(edited, s);
         assert!(!after.exact, "an edited quote should not match exactly");
-        assert!(after.from.is_some(), "a one-word edit should still re-anchor");
+        assert!(
+            after.from.is_some(),
+            "a one-word edit should still re-anchor"
+        );
         assert!(after.score > MIN_TOTAL_SCORE);
     }
 
@@ -298,8 +328,18 @@ mod tests {
     #[test]
     fn goes_stale_when_the_sentence_is_rewritten() {
         let edited = "The committee decided the proposal held up.";
-        let a = one(edited, sel("made a determination that the proposal", "committee ", " was sound"));
-        assert_eq!(a.from, None, "a full rewrite should go stale, not mis-place");
+        let a = one(
+            edited,
+            sel(
+                "made a determination that the proposal",
+                "committee ",
+                " was sound",
+            ),
+        );
+        assert_eq!(
+            a.from, None,
+            "a full rewrite should go stale, not mis-place"
+        );
     }
 
     #[test]
@@ -330,9 +370,24 @@ mod tests {
         let out = resolve_all(
             text,
             &[
-                Selector { id: 10, quote: "Very".into(), prefix: "".into(), suffix: " good".into() },
-                Selector { id: 11, quote: "unfortunately".into(), prefix: "quite ".into(), suffix: " bad".into() },
-                Selector { id: 12, quote: "nothing like this".into(), prefix: "".into(), suffix: "".into() },
+                Selector {
+                    id: 10,
+                    quote: "Very".into(),
+                    prefix: "".into(),
+                    suffix: " good".into(),
+                },
+                Selector {
+                    id: 11,
+                    quote: "unfortunately".into(),
+                    prefix: "quite ".into(),
+                    suffix: " bad".into(),
+                },
+                Selector {
+                    id: 12,
+                    quote: "nothing like this".into(),
+                    prefix: "".into(),
+                    suffix: "".into(),
+                },
             ],
         );
         assert_eq!(out.len(), 3);
@@ -347,8 +402,15 @@ mod tests {
         let body = "The committee made a determination that the proposal was sound. ".repeat(400);
         let text = format!("{body}A single distinctive terminating clause appears once.");
         let started = std::time::Instant::now();
-        let a = one(&text, sel("distinctive terminating clause", "A single ", " appears"));
+        let a = one(
+            &text,
+            sel("distinctive terminating clause", "A single ", " appears"),
+        );
         assert!(a.exact);
-        assert!(started.elapsed().as_millis() < 250, "took {:?}", started.elapsed());
+        assert!(
+            started.elapsed().as_millis() < 250,
+            "took {:?}",
+            started.elapsed()
+        );
     }
 }

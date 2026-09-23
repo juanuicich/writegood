@@ -90,7 +90,10 @@ pub fn cost(rates: &Rates, tokens: &Tokens) -> f64 {
 pub fn slim(raw: &Value, fetched_at: u64) -> Catalog {
     let mut vendors = BTreeMap::new();
     let Some(all) = raw.as_object() else {
-        return Catalog { fetched_at, vendors };
+        return Catalog {
+            fetched_at,
+            vendors,
+        };
     };
     for (vendor, entry) in all {
         let Some(models) = entry.get("models").and_then(Value::as_object) else {
@@ -105,14 +108,22 @@ pub fn slim(raw: &Value, fetched_at: u64) -> Catalog {
             };
             priced.insert(
                 model.clone(),
-                Rates { input, output, cache_read: rate("cache_read"), cache_write: rate("cache_write") },
+                Rates {
+                    input,
+                    output,
+                    cache_read: rate("cache_read"),
+                    cache_write: rate("cache_write"),
+                },
             );
         }
         if !priced.is_empty() {
             vendors.insert(vendor.clone(), priced);
         }
     }
-    Catalog { fetched_at, vendors }
+    Catalog {
+        fetched_at,
+        vendors,
+    }
 }
 
 pub fn path() -> PathBuf {
@@ -120,7 +131,10 @@ pub fn path() -> PathBuf {
 }
 
 fn now() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 fn is_fresh(fetched_at: u64, at: u64) -> bool {
@@ -159,7 +173,10 @@ pub fn lookup(vendor: &str, model: &str) -> Option<Rates> {
 /// old copy on any failure. Returns true when a new copy was installed.
 pub async fn refresh_if_stale() -> AppResult<bool> {
     ensure_loaded();
-    let fetched_at = LOADED.read().ok().and_then(|c| c.as_ref().map(|c| c.fetched_at));
+    let fetched_at = LOADED
+        .read()
+        .ok()
+        .and_then(|c| c.as_ref().map(|c| c.fetched_at));
     if fetched_at.is_some_and(|t| is_fresh(t, now())) {
         return Ok(false);
     }
@@ -181,7 +198,9 @@ pub async fn refresh_if_stale() -> AppResult<bool> {
     let raw: Value = serde_json::from_slice(&body)?;
     let catalog = slim(&raw, now());
     if catalog.vendors.is_empty() {
-        return Err(AppError::other("prices: models.dev returned no prices; keeping the old copy"));
+        return Err(AppError::other(
+            "prices: models.dev returned no prices; keeping the old copy",
+        ));
     }
 
     // Write beside the target and rename, so a crash never leaves half a file.
@@ -202,33 +221,62 @@ mod tests {
     use serde_json::json;
 
     fn opus() -> Rates {
-        Rates { input: 5.0, output: 25.0, cache_read: Some(0.5), cache_write: Some(6.25) }
+        Rates {
+            input: 5.0,
+            output: 25.0,
+            cache_read: Some(0.5),
+            cache_write: Some(6.25),
+        }
     }
 
     #[test]
     fn plain_input_and_output() {
-        let t = Tokens { input: 2_000, output: 1_000, ..Tokens::default() };
+        let t = Tokens {
+            input: 2_000,
+            output: 1_000,
+            ..Tokens::default()
+        };
         // 2000 × 5 + 1000 × 25 = 35,000 per million
         assert!((cost(&opus(), &t) - 0.035).abs() < 1e-12);
     }
 
     #[test]
     fn cache_tokens_are_taken_out_of_the_input_and_charged_at_their_own_rates() {
-        let t = Tokens { input: 10_000, output: 0, cache_read: 6_000, cache_write: 1_000 };
+        let t = Tokens {
+            input: 10_000,
+            output: 0,
+            cache_read: 6_000,
+            cache_write: 1_000,
+        };
         // uncached 3000 × 5 + read 6000 × 0.5 + write 1000 × 6.25 = 24,250
         assert!((cost(&opus(), &t) - 0.02425).abs() < 1e-12);
     }
 
     #[test]
     fn a_vendor_without_cache_rates_charges_cache_tokens_as_input() {
-        let flat = Rates { input: 0.15, output: 0.6, cache_read: None, cache_write: None };
-        let t = Tokens { input: 1_000_000, output: 0, cache_read: 400_000, cache_write: 0 };
+        let flat = Rates {
+            input: 0.15,
+            output: 0.6,
+            cache_read: None,
+            cache_write: None,
+        };
+        let t = Tokens {
+            input: 1_000_000,
+            output: 0,
+            cache_read: 400_000,
+            cache_write: 0,
+        };
         assert!((cost(&flat, &t) - 0.15).abs() < 1e-12);
     }
 
     #[test]
     fn a_cache_count_larger_than_the_input_never_goes_negative() {
-        let t = Tokens { input: 100, output: 0, cache_read: 500, cache_write: 0 };
+        let t = Tokens {
+            input: 100,
+            output: 0,
+            cache_read: 500,
+            cache_write: 0,
+        };
         assert!(cost(&opus(), &t) >= 0.0);
     }
 
@@ -247,7 +295,12 @@ mod tests {
         .unwrap();
         assert_eq!(
             Tokens::from_usage(&usage),
-            Some(Tokens { input: 1200, output: 300, cache_read: 800, cache_write: 100 })
+            Some(Tokens {
+                input: 1200,
+                output: 300,
+                cache_read: 800,
+                cache_write: 100
+            })
         );
     }
 
@@ -273,7 +326,12 @@ mod tests {
         assert_eq!(ds.keys().collect::<Vec<_>>(), vec!["deepseek-flash"]);
         assert_eq!(
             ds["deepseek-flash"],
-            Rates { input: 0.15, output: 0.6, cache_read: Some(0.003), cache_write: None }
+            Rates {
+                input: 0.15,
+                output: 0.6,
+                cache_read: Some(0.003),
+                cache_write: None
+            }
         );
     }
 
@@ -292,8 +350,14 @@ mod tests {
     #[test]
     fn the_slim_copy_round_trips_through_json() {
         let mut vendors = BTreeMap::new();
-        vendors.insert("anthropic".to_string(), BTreeMap::from([("claude-opus-5".to_string(), opus())]));
-        let c = Catalog { fetched_at: 7, vendors };
+        vendors.insert(
+            "anthropic".to_string(),
+            BTreeMap::from([("claude-opus-5".to_string(), opus())]),
+        );
+        let c = Catalog {
+            fetched_at: 7,
+            vendors,
+        };
         let back: Catalog = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
         assert_eq!(back.vendors["anthropic"]["claude-opus-5"], opus());
     }

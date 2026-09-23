@@ -529,8 +529,14 @@ mod tests {
 
     #[tokio::test]
     async fn the_provider_files_are_written_before_the_command_starts() {
-        let mut p = sh("cat .agents/agents/writegood/agent.md .agents/hooks.json", &[]);
-        p.files.insert(".agents/agents/writegood/agent.md".into(), "tools: []\n".into());
+        let mut p = sh(
+            "cat .agents/agents/writegood/agent.md .agents/hooks.json",
+            &[],
+        );
+        p.files.insert(
+            ".agents/agents/writegood/agent.md".into(),
+            "tools: []\n".into(),
+        );
         p.files.insert(".agents/hooks.json".into(), "{}".into());
         assert_eq!(cli_run(p, "x".into()).await.unwrap(), "tools: []\n{}");
     }
@@ -590,11 +596,8 @@ mod tests {
 
     #[test]
     fn a_prompt_that_contains_a_placeholder_is_passed_on_as_written() {
-        let filled = fill_placeholders(
-            &args(&["{prompt}", "{model}"]),
-            &[("model", Some("m"))],
-        )
-        .unwrap();
+        let filled =
+            fill_placeholders(&args(&["{prompt}", "{model}"]), &[("model", Some("m"))]).unwrap();
         let (out, _) = substitute_args(&filled, "write {model} here");
         assert_eq!(out, args(&["write {model} here", "m"]));
     }

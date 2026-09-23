@@ -40,7 +40,10 @@ pub fn write(level: &str, message: &str) -> AppResult<()> {
         .map(|d| d.as_secs())
         .unwrap_or(0);
 
-    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(&path)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
     writeln!(file, "{stamp} {level:<5} {message}")?;
     Ok(())
 }

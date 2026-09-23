@@ -498,14 +498,38 @@ key_ref = "keychain:writegood/anthropic"
 /// The starter pass library from SPEC.md §8.2, as (file name, contents). The
 /// files live in `src-tauri/passes/` so they read as the Markdown they are.
 const STARTERS: &[(&str, &str)] = &[
-    ("01-nominalization.md", include_str!("../passes/01-nominalization.md")),
-    ("02-passive-actor.md", include_str!("../passes/02-passive-actor.md")),
-    ("03-sentence-openings.md", include_str!("../passes/03-sentence-openings.md")),
-    ("04-filler-words.md", include_str!("../passes/04-filler-words.md")),
-    ("05-repeated-phrasing.md", include_str!("../passes/05-repeated-phrasing.md")),
-    ("06-paragraph-order.md", include_str!("../passes/06-paragraph-order.md")),
-    ("07-topic-flow.md", include_str!("../passes/07-topic-flow.md")),
-    ("08-unearned-metaphor.md", include_str!("../passes/08-unearned-metaphor.md")),
+    (
+        "01-nominalization.md",
+        include_str!("../passes/01-nominalization.md"),
+    ),
+    (
+        "02-passive-actor.md",
+        include_str!("../passes/02-passive-actor.md"),
+    ),
+    (
+        "03-sentence-openings.md",
+        include_str!("../passes/03-sentence-openings.md"),
+    ),
+    (
+        "04-filler-words.md",
+        include_str!("../passes/04-filler-words.md"),
+    ),
+    (
+        "05-repeated-phrasing.md",
+        include_str!("../passes/05-repeated-phrasing.md"),
+    ),
+    (
+        "06-paragraph-order.md",
+        include_str!("../passes/06-paragraph-order.md"),
+    ),
+    (
+        "07-topic-flow.md",
+        include_str!("../passes/07-topic-flow.md"),
+    ),
+    (
+        "08-unearned-metaphor.md",
+        include_str!("../passes/08-unearned-metaphor.md"),
+    ),
     ("09-length.md", include_str!("../passes/09-length.md")),
 ];
 
@@ -1047,7 +1071,10 @@ timeout_secs = 90
 
         let back = load_config_in(home.at()).unwrap();
         assert!(back.appearance.show_cost);
-        assert_eq!(back.providers["anthropic"].catalog.as_deref(), Some("anthropic-eu"));
+        assert_eq!(
+            back.providers["anthropic"].catalog.as_deref(),
+            Some("anthropic-eu")
+        );
         // A provider without the key does not grow one on save.
         assert!(!text.contains("catalog = \"\""));
     }
@@ -1077,8 +1104,14 @@ key_ref = \"keychain:writegood/anthropic\"\n";
 
         let text = std::fs::read_to_string(home.at().join("config.toml")).unwrap();
         assert!(text.starts_with("# my notes on providers\n"), "{text}");
-        assert!(text.contains("font_size   = 21   # bigger on the laptop\n"), "{text}");
-        assert!(text.contains("unknown_key = 3    # not the app's"), "{text}");
+        assert!(
+            text.contains("font_size   = 21   # bigger on the laptop\n"),
+            "{text}"
+        );
+        assert!(
+            text.contains("unknown_key = 3    # not the app's"),
+            "{text}"
+        );
         assert!(text.contains("# key_ref = \"env:OLD\"\n"), "{text}");
         assert!(text.contains("theme       = \"light\"\n"), "{text}");
         // What the file lacked is added, and what it had is read back.
@@ -1128,7 +1161,8 @@ key_ref = \"keychain:writegood/anthropic\"\n";
         assert_eq!(pass.thinking.as_deref(), Some("high"));
         assert_eq!(pass.timeout_secs, Some(150));
 
-        let plain = parse_pass(Path::new("/tmp/01-x.md"), "+++\nname = \"X\"\n+++\nbody\n").unwrap();
+        let plain =
+            parse_pass(Path::new("/tmp/01-x.md"), "+++\nname = \"X\"\n+++\nbody\n").unwrap();
         assert_eq!(plain.thinking, None);
         assert_eq!(plain.timeout_secs, None);
     }
@@ -1234,8 +1268,16 @@ key_ref = \"keychain:writegood/anthropic\"\n";
                 "{} does not ask for verbatim quotes",
                 p.slug
             );
-            assert!(lower.contains("never"), "{} does not forbid rewriting", p.slug);
-            assert!(lower.contains("praise"), "{} does not forbid praise", p.slug);
+            assert!(
+                lower.contains("never"),
+                "{} does not forbid rewriting",
+                p.slug
+            );
+            assert!(
+                lower.contains("praise"),
+                "{} does not forbid praise",
+                p.slug
+            );
             assert!(
                 lower.contains("no other value is allowed"),
                 "{} does not fix the severity values",

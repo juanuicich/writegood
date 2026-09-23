@@ -17,7 +17,10 @@ pub struct Chunk {
 
 impl Chunk {
     fn new(kind: &str, text: String) -> Self {
-        Chunk { kind: kind.to_string(), text }
+        Chunk {
+            kind: kind.to_string(),
+            text,
+        }
     }
 }
 
@@ -82,7 +85,11 @@ mod tests {
     }
 
     fn text_of(chunks: &[Chunk], kind: &str) -> String {
-        chunks.iter().filter(|c| c.kind == kind).map(|c| c.text.as_str()).collect()
+        chunks
+            .iter()
+            .filter(|c| c.kind == kind)
+            .map(|c| c.text.as_str())
+            .collect()
     }
 
     #[test]
@@ -93,7 +100,10 @@ mod tests {
 
     #[test]
     fn a_replaced_word_shows_as_a_delete_and_an_insert() {
-        let d = words("the committee decided quickly", "the committee decided slowly");
+        let d = words(
+            "the committee decided quickly",
+            "the committee decided slowly",
+        );
         assert!(text_of(&d, "delete").contains("quickly"));
         assert!(text_of(&d, "insert").contains("slowly"));
         assert!(text_of(&d, "equal").contains("committee"));
@@ -120,7 +130,10 @@ mod tests {
         let d = words("alpha beta", "gamma delta");
         let equal = text_of(&d, "equal");
         assert!(!equal.is_empty());
-        assert!(equal.trim().is_empty(), "expected only whitespace, got {equal:?}");
+        assert!(
+            equal.trim().is_empty(),
+            "expected only whitespace, got {equal:?}"
+        );
     }
 
     #[test]

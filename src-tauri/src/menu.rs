@@ -75,7 +75,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
                 Some("CmdOrCtrl+Alt+S"),
             )?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, OPEN_HOME, "Open the writegood folder", true, None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                OPEN_HOME,
+                "Open the writegood folder",
+                true,
+                None::<&str>,
+            )?,
         ],
     )?;
 
@@ -87,9 +93,21 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         true,
         &[
             &MenuItem::with_id(app, "find", "Find…", true, Some("CmdOrCtrl+F"))?,
-            &MenuItem::with_id(app, "replace", "Find and Replace…", true, Some("CmdOrCtrl+Alt+F"))?,
+            &MenuItem::with_id(
+                app,
+                "replace",
+                "Find and Replace…",
+                true,
+                Some("CmdOrCtrl+Alt+F"),
+            )?,
             &MenuItem::with_id(app, "find-next", "Find Next", true, Some("CmdOrCtrl+G"))?,
-            &MenuItem::with_id(app, "find-prev", "Find Previous", true, Some("CmdOrCtrl+Shift+G"))?,
+            &MenuItem::with_id(
+                app,
+                "find-prev",
+                "Find Previous",
+                true,
+                Some("CmdOrCtrl+Shift+G"),
+            )?,
         ],
     )?;
 
@@ -154,13 +172,25 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         "View",
         true,
         &[
-            &MenuItem::with_id(app, "sidebar", "Show or hide the margin", true, Some("Ctrl+Cmd+S"))?,
+            &MenuItem::with_id(
+                app,
+                "sidebar",
+                "Show or hide the margin",
+                true,
+                Some("Ctrl+Cmd+S"),
+            )?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "bigger", "Bigger text", true, Some("CmdOrCtrl++"))?,
             &MenuItem::with_id(app, "smaller", "Smaller text", true, Some("CmdOrCtrl+-"))?,
             &MenuItem::with_id(app, "actual-size", "Actual size", true, Some("CmdOrCtrl+0"))?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "toggle-theme", "Switch light and dark", true, None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                "toggle-theme",
+                "Switch light and dark",
+                true,
+                None::<&str>,
+            )?,
             &MenuItem::with_id(app, "theme", "Theme…", true, None::<&str>)?,
         ],
     )?;
@@ -184,23 +214,39 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         HELP_SUBMENU_ID,
         "Help",
         true,
-        &[&MenuItem::with_id(app, "help", "writegood help", true, Some("CmdOrCtrl+Shift+/"))?],
+        &[&MenuItem::with_id(
+            app,
+            "help",
+            "writegood help",
+            true,
+            Some("CmdOrCtrl+Shift+/"),
+        )?],
     )?;
 
-    Menu::with_items(app, &[&app_menu, &file, &edit, &view, &review, &window, &help])
+    Menu::with_items(
+        app,
+        &[&app_menu, &file, &edit, &view, &review, &window, &help],
+    )
 }
 
 /// Rebuild File > Open Recent. A failure is logged and leaves the old list:
 /// the menu is a convenience, and the command bar has the same list.
 pub fn refresh_recent<R: Runtime>(app: &AppHandle<R>, docs: &[Recent]) {
-    let Some(state) = app.try_state::<RecentMenu<R>>() else { return };
+    let Some(state) = app.try_state::<RecentMenu<R>>() else {
+        return;
+    };
     let menu = &state.0;
     let result = (|| -> tauri::Result<()> {
         for item in menu.items()? {
             menu.remove(&item)?;
         }
         if docs.is_empty() {
-            menu.append(&MenuItem::new(app, "No recent documents", false, None::<&str>)?)?;
+            menu.append(&MenuItem::new(
+                app,
+                "No recent documents",
+                false,
+                None::<&str>,
+            )?)?;
         }
         for doc in docs {
             let id = format!("{OPEN_DOC}{}", doc.id);

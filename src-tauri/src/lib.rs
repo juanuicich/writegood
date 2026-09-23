@@ -44,7 +44,14 @@ fn rev_save(
     label: Option<String>,
 ) -> AppResult<db::Revision> {
     let conn = db.0.lock().unwrap();
-    db::save_revision(&conn, doc_id, &content_json, &content_text, major, label.as_deref())
+    db::save_revision(
+        &conn,
+        doc_id,
+        &content_json,
+        &content_text,
+        major,
+        label.as_deref(),
+    )
 }
 
 #[tauri::command]
@@ -73,7 +80,15 @@ fn run_start(
     model: Option<String>,
 ) -> AppResult<db::Run> {
     let conn = db.0.lock().unwrap();
-    db::start_run(&conn, doc_id, revision_id, &pass_slug, &pass_name, &provider, model.as_deref())
+    db::start_run(
+        &conn,
+        doc_id,
+        revision_id,
+        &pass_slug,
+        &pass_name,
+        &provider,
+        model.as_deref(),
+    )
 }
 
 #[tauri::command]
@@ -85,7 +100,13 @@ fn run_finish(
     usage: Option<db::Usage>,
 ) -> AppResult<()> {
     let conn = db.0.lock().unwrap();
-    db::finish_run(&conn, id, &status, error.as_deref(), usage.unwrap_or_default())
+    db::finish_run(
+        &conn,
+        id,
+        &status,
+        error.as_deref(),
+        usage.unwrap_or_default(),
+    )
 }
 
 /// The open file's running cost across its runs and duels (SPEC §9.4).
@@ -229,7 +250,8 @@ pub fn run() {
             // So the window floats above the others, without the focus.
             #[cfg(all(debug_assertions, target_os = "macos"))]
             if background() {
-                app.handle().set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+                app.handle()
+                    .set_activation_policy(tauri::ActivationPolicy::Accessory)?;
                 if let Some(window) = app.get_webview_window("main") {
                     window.set_always_on_top(true)?;
                 }
@@ -240,15 +262,22 @@ pub fn run() {
             app.manage(db::Db(std::sync::Mutex::new(conn)));
             let _ = log::write("info", "app started");
             if recovered > 0 {
-                let _ = log::write("warn", &format!("closed {recovered} run(s) left open by a previous session"));
+                let _ = log::write(
+                    "warn",
+                    &format!("closed {recovered} run(s) left open by a previous session"),
+                );
             }
             // Prices refresh in the background. Nothing waits on them, and a
             // failure only means costs show as tokens until the next start.
             tauri::async_runtime::spawn(async {
                 match prices::refresh_if_stale().await {
-                    Ok(true) => { let _ = log::write("info", "prices: fetched a new copy from models.dev"); }
+                    Ok(true) => {
+                        let _ = log::write("info", "prices: fetched a new copy from models.dev");
+                    }
                     Ok(false) => {}
-                    Err(e) => { let _ = log::write("warn", &e.to_string()); }
+                    Err(e) => {
+                        let _ = log::write("warn", &e.to_string());
+                    }
                 }
             });
             Ok(())

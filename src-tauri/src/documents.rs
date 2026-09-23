@@ -108,7 +108,10 @@ pub fn recovery_path(id: i64) -> PathBuf {
 
 /// Where a document's text lives now: its file, or its recovery file.
 fn text_path(doc: &db::Document) -> PathBuf {
-    doc.path.as_ref().map(PathBuf::from).unwrap_or_else(|| recovery_path(doc.id))
+    doc.path
+        .as_ref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| recovery_path(doc.id))
 }
 
 fn title_for(text: &str, path: Option<&str>) -> String {
@@ -139,15 +142,27 @@ pub fn recent(conn: &Connection) -> AppResult<Vec<Recent>> {
         .into_iter()
         .filter(|d| text_path(d).is_file())
         .take(20)
-        .map(|d| Recent { id: d.id, path: d.path, title: d.title })
+        .map(|d| Recent {
+            id: d.id,
+            path: d.path,
+            title: d.title,
+        })
         .collect())
 }
 
 /// Record the open, then rebuild File > Open Recent.
-fn opened<R: Runtime>(app: &AppHandle<R>, conn: &Connection, doc: db::Document, text: String) -> AppResult<Opened> {
+fn opened<R: Runtime>(
+    app: &AppHandle<R>,
+    conn: &Connection,
+    doc: db::Document,
+    text: String,
+) -> AppResult<Opened> {
     db::touch_opened(conn, doc.id)?;
     refresh_menu(app, conn);
-    Ok(Opened { doc: db::get_document(conn, doc.id)?, text })
+    Ok(Opened {
+        doc: db::get_document(conn, doc.id)?,
+        text,
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -175,7 +190,8 @@ fn test_pick() -> Option<Option<String>> {
 }
 
 fn picked(path: Option<tauri_plugin_dialog::FilePath>) -> Option<String> {
-    path.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned())
+    path.and_then(|p| p.into_path().ok())
+        .map(|p| p.to_string_lossy().into_owned())
 }
 
 // ----------------------------------------------------------------- commands
@@ -258,7 +274,13 @@ pub fn doc_save(db: State<db::Db>, id: i64, text: String) -> AppResult<db::Docum
 /// Write a document to a new file and point its row there. The first save of
 /// an untitled draft is a Save As. The old file stays; a recovery file goes.
 #[tauri::command]
-pub fn doc_save_as(app: AppHandle, db: State<db::Db>, id: i64, path: String, text: String) -> AppResult<db::Document> {
+pub fn doc_save_as(
+    app: AppHandle,
+    db: State<db::Db>,
+    id: i64,
+    path: String,
+    text: String,
+) -> AppResult<db::Document> {
     let path = with_markdown_extension(&path);
     let conn = db.0.lock().unwrap();
     // Refuse before writing: the file must not change under another row.
@@ -323,9 +345,17 @@ mod tests {
         let home = env_home("docs-write");
         let path = home.dir.join("documents").join("a.md");
         write(&path.to_string_lossy(), "hello").unwrap();
-        assert_eq!(read(&path.to_string_lossy()).unwrap(), "hello\n", "files end with a newline");
+        assert_eq!(
+            read(&path.to_string_lossy()).unwrap(),
+            "hello\n",
+            "files end with a newline"
+        );
         write(&path.to_string_lossy(), "already\n").unwrap();
-        assert_eq!(read(&path.to_string_lossy()).unwrap(), "already\n", "and not two");
+        assert_eq!(
+            read(&path.to_string_lossy()).unwrap(),
+            "already\n",
+            "and not two"
+        );
         let leftovers: Vec<_> = std::fs::read_dir(home.dir.join("documents"))
             .unwrap()
             .filter_map(Result::ok)
