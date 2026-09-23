@@ -4,7 +4,7 @@
  *  The prompts, the preamble, the parser, the filters and the verifier come
  *  from the app (src/lib/passes). The benchmark changes the provider, the
  *  model and the rules, and nothing else. */
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import type { Pass } from "../../src/lib/ipc";
@@ -56,14 +56,18 @@ export type Thinking = "off" | "none" | "on" | "minimal" | "low" | "medium" | "h
 /** The thinking levels each provider can take. `none`, `on` and `minimal`
  *  are OpenRouter's. DeepSeek has an on and off switch and effort levels.
  *  agy takes the app's levels, which its `thinking_names` map to a model. */
-export const LEVELS_FOR: Record<Provider["name"], Thinking[]> = {
+export const LEVELS_FOR: Record<Provider["name"] | "jev", Thinking[]> = {
   openrouter: ["off", "none", "on", "minimal", "low", "medium", "high", "max", "default"],
   deepseek: ["off", "low", "medium", "high", "max", "default"],
   agy: ["off", "low", "medium", "high", "max", "default"],
+  // The app's own client takes the levels of SPEC §9.1.
+  app: ["off", "low", "high", "max", "default"],
+  // Jev does not think. It has no level to set.
+  jev: ["off", "default"],
 };
 
 /** An error that names the levels a provider cannot take, or null. */
-export function refuseLevels(provider: Provider["name"], levels: Iterable<Thinking>): string | null {
+export function refuseLevels(provider: Provider["name"] | "jev", levels: Iterable<Thinking>): string | null {
   const allowed = LEVELS_FOR[provider];
   const bad = [...new Set(levels)].filter((l) => !allowed.includes(l));
   if (!bad.length) return null;
@@ -103,6 +107,7 @@ export function loadRules(name: string): Pass[] {
         path: join(dir, file),
         thinking: (field("thinking") as Pass["thinking"]) ?? null,
         timeoutSecs: timeout ? Number(timeout) : null,
+        jev: (Bun.TOML.parse(meta) as { jev?: Pass["jev"] }).jev ?? null,
       }];
     });
 }
@@ -126,10 +131,12 @@ export interface Usage {
 }
 
 export interface Provider {
-  name: "deepseek" | "openrouter" | "agy";
+  name: "deepseek" | "openrouter" | "agy" | "app";
   model: string;
   /** OpenRouter only: the one upstream provider allowed to serve the call. */
   pinned?: string;
+  /** A call made before the timed run starts, when the provider needs one. */
+  warm?(): Promise<void>;
   chat(system: string, prompt: string, thinking: Thinking, ceilingSecs: number): Promise<{ text: string; usage: Usage }>;
 }
 
@@ -401,6 +408,184 @@ export function agy(model: string, maxInFlight: number): Provider {
   };
 }
 
+// ------------------------------------------------- the app's own client
+
+const PROBE = join(SRC_TAURI, "target", "debug", "examples", "probe");
+let probeBuilt: Promise<void> | null = null;
+
+/** Build the app's `probe` example once per process. */
+function buildProbe(): Promise<void> {
+  probeBuilt ??= (async () => {
+    const proc = Bun.spawn(["cargo", "build", "-q", "--example", "probe"], {
+      cwd: SRC_TAURI, stdin: "ignore", stdout: "inherit", stderr: "inherit",
+    });
+    if ((await proc.exited) !== 0) throw new Error("cargo build --example probe failed");
+  })();
+  return probeBuilt;
+}
+
+/** A provider block from a TOML file that holds `[providers.<name>]`, such
+ *  as `scripts/jev.toml`. */
+export function readBlock(file: string, name: string): Record<string, unknown> {
+  const parsed = Bun.TOML.parse(readFileSync(file, "utf8")) as { providers?: Record<string, Record<string, unknown>> };
+  const block = parsed.providers?.[name];
+  if (!block) throw new Error(`${file} has no [providers.${name}]`);
+  return block;
+}
+
+const tomlValue = (v: unknown): string =>
+  typeof v === "string" ? JSON.stringify(v)
+  : typeof v === "number" || typeof v === "boolean" ? String(v)
+  : `{ ${Object.entries(v as Record<string, unknown>).map(([k, x]) => `${k} = ${tomlValue(x)}`).join(", ")} }`;
+
+/** A throwaway writegood home whose config.toml holds one provider block.
+ *  The probe reads its config from here, as the app reads ~/.writegood. The
+ *  key goes in the child's environment, never into a file. */
+function scratchHome(name: string, block: Record<string, unknown>): string {
+  const home = mkdtempSync(join(tmpdir(), "writegood-bench-home-"));
+  const lines = [`default_provider = ${JSON.stringify(name)}`, "", `[providers.${name}]`];
+  for (const [k, v] of Object.entries(block)) lines.push(`${k} = ${tomlValue(v)}`);
+  writeFileSync(join(home, "config.toml"), lines.join("\n") + "\n");
+  return home;
+}
+
+/** The env name a block's `key_ref = "env:NAME"` names. */
+const keyName = (block: Record<string, unknown>) => {
+  const ref = String(block.key_ref ?? "");
+  if (!ref.startsWith("env:")) throw new Error(`the block's key_ref must be env:NAME, not ${ref || "empty"}`);
+  return ref.slice(4);
+};
+
+/** Run the probe binary once, in `home`. */
+function probeRunner(home: string, keyEnv: string) {
+  const auth = key(keyEnv);
+  return async (args: string[], files: Record<string, string>) => {
+    await buildProbe();
+    const dir = mkdtempSync(join(tmpdir(), "writegood-bench-probe-"));
+    try {
+      for (const [f, text] of Object.entries(files)) writeFileSync(join(dir, f), text);
+      const t0 = performance.now();
+      const proc = Bun.spawn([PROBE, ...args.map((a) => (a in files ? join(dir, a) : a))], {
+        cwd: SRC_TAURI, stdin: "ignore", stdout: "pipe", stderr: "pipe",
+        env: { ...process.env, WRITEGOOD_HOME: home, [keyEnv]: auth },
+      });
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited,
+      ]);
+      return { stdout, stderr, code, secs: (performance.now() - t0) / 1000 };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+}
+
+/** The probe fetches the price catalog into a new home on its first call,
+ *  as the app does at startup. `warm` makes one small call before the timed
+ *  run, so no timed call waits for the fetch, and later homes copy it. */
+let catalog: string | null = null;
+function withCatalog(home: string): string {
+  if (catalog && existsSync(catalog)) copyFileSync(catalog, join(home, "prices.json"));
+  return home;
+}
+
+/** A provider block from `config.toml`, called through the app's own client:
+ *  `llm::chat` in `src-tauri/examples/probe.rs`. The request body, the
+ *  thinking options and the price are the app's. A pass's thinking level
+ *  replaces the block's `thinking`, as a pass's frontmatter does in the app,
+ *  so each level gets its own home. The app reports no upstream provider
+ *  and no reasoning tokens, so the result records neither. */
+export function app(blockFile: string, name: string, maxInFlight: number): Provider {
+  const block = readBlock(blockFile, name);
+  const env = keyName(block);
+  const homes = new Map<string, ReturnType<typeof probeRunner>>();
+  const runnerFor = (level: string) => {
+    let r = homes.get(level);
+    if (!r) {
+      const b = level === "default" ? block : { ...block, thinking: level };
+      r = probeRunner(withCatalog(scratchHome(name, b)), env);
+      homes.set(level, r);
+    }
+    return r;
+  };
+  const lim = limiter(maxInFlight);
+  return {
+    name: "app",
+    model: String(block.model),
+    async warm() {
+      const home = withCatalog(scratchHome(name, block));
+      const r = await probeRunner(home, env)(["--provider", name, "--system", "system.txt", "--prompt", "prompt.txt"], {
+        "system.txt": "Answer in JSON.", "prompt.txt": "Answer with an empty JSON array.",
+      });
+      if (r.code !== 0) throw new Error(`warm-up call failed: ${r.stderr.trim().slice(-300)}`);
+      catalog = join(home, "prices.json");
+    },
+    chat: (system, prompt, thinking, ceilingSecs) => lim(async () => {
+      const run = runnerFor(thinking);
+      const call = run(["--provider", name, "--system", "system.txt", "--prompt", "prompt.txt"], { "system.txt": system, "prompt.txt": prompt });
+      let clock: ReturnType<typeof setTimeout> | undefined;
+      const timer = new Promise<never>((_, no) => {
+        clock = setTimeout(() => no(new Error(`did not answer within ${ceilingSecs}s`)), ceilingSecs * 1000);
+      });
+      const { stdout, stderr, code } = await Promise.race([call, timer]).finally(() => clearTimeout(clock));
+      const errLine = stderr.split("\n").filter((l) => l.startsWith("probe: ")).at(-1) ?? stderr.trim();
+      if (code !== 0) throw new Error(errLine.slice(0, 300));
+      const priced = stderr.match(/probe: (\d+) in \((\d+) cache read, (\d+) cache write\), (\d+) out, \$([\d.]+)/);
+      const unpriced = stderr.match(/probe: (\d+) in, (\d+) out, no price/);
+      return {
+        // The probe prints the reply and a newline.
+        text: stdout.replace(/\n$/, ""),
+        usage: {
+          input: Number(priced?.[1] ?? unpriced?.[1] ?? 0),
+          cacheRead: Number(priced?.[2] ?? 0),
+          output: Number(priced?.[4] ?? unpriced?.[2] ?? 0),
+          reasoning: 0,
+          cost: Number(priced?.[5] ?? 0),
+          costSource: "rates",
+        },
+      };
+    }),
+  };
+}
+
+/** A request to Jev as the app sends it: `jev::ask` in the probe binary,
+ *  with the block in `blockFile` as the provider. `maxInFlight` bounds the
+ *  requests across all drafts, as the provider's `max_in_flight` does in
+ *  the app. */
+export function jevClient(blockFile: string, name: string) {
+  const block = readBlock(blockFile, name);
+  const run = probeRunner(scratchHome(name, block), keyName(block));
+  const lim = limiter(Number(block.max_in_flight ?? 8));
+  const provider: import("../../src/lib/ipc").Provider = {
+    kind: "jev",
+    model: String(block.model),
+    args: [],
+    timeoutSecs: Number(block.timeout_secs ?? 60),
+    keep: (block.keep as number | undefined) ?? null,
+    maxInFlight: (block.max_in_flight as number | undefined) ?? null,
+  };
+  return {
+    provider,
+    model: String(block.model),
+    /** One Noul, so the home has its price catalog before the timed run. */
+    async warm() {
+      const r = await run(["--provider", name, "--jev", "request.json"], {
+        "request.json": JSON.stringify({
+          state: "warm-up",
+          questions: { q: { type: "noul", instructions: { question: "Is this a question?" }, criteria: { true: "Yes.", false: "No." } } },
+        }),
+      });
+      if (r.code !== 0) throw new Error(`warm-up request failed: ${r.stderr.trim().slice(-300)}`);
+    },
+    ask: (state: string, questions: unknown) => lim(async () => {
+      const { stdout, stderr, code, secs } = await run(["--provider", name, "--jev", "request.json"], {
+        "request.json": JSON.stringify({ state, questions }),
+      });
+      if (code !== 0) throw new Error((stderr.trim() || "probe failed").slice(0, 300));
+      return { reply: JSON.parse(stdout) as import("../../src/lib/ipc").JevReply, secs };
+    }),
+  };
+}
+
 // ---------------------------------------------------------------- result files
 
 export interface CallRecord {
@@ -433,6 +618,9 @@ export interface Finding {
   quote: string;
   severity: string;
   note: string;
+  /** The paragraph the call examined, or null for a document-scope call.
+   *  Results made before 24 September 2026 do not record it. */
+  chunk?: number | null;
 }
 
 export interface DraftRecord {
@@ -495,6 +683,12 @@ export interface Result {
     drafts: string[];
     /** agy: calls in flight across all drafts. */
     agyLimit?: number;
+    /** app and jev: the provider block the calls used. */
+    block?: string;
+    /** app: calls in flight across all drafts. */
+    appLimit?: number;
+    /** The length up to which a draft was one window, when not the app's. */
+    singleWindow?: number;
     note?: string;
   };
   rules: string;

@@ -1,0 +1,622 @@
+{
+ "built": "bench/scripts/join.ts",
+ "target": 18000,
+ "parts": [
+  {
+   "source": "draft-essay.md",
+   "scored": true,
+   "from": 0,
+   "to": 2821,
+   "fromScalar": 0,
+   "toScalar": 2821
+  },
+  {
+   "source": "draft-memo.md",
+   "scored": true,
+   "from": 2823,
+   "to": 5915,
+   "fromScalar": 2823,
+   "toScalar": 5915
+  },
+  {
+   "source": "draft-story.md",
+   "scored": true,
+   "from": 5917,
+   "to": 8615,
+   "fromScalar": 5917,
+   "toScalar": 8615
+  },
+  {
+   "source": "on-writing.md",
+   "scored": true,
+   "from": 8617,
+   "to": 9836,
+   "fromScalar": 8617,
+   "toScalar": 9836
+  },
+  {
+   "source": "chapter.md",
+   "scored": false,
+   "from": 9838,
+   "to": 18006,
+   "fromScalar": 9838,
+   "toScalar": 18006
+  }
+ ],
+ "gold": [
+  {
+   "source": "draft-essay.md",
+   "category": "nominalization",
+   "quote": "decision to sell was made",
+   "from": 475,
+   "to": 500
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "nominalization",
+   "quote": "carried out an evaluation",
+   "from": 645,
+   "to": 670
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "nominalization",
+   "quote": "had come to the realization",
+   "from": 1645,
+   "to": 1672
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "passive-actor",
+   "quote": "The decision to sell was made",
+   "from": 471,
+   "to": 500
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "passive-actor",
+   "quote": "The combination was forgotten",
+   "from": 2401,
+   "to": 2430
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "sentence-openings",
+   "quote": "By the time I reached the top of the hill that February,",
+   "from": 260,
+   "to": 316
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "sentence-openings",
+   "quote": "After eleven years of sitting in morning traffic behind a school bus,",
+   "from": 2517,
+   "to": 2586
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "filler-words",
+   "quote": "It should be noted that",
+   "from": 817,
+   "to": 840
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "filler-words",
+   "quote": "very",
+   "from": 158,
+   "to": 162
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "filler-words",
+   "quote": "basically",
+   "from": 2593,
+   "to": 2602
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "repeated-phrasing",
+   "quote": "picturesque",
+   "from": 2025,
+   "to": 2036
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "repeated-phrasing",
+   "quote": "plain and simple",
+   "from": 2703,
+   "to": 2719
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "paragraph-order",
+   "quote": "the top of the hill that February",
+   "from": 282,
+   "to": 315
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "topic-flow",
+   "quote": "Municipal snow contracts in our city",
+   "from": 1528,
+   "to": 1564
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "unearned-metaphor",
+   "quote": "an anchor that kept me moored",
+   "from": 1920,
+   "to": 1949
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "unearned-metaphor",
+   "quote": "opened up like a book",
+   "from": 1993,
+   "to": 2014
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "length",
+   "quote": "Everyone's situation is different, and what works for one person will not necessarily work for another.",
+   "from": 890,
+   "to": 993
+  },
+  {
+   "source": "draft-essay.md",
+   "category": "length",
+   "quote": "in my own circumstances, which may or may not resemble yours",
+   "from": 1206,
+   "to": 1266
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "nominalization",
+   "quote": "makes a determination",
+   "from": 3383,
+   "to": 3404
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "nominalization",
+   "quote": "conduct a review",
+   "from": 5480,
+   "to": 5496
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "passive-actor",
+   "quote": "It was decided",
+   "from": 3555,
+   "to": 3569
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "passive-actor",
+   "quote": "Concerns have been raised",
+   "from": 3885,
+   "to": 3910
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "sentence-openings",
+   "quote": "The board",
+   "from": 2988,
+   "to": 2997
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "sentence-openings",
+   "quote": "Given the results of the pilot and what both teams told us in the May retrospective",
+   "from": 5661,
+   "to": 5744
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "filler-words",
+   "quote": "quite",
+   "from": 3249,
+   "to": 3254
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "filler-words",
+   "quote": "Clearly",
+   "from": 3701,
+   "to": 3708
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "filler-words",
+   "quote": "It should be noted that",
+   "from": 5038,
+   "to": 5061
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "filler-words",
+   "quote": "really",
+   "from": 5844,
+   "to": 5850
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "repeated-phrasing",
+   "quote": "cumbersome",
+   "from": 3791,
+   "to": 3801
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "repeated-phrasing",
+   "quote": "full and complete",
+   "from": 5433,
+   "to": 5450
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "unearned-metaphor",
+   "quote": "a toll booth on the highway to production",
+   "from": 3731,
+   "to": 3772
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "unearned-metaphor",
+   "quote": "a straitjacket",
+   "from": 5602,
+   "to": 5616
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "paragraph-order",
+   "quote": "Under the pilot, both teams",
+   "from": 3097,
+   "to": 3124
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "topic-flow",
+   "quote": "Admission controllers in the cluster",
+   "from": 4884,
+   "to": 4920
+  },
+  {
+   "source": "draft-memo.md",
+   "category": "length",
+   "quote": "As noted above, the board would still review every high-risk change, and nothing in this proposal would change that.",
+   "from": 4403,
+   "to": 4519
+  },
+  {
+   "source": "draft-story.md",
+   "category": "nominalization",
+   "quote": "given an undertaking",
+   "from": 6953,
+   "to": 6973
+  },
+  {
+   "source": "draft-story.md",
+   "category": "nominalization",
+   "quote": "carry out an assessment",
+   "from": 6977,
+   "to": 7000
+  },
+  {
+   "source": "draft-story.md",
+   "category": "nominalization",
+   "quote": "made the decision",
+   "from": 7607,
+   "to": 7624
+  },
+  {
+   "source": "draft-story.md",
+   "category": "passive-actor",
+   "quote": "Flood warnings for Quay Street were not issued",
+   "from": 6605,
+   "to": 6651
+  },
+  {
+   "source": "draft-story.md",
+   "category": "passive-actor",
+   "quote": "Sandbags had been promised",
+   "from": 6718,
+   "to": 6744
+  },
+  {
+   "source": "draft-story.md",
+   "category": "sentence-openings",
+   "quote": "In the weeks after the water went down and the loss adjuster had come round to photograph each and every room",
+   "from": 7490,
+   "to": 7599
+  },
+  {
+   "source": "draft-story.md",
+   "category": "filler-words",
+   "quote": "really",
+   "from": 7055,
+   "to": 7061
+  },
+  {
+   "source": "draft-story.md",
+   "category": "filler-words",
+   "quote": "obviously",
+   "from": 7291,
+   "to": 7300
+  },
+  {
+   "source": "draft-story.md",
+   "category": "filler-words",
+   "quote": "very",
+   "from": 7590,
+   "to": 7594
+  },
+  {
+   "source": "draft-story.md",
+   "category": "repeated-phrasing",
+   "quote": "sodden",
+   "from": 7156,
+   "to": 7162
+  },
+  {
+   "source": "draft-story.md",
+   "category": "repeated-phrasing",
+   "quote": "each and every",
+   "from": 7580,
+   "to": 7594
+  },
+  {
+   "source": "draft-story.md",
+   "category": "unearned-metaphor",
+   "quote": "the beating heart of Quay Street",
+   "from": 7344,
+   "to": 7376
+  },
+  {
+   "source": "draft-story.md",
+   "category": "unearned-metaphor",
+   "quote": "lit a fire under the council",
+   "from": 7459,
+   "to": 7487
+  },
+  {
+   "source": "draft-story.md",
+   "category": "unearned-metaphor",
+   "quote": "a wake-up call",
+   "from": 8550,
+   "to": 8564
+  },
+  {
+   "source": "draft-story.md",
+   "category": "paragraph-order",
+   "quote": "The insurance payment, when it came in August",
+   "from": 6188,
+   "to": 6233
+  },
+  {
+   "source": "draft-story.md",
+   "category": "topic-flow",
+   "quote": "Gluten development",
+   "from": 7739,
+   "to": 7757
+  },
+  {
+   "source": "draft-story.md",
+   "category": "length",
+   "quote": "It is difficult to overstate how much the flood affected the people of the street, and it would be impossible to describe every way in which their lives were changed by it.",
+   "from": 8143,
+   "to": 8315
+  },
+  {
+   "source": "on-writing.md",
+   "category": "nominalization",
+   "quote": "determination would be made",
+   "from": 8694,
+   "to": 8721
+  },
+  {
+   "source": "on-writing.md",
+   "category": "nominalization",
+   "quote": "There was an expectation",
+   "from": 8882,
+   "to": 8906
+  },
+  {
+   "source": "on-writing.md",
+   "category": "nominalization",
+   "quote": "made the observation",
+   "from": 8990,
+   "to": 9010
+  },
+  {
+   "source": "on-writing.md",
+   "category": "nominalization",
+   "quote": "decision would be made",
+   "from": 9310,
+   "to": 9332
+  },
+  {
+   "source": "on-writing.md",
+   "category": "nominalization",
+   "quote": "There was an expectation",
+   "from": 8882,
+   "to": 8906
+  },
+  {
+   "source": "on-writing.md",
+   "category": "nominalization",
+   "quote": "made the observation",
+   "from": 8990,
+   "to": 9010
+  },
+  {
+   "source": "on-writing.md",
+   "category": "passive-actor",
+   "quote": "the meeting was conducted",
+   "from": 8807,
+   "to": 8832
+  },
+  {
+   "source": "on-writing.md",
+   "category": "passive-actor",
+   "quote": "the matter was tabled",
+   "from": 9038,
+   "to": 9059
+  },
+  {
+   "source": "on-writing.md",
+   "category": "passive-actor",
+   "quote": "the meeting was conducted",
+   "from": 8807,
+   "to": 8832
+  },
+  {
+   "source": "on-writing.md",
+   "category": "passive-actor",
+   "quote": "the matter was tabled",
+   "from": 9038,
+   "to": 9059
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "actually",
+   "from": 8774,
+   "to": 8782
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "Unfortunately",
+   "from": 8792,
+   "to": 8805
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "really",
+   "from": 8854,
+   "to": 8860
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "quite",
+   "from": 8861,
+   "to": 8866
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "actually",
+   "from": 8774,
+   "to": 8782
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "Unfortunately",
+   "from": 8792,
+   "to": 8805
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "really",
+   "from": 8854,
+   "to": 8860
+  },
+  {
+   "source": "on-writing.md",
+   "category": "filler-words",
+   "quote": "quite",
+   "from": 8861,
+   "to": 8866
+  },
+  {
+   "source": "on-writing.md",
+   "category": "repeated-phrasing",
+   "quote": "No resolution was arrived at",
+   "from": 8950,
+   "to": 8978
+  },
+  {
+   "source": "on-writing.md",
+   "category": "repeated-phrasing",
+   "quote": "It is a feeling that recurs",
+   "from": 9200,
+   "to": 9227
+  },
+  {
+   "source": "on-writing.md",
+   "category": "repeated-phrasing",
+   "quote": "decision",
+   "from": 9310,
+   "to": 9318
+  },
+  {
+   "source": "on-writing.md",
+   "category": "repeated-phrasing",
+   "quote": "No resolution was arrived at",
+   "from": 8950,
+   "to": 8978
+  },
+  {
+   "source": "on-writing.md",
+   "category": "repeated-phrasing",
+   "quote": "It is a feeling that recurs",
+   "from": 9200,
+   "to": 9227
+  },
+  {
+   "source": "on-writing.md",
+   "category": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made regarding the proposal.",
+   "from": 9271,
+   "to": 9356
+  },
+  {
+   "source": "on-writing.md",
+   "category": "paragraph-order",
+   "quote": "There was an expectation that a resolution would be arrived at.",
+   "from": 9493,
+   "to": 9556
+  },
+  {
+   "source": "on-writing.md",
+   "category": "paragraph-order",
+   "quote": "Some of us left the room with the feeling that nothing had been accomplished.",
+   "from": 9088,
+   "to": 9165
+  },
+  {
+   "source": "on-writing.md",
+   "category": "topic-flow",
+   "quote": "The chair",
+   "from": 8980,
+   "to": 8989
+  },
+  {
+   "source": "on-writing.md",
+   "category": "topic-flow",
+   "quote": "The chair",
+   "from": 8980,
+   "to": 8989
+  },
+  {
+   "source": "on-writing.md",
+   "category": "length",
+   "quote": "It is a feeling that recurs.",
+   "from": 9200,
+   "to": 9228
+  },
+  {
+   "source": "on-writing.md",
+   "category": "length",
+   "quote": "It is a feeling that recurs.",
+   "from": 9200,
+   "to": 9228
+  }
+ ]
+}

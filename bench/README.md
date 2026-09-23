@@ -23,8 +23,11 @@ providers the app does not have yet.
 | `scripts/table.ts` | Prints the comparison table and writes `RESULTS.md` |
 | `scripts/merge.ts` | Composes a hybrid result from two runs |
 | `scripts/convert.ts` | Converted the runs made before this folder existed |
-| `scripts/lib.ts` | Keys, rule loading, the three providers, the result format |
+| `scripts/join.ts` | Builds `corpus/joined.md`, the scored drafts in one draft longer than a window |
+| `scripts/lib.ts` | Keys, rule loading, the providers, the result format |
 | `scripts/agy.toml` | agy's provider block from SPEC §9.3 |
+| `scripts/jev.toml` | The jev provider block from `BENCHMARKS.md` |
+| `scripts/openrouter-app.toml` | OpenRouter as an openai-compatible provider block, for `--provider app` |
 | `scripts/agy.test.ts` | Checks the block and the command line the runner builds from it |
 | `results/<date>-<label>.json` | One result per run |
 | `results/raw/` | Model replies of new runs, and the original scratch runs and scripts |
@@ -59,6 +62,17 @@ the answer keys for decoys only.
 measure latency and cost only. `chapter.md` is longer than one window of
 16,000 characters.
 
+`joined.md` (18,007 characters) measures quality with windows. `join.ts`
+built it from the four scored drafts, which hold 9,834 characters together,
+and paragraphs from the start of `chapter.md` after them. The app splits it
+into five windows, and two window boundaries fall inside the memo and the
+story. `joined-map.json` records where each part lies and every reference
+item's position in the joined text. The scorer moves each finding back to
+the draft it lies in and scores it against that draft's reference. Findings
+in the `chapter.md` padding are not scored. Paragraph order and length are
+not scored on it: their reference items judge each draft as a whole
+document.
+
 ## Rule sets
 
 A result names the rule set it ran. The prompts are what the model reads, so a
@@ -70,7 +84,9 @@ to a new name and change the copy.
 | `2026-09-23-starters` | The starter templates before the rewrite. No result uses them yet. |
 | `2026-09-23-rewrite-docflow` | The rewrite with topic flow at document scope. Results A to P used it. |
 | `2026-09-23-outline` | `rewrite-docflow` with an outline before the JSON in three document passes. Run X2 used it; it is kept in `results/raw/` only. |
-| `2026-09-23-rewrite` | The rules the app ships (commit fcf6ec4). Topic flow at paragraph scope; paragraph order sets `thinking = "high"`. Results X3, R and the smoke test used it. |
+| `2026-09-23-rewrite` | The rules the app shipped at commit fcf6ec4. Topic flow at paragraph scope; paragraph order sets `thinking = "high"`. Results X3, R and the smoke test used it. |
+| `2026-09-23-jev-openings` | `rewrite` with the clearer sentence-openings rule. The Jev tests used it. |
+| `2026-09-23-shipped` | The rules the app ships at commit b5746ab: `jev-openings` with the `[jev]` table in filler words. The prompts equal `jev-openings`. The tests in `2026-09-23-gaps.md` used it. |
 
 `2026-09-23-rewrite-docflow` is reconstructed. The rules at the time of those
 runs were not saved. The reconstruction is `2026-09-23-rewrite` with topic
@@ -106,7 +122,8 @@ per draft as well.
 ## Running
 
 Keys come from the repo's `.env`, then from `~/.writegood/.env`:
-`DEEPSEEK_API_KEY` and `OPENROUTER_API_KEY`. The scripts never print a key.
+`DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY` and, for Jev, `TYPESAFE_API_KEY`.
+The scripts never print a key.
 
 The configuration the app ships, on the four scored drafts:
 
@@ -160,6 +177,9 @@ The composed wall is the slower part, and first findings are the base run's.
   passes and for paragraph order, and the hybrids they make.
 - `results/2026-09-23-followup.md`: GPT-6 Luna at effort low, DeepSeek direct
   through `run.ts`, Gemini 3.8 Flash for the fast passes, and Jev Method 2.
+- `results/2026-09-23-gaps.md`: paragraph order on OpenRouter through the
+  app's client, quality with windows, and the run-to-run noise of the
+  current setup.
 
 ## Adding a model
 
@@ -225,21 +245,61 @@ bun bench/scripts/run.ts --provider agy --model gemini-3.8-flash \
 - Cost is $0. Each call records `serviceSecs`, the time agy took without the
   wait for a slot.
 
+Through the app's own client, with a provider block as `config.toml` holds
+it:
+
+```
+bun bench/scripts/run.ts --provider app --block bench/scripts/openrouter-app.toml \
+  --block-name openrouter --thinking low --pipeline plain --passes paragraph-order \
+  --rules 2026-09-23-shipped --label app-or-po-gemini-low-1
+```
+
+- Each call goes through `llm::chat` in `src-tauri/examples/probe.rs`, as
+  `dev/probe.ts` sends it. The request body, the thinking options and the
+  price come from the app. The benchmark writes the block into a throwaway
+  home and passes the key in the environment.
+- A pass's thinking level replaces the block's `thinking`, as a pass's
+  frontmatter does in the app.
+- The app reports no upstream provider and no reasoning tokens, so the result
+  records neither. Cost comes from the app's price catalog.
+- One small call runs before the timed run, so the probe fetches the price
+  catalog once and no timed call waits for it.
+
+Jev, as the app runs it:
+
+```
+bun bench/scripts/run.ts --provider jev --rules 2026-09-23-shipped \
+  --passes filler-words --label jev-fw-1
+```
+
+- Each paragraph runs through the app's `jev.ts`, and each request goes
+  through `jev::ask` in the probe binary. The pass's `[jev]` table applies.
+  The block is `scripts/jev.toml` unless `--block` names another.
+- A pass needs `scope = "paragraph"` and a `[jev]` table.
+- Each request starts a new probe process, which the app does not do. Wall
+  times through this route are longer than the app's, so compare its scores,
+  not its times.
+
+`--single-window CHARS` sends a draft up to CHARS characters long as one
+window. The app's limit is 16,000. `--single-window 20000` sends all of
+`joined.md` in every call.
+
 To compare a model fairly, run it at least twice. Keep `--limit`, `--votes`
 and `--need` at their defaults unless the change under test is one of them.
 
 ## Limits
 
 - 82 reference items is a small sample. One item is 1.2 points of recall.
-- Repeat runs of one configuration differed by up to five F1 points. Compare
+- Four runs of one configuration scored 65.5% to 72.4% F1, with a standard
+  deviation of 3.1 points (`results/2026-09-23-gaps.md`, test 3). Compare
   means of several runs, not single runs.
 - The document passes have five or six reference items each: paragraph order
   6, length 6, topic flow 5. Their per-pass scores move by 15 points or more
   on one finding.
 - The reference is one model's reading of the rules. The judge found 22 valid
   problems among 62 findings it missed. `judge/README.md` has the numbers.
-- All four scored drafts fit in one window, so the scores say nothing about
-  windows. `chapter.md` exercises windows, but it has no reference.
+- All four scored drafts fit in one window. Only `joined.md` measures quality
+  with windows, and its padding has no reference.
 - A run with fewer drafts is scored on those drafts only. Its score is not
   comparable with a four-draft score. The smoke test is one such run.
 - Latency varies with the provider's load. In one hour, the fast pipeline's

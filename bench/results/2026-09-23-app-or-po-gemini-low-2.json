@@ -1,0 +1,331 @@
+{
+ "schema": 1,
+ "label": "app-or-po-gemini-low-2",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "app",
+  "orProvider": null,
+  "model": "google/gemini-3.8-flash",
+  "thinking": "low",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-shipped",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "block": "openrouter-app.toml [providers.openrouter]",
+  "appLimit": 32,
+  "note": "Test 1: paragraph order on OpenRouter through the app's client, not pinned."
+ },
+ "rules": "2026-09-23-shipped",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 2.699266625,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1363,
+   "cacheRead": 0,
+   "output": 224,
+   "reasoning": 0,
+   "cost": 0.001862,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 2.6967018749999996,
+    "p90": 2.6967018749999996,
+    "max": 2.6967018749999996
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 3.931439083,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1360,
+   "cacheRead": 0,
+   "output": 229,
+   "reasoning": 0,
+   "cost": 0.001879,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 3.931303583,
+    "p90": 3.931303583,
+    "max": 3.931303583
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 2.6969732090000003,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1328,
+   "cacheRead": 0,
+   "output": 249,
+   "reasoning": 0,
+   "cost": 0.00193,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 2.6968687080000002,
+    "p90": 2.6968687080000002,
+    "max": 2.6968687080000002
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 5.6441560840000005,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 978,
+   "cacheRead": 0,
+   "output": 853,
+   "reasoning": 0,
+   "cost": 0.003932,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 5.644041625,
+    "p90": 5.644041625,
+    "max": 5.644041625
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 6,
+   "fp": 3,
+   "fn": 0,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.6666666666666666,
+   "recall": 1,
+   "f1": 0.8
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 6,
+    "fp": 3,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.6666666666666666,
+    "recall": 1,
+    "f1": 0.8
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-story.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the top of the hill that February",
+   "severity": "high",
+   "note": "This reference depends on Carver Hill and the winter walking routine, which are introduced only later in the paragraph beginning \"The first winter was very hard.\".",
+   "chunk": null
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard.",
+   "severity": "medium",
+   "note": "This paragraph returns to the topic of winter walking and navigating the hill in February, which was previously discussed in the paragraph beginning \"By the time I reached the top of the hill\".",
+   "chunk": null
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "pilot, both teams",
+   "severity": "high",
+   "note": "Mentions 'the pilot' and 'both teams' before the pilot or participating teams have been introduced. The pilot is introduced later in the paragraph beginning 'In March and April, the Payments and Search teams ran a pilot.'",
+   "chunk": null
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April, the Payments and Search teams ran a pilot.",
+   "severity": "medium",
+   "note": "Returns to the pilot results after intermediate paragraphs discussing current board bottlenecks and oversight concerns, splitting discussion begun in the second paragraph.",
+   "chunk": null
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The insurance payment, when it came in August, covered the ovens",
+   "severity": "medium",
+   "note": "This paragraph introduces the insurance settlement and aftermath before the narrative describes the morning of the flood, which resumes in the next paragraph (\"She rang her son Tom\").",
+   "chunk": null
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people on Quay Street in many different ways.",
+   "severity": "medium",
+   "note": "This paragraph repeats the general observation about the flood's impact on Quay Street already introduced in the earlier paragraph beginning \"It was obviously a shock to the whole street.\" without adding specific information.",
+   "chunk": null
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made",
+   "severity": "medium",
+   "note": "This paragraph covers the same ground as the earlier paragraph beginning \"It was decided by the committee thxt x determination\" without adding new information.",
+   "chunk": null
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution would be arrived at.",
+   "severity": "medium",
+   "note": "This paragraph repeats the earlier paragraph beginning \"There was an expectation that **a resolution would be arrived at**\".",
+   "chunk": null
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling that nothing had been accomplished.",
+   "severity": "medium",
+   "note": "This paragraph repeats the content of the earlier paragraph beginning \"*Some of us left the room with the feeling\".",
+   "chunk": null
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.0010860410000000228,
+   "secs": 2.6967018749999996,
+   "input": 1363,
+   "cacheRead": 0,
+   "output": 224,
+   "reasoning": 0,
+   "cost": 0.001862,
+   "costSource": "rates",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.000032374999999774446,
+   "secs": 3.931303583,
+   "input": 1360,
+   "cacheRead": 0,
+   "output": 229,
+   "reasoning": 0,
+   "cost": 0.001879,
+   "costSource": "rates",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.00002204200000005585,
+   "secs": 2.6968687080000002,
+   "input": 1328,
+   "cacheRead": 0,
+   "output": 249,
+   "reasoning": 0,
+   "cost": 0.00193,
+   "costSource": "rates",
+   "candidates": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.000021083999999973457,
+   "secs": 5.644041625,
+   "input": 978,
+   "cacheRead": 0,
+   "output": 853,
+   "reasoning": 0,
+   "cost": 0.003932,
+   "costSource": "rates",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

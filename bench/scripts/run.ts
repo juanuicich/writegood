@@ -10,6 +10,15 @@
  *                                      agy: the family, such as gemini-3.8-flash; the
  *                                      thinking level picks -low, -medium or -high
  *  --agy-limit N                       agy: calls in flight across all drafts. Default 4
+ *  --provider app --block FILE --block-name NAME
+ *                                      the provider block [providers.NAME] in FILE, called
+ *                                      through the app's own client (probe.rs, llm::chat).
+ *                                      A pass's thinking level replaces the block's.
+ *                                      --app-limit N bounds its calls across drafts. Default 32
+ *  --provider jev [--block FILE]       Jev, through the app's jev.ts and jev::ask. Default
+ *                                      block: scripts/jev.toml. The pass's [jev] table applies
+ *  --single-window CHARS               a draft up to CHARS long is one window. Default 16000,
+ *                                      as the app
  *  --or-provider SLUG                  openrouter: the only upstream provider allowed.
  *                                      Default: the model's vendor (deepseek/… → deepseek)
  *  --thinking off|none|on|minimal|low|medium|high|max|default   default off
@@ -40,23 +49,32 @@
  *  Prompts, preamble, parser, filters and verifier are the app's own code. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { preamble } from "../../src/lib/passes/schema";
-import { buildPrompt, paragraphs, readFindings } from "../../src/lib/passes/parse";
+import { buildPrompt, paragraphs, paragraphStarts, readFindings } from "../../src/lib/passes/parse";
 import { inParagraph, Repeats } from "../../src/lib/passes/filter";
 import { buildVerifyPrompt, parseVerdicts, tally, VERIFY_SYSTEM } from "../../src/lib/passes/verify";
 import { limiter } from "../../src/lib/passes/limit";
-import { windowOf, windows } from "../../src/lib/passes/windows";
+import { SINGLE, windowOf, windows } from "../../src/lib/passes/windows";
+import { jevSettings, paragraphFindings, Unreadable, type Ask } from "../../src/lib/passes/jev";
 import type { NewFinding, Pass } from "../../src/lib/ipc";
 import {
-  agy, deepseek, draftPath, quick, firstParty, flag, loadRules, openrouter, quantiles, refuseLevels, RESULTS, SCORED, words,
+  agy, app, deepseek, draftPath, jevClient, quick, firstParty, flag, loadRules, openrouter, quantiles, refuseLevels, RESULTS, SCORED, words,
   type CallRecord, type DraftRecord, type Finding, type Provider, type Result, type Thinking,
 } from "./lib";
-import { describe, passesRun, score } from "./score";
+import { describe, scoreResult } from "./score";
 
 const LEVELS = ["off", "none", "on", "minimal", "low", "medium", "high", "max", "default"];
 const providerName = flag("--provider", "deepseek")!;
-const model = flag("--model", providerName === "deepseek" ? "deepseek-flash" : providerName === "agy" ? "gemini-3.8-flash" : undefined);
+const blockFile = flag("--block", providerName === "jev" ? join(import.meta.dir, "jev.toml") : undefined);
+const blockName = flag("--block-name", providerName === "jev" ? "jev" : undefined);
+const appLimit = Number(flag("--app-limit", "32"));
+const singleWindow = Number(flag("--single-window", String(SINGLE)));
+const jevC = providerName === "jev" ? jevClient(blockFile!, blockName!) : null;
+const appP = providerName === "app" ? app(blockFile ?? "", blockName ?? "", appLimit) : null;
+const model = flag("--model",
+  providerName === "deepseek" ? "deepseek-flash" : providerName === "agy" ? "gemini-3.8-flash"
+  : jevC?.model ?? appP?.model);
 const agyLimit = Number(flag("--agy-limit", "4"));
 const thinking = flag("--thinking", "off") as Thinking;
 const rulesName = flag("--rules", "2026-09-23-rewrite")!;
@@ -76,7 +94,9 @@ if (!model) throw new Error("--model is required");
 if (!label || !/^[\w.-]+$/.test(label)) throw new Error("--label is required: letters, digits, dot, dash, underscore");
 if (!LEVELS.includes(thinking)) throw new Error(`--thinking is one of ${LEVELS.join(", ")}`);
 if (!["plain", "fast", "hybrid"].includes(pipeline)) throw new Error("--pipeline is plain, fast or hybrid");
-if (!["deepseek", "openrouter", "agy"].includes(providerName)) throw new Error("--provider is deepseek, openrouter or agy");
+if (!["deepseek", "openrouter", "agy", "app", "jev"].includes(providerName)) throw new Error("--provider is deepseek, openrouter, agy, app or jev");
+if (providerName === "app" && (!blockFile || !blockName)) throw new Error("--provider app needs --block FILE and --block-name NAME");
+if (appP && flag("--model") && flag("--model") !== appP.model) throw new Error("--provider app takes the model from its block");
 
 const outFile = join(RESULTS, `${date}-${label}.json`);
 if (existsSync(outFile) && !process.argv.includes("--force")) throw new Error(`${outFile} exists; pick another --label or pass --force`);
@@ -90,9 +110,13 @@ const orProvider = providerName === "openrouter" ? flag("--or-provider") ?? firs
 
 /** The thinking level of each pass, and whether it is verified. */
 const levelOf = (p: Pass): Thinking => (pipeline === "hybrid" && p.thinking ? (p.thinking as Thinking) : thinking);
-const verifiedOf = (p: Pass) => pipeline === "fast" || (pipeline === "hybrid" && quick(levelOf(p)));
+// Jev has its own procedure and no verifier (SPEC §8.4).
+const verifiedOf = (p: Pass) => providerName !== "jev" && (pipeline === "fast" || (pipeline === "hybrid" && quick(levelOf(p))));
 // A level the provider cannot take stops the run before any call.
-const refused = refuseLevels(providerName as Provider["name"], passes.map(levelOf));
+const refused = refuseLevels(providerName as Provider["name"] | "jev", passes.map(levelOf));
+if (jevC) for (const p of passes) {
+  if (p.scope !== "paragraph" || !p.jev) throw new Error(`${p.slug} cannot run on jev: it needs scope "paragraph" and a [jev] table`);
+}
 if (refused) throw new Error(refused);
 const thinkingPasses = Object.fromEntries(passes.filter((p) => levelOf(p) !== thinking).map((p) => [p.slug, levelOf(p)]));
 
@@ -103,9 +127,12 @@ console.log(
 for (const p of passes) console.log(`  ${p.slug.padEnd(18)} ${p.scope.padEnd(9)} thinking ${levelOf(p)}${verifiedOf(p) ? ", verified" : ""}`);
 if (process.argv.includes("--dry")) process.exit(0);
 
-const provider: Provider =
+// Jev has no chat; its passes take the other branch in runPass.
+const provider: Provider | null =
   providerName === "deepseek" ? deepseek(model)
   : providerName === "agy" ? agy(model, agyLimit)
+  : providerName === "app" ? appP
+  : providerName === "jev" ? null
   : openrouter(model, orProvider!, cacheControl);
 
 const rules = { allowSuggestions: false, redactSuggestions: true, forbidPraise: true, blindJudge: true };
@@ -118,7 +145,11 @@ async function runDraft(name: string) {
   // another run's prompt cache, so repeat runs measure the same thing.
   const system = `Run ${crypto.randomUUID()}.\n\n${preamble(rules)}`;
   const paras = paragraphs(draft);
-  const wins = windows(paras, draft);
+  // --single-window raises the length up to which the whole draft is one
+  // window. At the default, this is the app's own split.
+  const wins = draft.length <= singleWindow && draft.length > SINGLE
+    ? [{ from: 0, to: paras.length, text: draft, excerpt: false }]
+    : windows(paras, draft);
   const lim = limiter(limit);
   const t0 = performance.now();
   const now = () => (performance.now() - t0) / 1000;
@@ -137,7 +168,7 @@ async function runDraft(name: string) {
       };
       calls.push(rec);
       try {
-        const { text, usage } = await provider.chat(sys, prompt, level, pass.timeoutSecs ?? ceiling);
+        const { text, usage } = await provider!.chat(sys, prompt, level, pass.timeoutSecs ?? ceiling);
         Object.assign(rec, usage);
         replies.push({ draft: name, pass: pass.slug, stage, chunk, reply: text });
         return { text, rec };
@@ -149,8 +180,52 @@ async function runDraft(name: string) {
       }
     }, priority);
 
+  /** A pass on Jev, as the app runs it: jev.ts's method for each paragraph,
+   *  each request through jev::ask. No candidates and no verifier. */
+  const runJev = async (pass: Pass) => {
+    const settings = jevSettings(pass, jevC!.provider);
+    const points = Array.from(draft);
+    const starts = paragraphStarts(draft);
+    await Promise.all(paras.map(async (para, i) => {
+      const jevAsk: Ask = (state, questions) => lim(async () => {
+        const rec: CallRecord = {
+          draft: name, pass: pass.slug, stage: "pass", chunk: i, thinking: "off", start: now(), secs: 0,
+          input: 0, cacheRead: 0, output: 0, reasoning: 0, cost: 0, costSource: "rates", servedBy: `jev ${jevC!.model}`,
+        };
+        calls.push(rec);
+        try {
+          const { reply, secs } = await jevC!.ask(state, questions);
+          rec.serviceSecs = secs;
+          rec.input = reply.tokens?.input ?? 0;
+          rec.output = reply.tokens?.output ?? 0;
+          rec.cost = reply.costUsd ?? 0;
+          if (reply.model) rec.servedBy = `jev ${reply.model}`;
+          replies.push({ draft: name, pass: pass.slug, stage: "pass", chunk: i, reply: JSON.stringify(reply.answers) });
+          return reply;
+        } catch (e) {
+          rec.error = e instanceof Error ? e.message : String(e);
+          throw e;
+        } finally {
+          rec.secs = now() - rec.start;
+        }
+      }, 1);
+      try {
+        const found = (await paragraphFindings(pass, settings, para, { points, start: starts[i]! }, jevAsk)) ?? [];
+        candidates += found.length;
+        for (const f of found) findings.push({ draft: name, pass: pass.slug, quote: f.quote, severity: f.severity, note: f.note, chunk: i });
+      } catch (e) {
+        // An unreadable reply or a failed request loses this paragraph only.
+        const last = calls.filter((c) => c.pass === pass.slug && c.chunk === i).at(-1);
+        if (last && e instanceof Unreadable) last.unreadable = e.message;
+      }
+    }));
+    quickDone = Math.max(quickDone, now());
+  };
+
   const runPass = async (pass: Pass) => {
+    if (jevC) return runJev(pass);
     const verified = verifiedOf(pass);
+    const chunkOf = new Map<NewFinding, number | null>();
     const repeats = new Repeats(draft);
     const doc = scope === "document" || pass.scope === "document";
     const questions = doc
@@ -164,13 +239,14 @@ async function runDraft(name: string) {
       const { text, rec } = answer;
       let found: NewFinding[];
       try {
-        found = readFindings(text, provider.name).found;
+        found = readFindings(text, provider!.name).found;
       } catch (e) {
         rec.unreadable = e instanceof Error ? e.message : String(e);
         return;
       }
       rec.candidates = found.length;
       candidates += found.length;
+      for (const f of found) chunkOf.set(f, q.chunk);
       if (!verified) return void kept.push(found);
       const left = repeats.take(q.chunk === null ? found : inParagraph(found, paras[q.chunk]!));
       if (left.length) pending.set(q.context, [...(pending.get(q.context) ?? []), ...left]);
@@ -188,7 +264,9 @@ async function runDraft(name: string) {
       const keep = tally(ballots, cands.length, need);
       kept.push(cands.filter((_, i) => keep[i]));
     }));
-    for (const f of kept.flat()) findings.push({ draft: name, pass: pass.slug, quote: f.quote, severity: f.severity, note: f.note });
+    for (const f of kept.flat()) {
+      findings.push({ draft: name, pass: pass.slug, quote: f.quote, severity: f.severity, note: f.note, chunk: chunkOf.get(f) ?? null });
+    }
     if (quick(levelOf(pass))) quickDone = Math.max(quickDone, now());
   };
 
@@ -223,6 +301,8 @@ async function runDraft(name: string) {
 
 // All drafts at once, or one at a time with a pause. A provider with a
 // requests-per-minute limit needs the pause.
+await provider?.warm?.();
+await jevC?.warm();
 const runs: Awaited<ReturnType<typeof runDraft>>[] = [];
 if (serial === undefined) runs.push(...(await Promise.all(drafts.map(runDraft))));
 else for (const [i, d] of drafts.entries()) {
@@ -241,6 +321,9 @@ const result: Result = {
     limit, ...(serial !== undefined ? { serialSecs: Number(serial) } : {}), votes: pipeline === "plain" ? null : votes, need: pipeline === "plain" ? null : need, ceilingSecs: ceiling, drafts,
     ...(providerName === "openrouter" ? { cacheControl } : {}),
     ...(providerName === "agy" ? { agyLimit } : {}),
+    ...(blockFile && (providerName === "app" || providerName === "jev") ? { block: `${basename(blockFile)} [providers.${blockName}]` } : {}),
+    ...(providerName === "app" ? { appLimit } : {}),
+    ...(singleWindow !== SINGLE ? { singleWindow } : {}),
     ...(note ? { note } : {}),
   },
   rules: rulesName,
@@ -250,7 +333,7 @@ const result: Result = {
   calls,
   errors: [...new Set(calls.flatMap((c) => [c.error, c.unreadable].filter(Boolean) as string[]))].map((e) => e.slice(0, 300)),
 };
-result.scores = score(findings, passesRun(result)).scores;
+result.scores = scoreResult(result).scores;
 
 mkdirSync(join(RESULTS, "raw"), { recursive: true });
 writeFileSync(outFile, JSON.stringify(result, null, 1));

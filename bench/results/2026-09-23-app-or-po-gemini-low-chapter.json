@@ -1,0 +1,98 @@
+{
+ "schema": 1,
+ "label": "app-or-po-gemini-low-chapter",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "app",
+  "orProvider": null,
+  "model": "google/gemini-3.8-flash",
+  "thinking": "low",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-shipped",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "chapter.md"
+  ],
+  "block": "openrouter-app.toml [providers.openrouter]",
+  "appLimit": 32,
+  "note": "Test 1: paragraph order on the chapter, OpenRouter through the app's client, not pinned."
+ },
+ "rules": "2026-09-23-shipped",
+ "drafts": [
+  {
+   "draft": "chapter.md",
+   "words": 5038,
+   "paragraphs": 113,
+   "wall": 4.072099167,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 7631,
+   "cacheRead": 0,
+   "output": 354,
+   "reasoning": 0,
+   "cost": 0.007051,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 4.067805542,
+    "p90": 4.067805542,
+    "max": 4.067805542
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": null,
+ "findings": [
+  {
+   "draft": "chapter.md",
+   "pass": "paragraph-order",
+   "quote": "The last two rows were checked on 23 September 2026.",
+   "severity": "high",
+   "note": "Too early. The reference to \"The last two rows\" assumes a table or list of dependencies that is missing or introduced elsewhere.",
+   "chunk": null
+  },
+  {
+   "draft": "chapter.md",
+   "pass": "paragraph-order",
+   "quote": "OPEN — a pass stops when the window is not visible.",
+   "severity": "medium",
+   "note": "Split topic. This paragraph introduces the window freezing issue and describes it as open, but \"DONE — genai replaces the Vercel AI SDK\" resolves it several paragraphs later after intervening configuration notes.",
+   "chunk": null
+  },
+  {
+   "draft": "chapter.md",
+   "pass": "paragraph-order",
+   "quote": "DONE — genai replaces the Vercel AI SDK.",
+   "severity": "medium",
+   "note": "Repeated ground and split topic. Earlier paragraphs already state that all provider calls run in Rust via genai rather than the webview, before this entry recounts switching from the AI SDK.",
+   "chunk": null
+  }
+ ],
+ "calls": [
+  {
+   "draft": "chapter.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.0017474999999999455,
+   "secs": 4.067805542,
+   "input": 7631,
+   "cacheRead": 0,
+   "output": 354,
+   "reasoning": 0,
+   "cost": 0.007051,
+   "costSource": "rates",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}
