@@ -767,6 +767,7 @@ kind    = "cli"
 command = "claude"
 args    = ["-p", "{prompt}", "--output-format", "json"]
 json_path = "result"        # extract this field from stdout, then parse
+thinking = "off"            # not in the command; the pass runs with the verifier
 timeout_secs = 180
 ```
 

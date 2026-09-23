@@ -458,6 +458,7 @@ key_ref = "keychain:writegood/anthropic"
 # command = "claude"
 # args    = ["-p", "{prompt}", "--output-format", "json"]
 # json_path = "result"        # extract this field from stdout, then parse
+# thinking = "off"            # not in the command; the pass runs with the verifier
 # timeout_secs = 180
 
 # Google's Antigravity CLI, on a Google AI plan. Each call runs in an empty
@@ -999,6 +1000,7 @@ kind    = "cli"
 command = "claude"
 args    = ["-p", "{prompt}", "--output-format", "json"]
 json_path = "result"
+thinking = "off"
 timeout_secs = 90
 "#;
         let cfg: Config = toml::from_str(text).unwrap();
@@ -1010,6 +1012,7 @@ timeout_secs = 90
         assert_eq!(cli.command.as_deref(), Some("claude"));
         assert_eq!(cli.args.len(), 4);
         assert_eq!(cli.json_path.as_deref(), Some("result"));
+        assert_eq!(cli.thinking.as_deref(), Some("off"));
         assert_eq!(cli.timeout_secs, 90);
     }
 
