@@ -82,13 +82,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         "Review",
         true,
         &[
-            &MenuItem::with_id(app, "run", "Run all passes", true, Some("CmdOrCtrl+Return"))?,
+            &MenuItem::with_id(app, "run", "Run all passes", true, Some("CmdOrCtrl+R"))?,
             &MenuItem::with_id(
                 app,
                 "run-one",
                 "Run one pass",
                 true,
-                Some("CmdOrCtrl+Shift+Return"),
+                Some("CmdOrCtrl+Shift+R"),
             )?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "history", "Revisions", true, Some("CmdOrCtrl+Y"))?,

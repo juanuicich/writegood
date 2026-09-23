@@ -79,7 +79,7 @@ has the details and the limits.
 
 On first launch it creates `~/.writegood` with a `config.toml` and nine starter
 passes. Put an API key where `config.toml` points — the macOS keychain, an
-environment variable, or a `.env` file — and press `⌘⏎`.
+environment variable, or a `.env` file — and press `⌘R` or `⌘⏎`.
 
 Everything is `⌘K`. On macOS the same commands are also in the menu bar, which
 is where macOS puts menus; nothing is painted inside the window. Windows and

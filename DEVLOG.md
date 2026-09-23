@@ -404,3 +404,22 @@ dev dependency.
 `#[cfg(debug_assertions)]`, so a release build does not start the server. The
 crate is still compiled in, and no release build has been inspected.
 
+
+## 2026-09-23 — ⌘R beside ⌘⏎
+
+**DONE — `⌘R` runs the passes and asks the judge, and `⌘⏎` still does.**
+`⌘⇧R` and `⌘⇧⏎` run one pass. The Review menu shows the R keys, because a menu
+item holds one shortcut; the window's key handler takes the Enter keys. The
+reason is the WebDriver plugin, which drops ⌘ from Enter. With `⌘R` the duel
+has its end-to-end test, and the suite is ten tests in about 4 seconds.
+
+**ASSUMPTION — either the page or the menu may see a ⌘ key first.** Nothing in
+this session could send a real keystroke, so the order on macOS is unknown. The
+app now works in both: while the duel is open the menu's `Run all passes`
+asks the judge, and the palette ignores menu commands behind a sheet. Needs
+checking by hand: `⌘R` and `⌘⏎` in the duel ask the judge and run no passes,
+and `⌘⇧⏎` opens the pass list.
+
+**CHANGE — `⌘⇧⏎` in the window now opens the pass list.** The key handler used
+to run every pass on `⌘⏎` with or without ⇧. That did not matter while the
+menu held `⌘⇧⏎`. It does now that the menu holds `⌘⇧R`.

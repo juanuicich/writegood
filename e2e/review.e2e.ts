@@ -5,12 +5,14 @@
 import { afterAll, beforeAll, expect } from "bun:test";
 import { Key } from "webdriverio";
 import { dollars } from "../src/lib/usage";
-import { command, COST_PER_CALL, e2e, FINDINGS, launch, statusText, until, type App } from "./harness";
+import { COST_PER_CALL, e2e, FINDINGS, launch, statusText, until, type App } from "./harness";
 
 let app: App;
 beforeAll(async () => {
   app = await launch();
-  await command(app.browser, "run all passes");
+  // ⌘R, not ⌘⏎: the plugin drops ⌘ from Enter (SPEC §16.1). A synthetic key
+  // never reaches the menu, so this is the window's own handler.
+  await app.browser.keys([Key.Command, "r"]);
   // The run is over when the progress line is gone and every note is placed.
   await until(app, "the run to finish", async () => {
     const running = await app.browser.execute(() => !!document.querySelector("footer .right .live"));

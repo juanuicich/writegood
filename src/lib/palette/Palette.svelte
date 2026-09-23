@@ -99,9 +99,10 @@
     await cmd.run();
   }
 
-  /** Run a command the macOS menu asked for. A command that needs an argument
-   *  opens the palette on that command, exactly as choosing it there does. */
-  async function runCommand(id: string) {
+  /** Run a command by id, for the macOS menu and for a key the window
+   *  handles itself. A command that needs an argument opens the palette on
+   *  that command, exactly as choosing it there does. */
+  export async function runCommand(id: string) {
     const cmd = commands.find((c) => c.id === id);
     if (!cmd) return;
     if (cmd.argument || cmd.choices) {
@@ -120,7 +121,12 @@
   $effect(() => {
     let stop: (() => void) | null = null;
     let done = false;
-    void onMenuCommand((id) => void runCommand(id)).then((off) => {
+    // An open sheet takes the menu, as it takes the keyboard (SPEC §12.4).
+    // The duel listens for itself; nothing runs behind either sheet.
+    void onMenuCommand((id) => {
+      if (app.duel || app.history) return;
+      void runCommand(id);
+    }).then((off) => {
       if (done) off();
       else stop = off;
     });

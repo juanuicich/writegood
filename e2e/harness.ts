@@ -10,7 +10,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { Key, remote } from "webdriverio";
+import { remote } from "webdriverio";
 
 export const BINARY = resolve(import.meta.dir, "../src-tauri/target/e2e/debug/writegood");
 
@@ -313,17 +313,6 @@ export async function caretAtEnd(b: WebdriverIO.Browser, selector: string) {
 export async function typeAtEnd(b: WebdriverIO.Browser, selector: string, text: string) {
   await caretAtEnd(b, selector);
   await b.$(".ProseMirror").addValue(text);
-}
-
-/** Run a command from the ⌘K palette by its label. ⌘K reaches the page because
- *  K is a letter; the plugin drops the modifier from Enter and the arrows
- *  (SPEC §16.1), so a command bound to ⌘⏎ is run from here instead. */
-export async function command(b: WebdriverIO.Browser, label: string) {
-  await b.keys([Key.Command, "k"]);
-  const field = b.$(".bar input");
-  await field.waitForExist({ timeout: 5_000 });
-  await field.setValue(label);
-  await b.keys([Key.Enter]);
 }
 
 /** Wait for a condition in the page, with the app's log in the error. */

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app } from "../state.svelte";
   import { runDuel, describe, judgeName } from "./run";
-  import { store } from "../ipc";
+  import { onMenuCommand, store } from "../ipc";
   import { tally } from "./judge";
 
   let field = $state<HTMLTextAreaElement | null>(null);
@@ -46,13 +46,31 @@
     }
   }
 
+  // If macOS hands ⌘R to the menu before the page, it arrives as the menu's
+  // "run" command. While the duel is open that means ask the judge; the
+  // palette ignores menu commands behind a sheet (SPEC §12.4).
+  $effect(() => {
+    let stop: (() => void) | null = null;
+    let done = false;
+    void onMenuCommand((id) => {
+      if (id === "run" && app.duel) void submit();
+    }).then((off) => {
+      if (done) off();
+      else stop = off;
+    });
+    return () => {
+      done = true;
+      stop?.();
+    };
+  });
+
   /** The sheet is a plain div, so it cannot take key events itself. Listen on
    *  the window while the duel is open, the way the revision sheet does. */
   function keydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
       e.preventDefault();
       app.closeDuel();
-    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    } else if ((e.key === "Enter" || e.key.toLowerCase() === "r") && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       void submit();
     }
@@ -98,7 +116,7 @@
         {:else if app.duel.result}
           esc to close
         {:else}
-          ⌘⏎ to ask {judgeName(app.config!)} · esc to abandon
+          ⌘R to ask {judgeName(app.config!)} · esc to abandon
         {/if}
         {#if record.total > 0}
           <span class="record"

@@ -721,8 +721,8 @@ Always available:
 | `⌘K` | the command bar |
 | `⌘N` | new document (the bar asks for a title) |
 | `⌘O` | open a document (the same bar, pre-filtered) |
-| `⌘⏎` | run the enabled passes |
-| `⌘⇧⏎` | run one pass (the bar asks which) |
+| `⌘R` or `⌘⏎` | run the enabled passes |
+| `⌘⇧R` or `⌘⇧⏎` | run one pass (the bar asks which) |
 | `⌘S` | save |
 | `⌘⇧S` | save and flag a major revision (the bar asks what changed) |
 | `⌘D` | duel: rewrite the current paragraph |
@@ -745,12 +745,22 @@ Findings navigation must work without the mouse, including scroll sync. That is
 the "tick forward and back through suggestions" requirement, and it is the
 difference between using the tool and abandoning it.
 
-On macOS every key in the first table except `⌘K`, `⌥↓`, `⌥↑` and `Esc` is a
-menu accelerator (§12.2), so the menu bar handles it and the webview never sees
-it. One key, one code path.
+On macOS the menu bar shows these keys (§12.2). A menu item holds one
+shortcut, so the Review menu shows `⌘R` and `⌘⇧R`, and the window's own key
+handler takes `⌘⏎` and `⌘⇧⏎`. Both keys run the same palette command. One
+command, one code path.
+
+`⌘R` was added beside `⌘⏎` so the end-to-end tests can press it. The WebDriver
+plugin drops ⌘ from Enter but not from letters (§16.1). `⌘⏎` stays because it
+is the key the author uses.
+
+It is not known which sees a ⌘ key first on macOS, the page or the menu bar.
+The app works in either order. While the duel or the revisions sheet is open,
+a menu command goes to the sheet, not to the palette: `Run all passes` asks
+the judge in the duel and does nothing in the revisions sheet.
 
 The duel and the revisions sheet cover the window and take the keyboard while
-they are open: `Esc` closes, `⌘⏎` asks the judge, `j` / `k` move between
+they are open: `Esc` closes, `⌘R` or `⌘⏎` asks the judge, `j` / `k` move between
 revisions, `Enter` puts a revision back.
 
 ### 12.5 States that need designing
@@ -853,7 +863,7 @@ page, click, type, send keys, and take a screenshot of the page.
 What it cannot do, on macOS:
 
 - **Native input.** Keys and clicks arrive as DOM events made in JavaScript.
-  The native menu bar never sees them, so a menu accelerator such as `⌘⏎`
+  The native menu bar never sees them, so a menu shortcut such as `⌘R`
   reaches the webview's own key handler, not the menu. The menu stays a
   manual check.
 - **The clipboard.** A synthetic `⌘C` or `⌘V` does not reach WebKit's copy and
@@ -862,7 +872,7 @@ What it cannot do, on macOS:
   `altKey` and `shiftKey` only on letters and digits. `⌘S` and `⌘K` arrive
   with ⌘ held; `⌘⏎`, `⌥↓` and `⌘⇧⏎` arrive as bare Enter and ArrowDown. This
   is a defect in 1.4.0 and on its main branch as of 23 September 2026. Tests
-  run passes from the `⌘K` palette instead of `⌘⏎`.
+  press `⌘R`, which the app accepts beside `⌘⏎` for this reason (§12.4).
 - **Typing into ProseMirror with `keys()`.** Key events insert no text in a
   contenteditable. `addValue()` on the editor element works, because the
   plugin inserts text with `execCommand("insertText")`.
@@ -903,9 +913,9 @@ The first set of tests covers:
   focus. The focused note is in view. `x` marks a finding addressed.
 - **Cost.** After a run, the status bar shows the cost that the fake model's
   token counts and rates give.
-- **Duel.** Not built. The duel sends its rewrite only on `⌘⏎`, which the
-  plugin delivers without ⌘ (§16.1). It waits on a fix upstream or on a
-  decision to send the key another way.
+- **Duel.** `⌘D` opens the duel. A typed rewrite goes to the judge on `⌘R`,
+  and the result names the version the judge picked, whichever side the
+  shuffle put it on.
 
 A test fails with the app's own log attached, read from the test home.
 

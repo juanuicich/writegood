@@ -12,6 +12,7 @@
 
   let booted = $state(false);
   let override = $state<string | null>(null);
+  let palette = $state<Palette | null>(null);
 
   onMount(async () => {
     void log.write("info", "boot: starting");
@@ -106,11 +107,11 @@
       argument: "title",
       run: (title) => app.create(title ?? "Untitled"),
     },
-    { id: "run", label: "run all passes", hint: "⌘⏎", run: () => run() },
+    { id: "run", label: "run all passes", hint: "⌘R", run: () => run() },
     {
       id: "run-one",
       label: "run one pass",
-      hint: "⌘⇧⏎",
+      hint: "⌘⇧R",
       choices: () =>
         app.passes.map((p) => ({ value: p.slug, label: p.name, hint: p.scope })),
       run: (slug) => run(slug),
@@ -241,9 +242,12 @@
       void app.save(e.shiftKey, e.shiftKey ? "major revision" : undefined);
       return;
     }
-    if (meta && e.key === "Enter") {
+    // ⌘R and ⌘⏎ both run the passes, with ⇧ to pick one. The menu shows the
+    // R keys; ⌘⏎ is handled here (SPEC §12.4). ⇧ can turn e.key upper case.
+    if (meta && (e.key === "Enter" || e.key.toLowerCase() === "r")) {
       e.preventDefault();
-      void run();
+      if (e.shiftKey) void palette?.runCommand("run-one");
+      else void run();
       return;
     }
     if (e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
@@ -323,7 +327,7 @@
 <Duel />
 <History />
 
-{#if booted}<Palette {commands} />{/if}
+{#if booted}<Palette {commands} bind:this={palette} />{/if}
 
 <style>
   main {
