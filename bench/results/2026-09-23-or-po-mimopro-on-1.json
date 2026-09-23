@@ -1,0 +1,317 @@
+{
+ "schema": 1,
+ "label": "or-po-mimopro-on-1",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "xiaomi",
+  "model": "xiaomi/mimo-v2.6-pro",
+  "thinking": "on",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 157.243218125,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1334,
+   "cacheRead": 0,
+   "output": 8899,
+   "reasoning": 8650,
+   "cost": 0.00832242,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 157.24268433300003,
+    "p90": 157.24268433300003,
+    "max": 157.24268433300003
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 250.976333334,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1328,
+   "cacheRead": 0,
+   "output": 11649,
+   "reasoning": 11534,
+   "cost": 0.01071231,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 250.97611558399998,
+    "p90": 250.97611558399998,
+    "max": 250.97611558399998
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 1,
+   "kept": 1
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 192.83085075000002,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1306,
+   "cacheRead": 0,
+   "output": 9175,
+   "reasoning": 8943,
+   "cost": 0.00855036,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 192.829864417,
+    "p90": 192.829864417,
+    "max": 192.829864417
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 138.275938542,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 952,
+   "cacheRead": 0,
+   "output": 8052,
+   "reasoning": 7758,
+   "cost": 0.00741936,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 138.273566625,
+    "p90": 138.273566625,
+    "max": 138.273566625
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 5,
+   "fp": 3,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.625,
+   "recall": 0.8333333333333334,
+   "f1": 0.7142857142857143
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 5,
+    "fp": 3,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.625,
+    "recall": 0.8333333333333334,
+    "f1": 0.7142857142857143
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 2,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "that February, I had stopped thinking of the walk as a punishment",
+   "severity": "high",
+   "note": "This presupposes a winter commute on foot that the draft has not yet established; the first paragraph says the walking began after the car was sold. The fact that he walked through the first winter is supplied only in the paragraph beginning \"The first winter was very hard.\""
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard",
+   "severity": "medium",
+   "note": "This returns to the winter walking described in the paragraph beginning \"By the time I reached the top of the hill that February,\", which is the same topic. Unrelated paragraphs on the decision to sell and on not telling others how to live sit between the two."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot, both teams",
+   "severity": "medium",
+   "note": "This paragraph relies on a pilot and on \"both teams\" before either exists; the paragraph beginning \"In March and April, the Payments and Search teams ran a pilot\" supplies them later, with three unrelated paragraphs between."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "It was obviously a shock to the whole",
+   "severity": "low",
+   "note": "This paragraph resumes the accountability thread opened in the paragraph beginning \"Flood warnings for Quay Street were not issued\", i.e. the council and the flood wall. The paragraph beginning \"The damage was really extensive.\" sits between the two."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people on Quay Street",
+   "severity": "medium",
+   "note": "This repeats the point already made in the paragraph beginning \"It was obviously a shock to the whole street.\", that the flood hit the whole street. The rest of the paragraph only restates that impact."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made",
+   "severity": "medium",
+   "note": "Repeated ground. This restates the paragraph beginning 'It was decided by the committee thxt x determination would be made' and adds nothing to it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution would be arrived at.",
+   "severity": "medium",
+   "note": "Repeated ground. This repeats the earlier paragraph beginning 'There was an expectation that', which already makes the point about the resolution."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling that nothing had been accomplished.",
+   "severity": "medium",
+   "note": "Repeated ground. This repeats the paragraph beginning 'Some of us left the room with the feeling', including its closing reflection."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.0003684589999999943,
+   "secs": 157.24268433300003,
+   "input": 1334,
+   "cacheRead": 0,
+   "output": 8899,
+   "reasoning": 8650,
+   "cost": 0.00832242,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000015124999999997613,
+   "secs": 250.97611558399998,
+   "input": 1328,
+   "cacheRead": 0,
+   "output": 11649,
+   "reasoning": 11534,
+   "cost": 0.01071231,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000010457999999999857,
+   "secs": 192.829864417,
+   "input": 1306,
+   "cacheRead": 0,
+   "output": 9175,
+   "reasoning": 8943,
+   "cost": 0.00855036,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000012083000000004063,
+   "secs": 138.273566625,
+   "input": 952,
+   "cacheRead": 0,
+   "output": 8052,
+   "reasoning": 7758,
+   "cost": 0.00741936,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

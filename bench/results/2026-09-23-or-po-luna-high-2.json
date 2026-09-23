@@ -1,0 +1,303 @@
+{
+ "schema": 1,
+ "label": "or-po-luna-high-2",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "openai",
+  "model": "openai/gpt-6-luna",
+  "thinking": "high",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 24.983695583,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1323,
+   "cacheRead": 0,
+   "output": 2432,
+   "reasoning": 2325,
+   "cost": 0.0013813,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 24.977728667,
+    "p90": 24.977728667,
+    "max": 24.977728667
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 1,
+   "kept": 1
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 53.870447125,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1313,
+   "cacheRead": 0,
+   "output": 5584,
+   "reasoning": 5383,
+   "cost": 0.00295605,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 53.870201957999996,
+    "p90": 53.870201957999996,
+    "max": 53.870201957999996
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 29.161383333,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1288,
+   "cacheRead": 0,
+   "output": 3211,
+   "reasoning": 3204,
+   "cost": 0.001766425,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 29.160955375,
+    "p90": 29.160955375,
+    "max": 29.160955375
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 0,
+   "kept": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 39.968130417,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 947,
+   "cacheRead": 0,
+   "output": 5103,
+   "reasoning": 4814,
+   "cost": 0.0026462,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 39.96681466599999,
+    "p90": 39.96681466599999,
+    "max": 39.96681466599999
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 4,
+   "fp": 2,
+   "fn": 2,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.6666666666666666,
+   "recall": 0.6666666666666666,
+   "f1": 0.6666666666666666
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 4,
+    "fp": 2,
+    "fn": 2,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.6666666666666666,
+    "recall": 0.6666666666666666,
+    "f1": 0.6666666666666666
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 0,
+    "fp": 1,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard.",
+   "severity": "low",
+   "note": "This returns to the hill and cold conditions raised in the paragraph beginning “By the time I reached the top of the hill that February,” after the cost discussion and disclaimer."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot",
+   "severity": "low",
+   "note": "The pilot's setup and the identity of “both teams” are supplied only in the paragraph beginning “In March and April, the Payments and Search teams ran a pilot.”"
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April, the Payments and Search teams",
+   "severity": "medium",
+   "note": "This returns to the pilot first mentioned in “Under the pilot, both teams cut their median wait from six days to under one, and neither shipped a change that had to be rolled back.” Three intervening paragraphs discuss the board rather than the pilot."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made regarding the proposal.",
+   "severity": "medium",
+   "note": "Repeats the proposal-decision point from the earlier paragraph beginning “It was decided by the committee thxt x determination”."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that",
+   "severity": "medium",
+   "note": "Repeats the resolution-not-reached point from the earlier paragraph beginning “There was an expectation that **a resolution would be arrived at**.”"
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling",
+   "severity": "medium",
+   "note": "Repeats the feeling of having accomplished nothing from the earlier paragraph beginning “Some of us left the room with the feeling that nothing had been accomplished.”"
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.00035383300000000164,
+   "secs": 24.977728667,
+   "input": 1323,
+   "cacheRead": 0,
+   "output": 2432,
+   "reasoning": 2325,
+   "cost": 0.0013813,
+   "costSource": "reported",
+   "servedBy": "OpenAI",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000013374999999999915,
+   "secs": 53.870201957999996,
+   "input": 1313,
+   "cacheRead": 0,
+   "output": 5584,
+   "reasoning": 5383,
+   "cost": 0.00295605,
+   "costSource": "reported",
+   "servedBy": "OpenAI",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000007833000000001533,
+   "secs": 29.160955375,
+   "input": 1288,
+   "cacheRead": 0,
+   "output": 3211,
+   "reasoning": 3204,
+   "cost": 0.001766425,
+   "costSource": "reported",
+   "servedBy": "OpenAI",
+   "candidates": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000007833999999999009,
+   "secs": 39.96681466599999,
+   "input": 947,
+   "cacheRead": 0,
+   "output": 5103,
+   "reasoning": 4814,
+   "cost": 0.0026462,
+   "costSource": "reported",
+   "servedBy": "OpenAI",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

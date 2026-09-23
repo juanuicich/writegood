@@ -1,0 +1,338 @@
+{
+ "schema": 1,
+ "label": "or-po-glm-high-1",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "z-ai",
+  "model": "z-ai/glm-5.3-flash",
+  "thinking": "high",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 115.333650542,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1326,
+   "cacheRead": 0,
+   "output": 3446,
+   "reasoning": 3215,
+   "cost": 0.0019219,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 115.333090167,
+    "p90": 115.333090167,
+    "max": 115.333090167
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 169.602481208,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1321,
+   "cacheRead": 0,
+   "output": 5134,
+   "reasoning": 4849,
+   "cost": 0.00276515,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 169.602343833,
+    "p90": 169.602343833,
+    "max": 169.602343833
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 134.358030875,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1294,
+   "cacheRead": 0,
+   "output": 4409,
+   "reasoning": 4078,
+   "cost": 0.0023986,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 134.357286209,
+    "p90": 134.357286209,
+    "max": 134.357286209
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 83.050064833,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 952,
+   "cacheRead": 0,
+   "output": 2703,
+   "reasoning": 2429,
+   "cost": 0.0014943,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 83.045589333,
+    "p90": 83.045589333,
+    "max": 83.045589333
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 5,
+   "fp": 6,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.45454545454545453,
+   "recall": 0.8333333333333334,
+   "f1": 0.5882352941176471
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 5,
+    "fp": 6,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.45454545454545453,
+    "recall": 0.8333333333333334,
+    "f1": 0.5882352941176471
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 2,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.3333333333333333,
+    "recall": 1,
+    "f1": 0.5
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 3,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the top of the hill that February",
+   "severity": "medium",
+   "note": "The hill is named only later in the paragraph beginning \"The route runs up Carver Hill\", and the February timing cannot be reconciled with \"The decision to sell was made in April\" and \"The first winter was very hard\", which place the start of the walk in spring. The reader cannot yet place this scene in the timeline."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard.",
+   "severity": "low",
+   "note": "The first-winter walking experience is opened here but was already described in the paragraph beginning \"By the time I reached the top of the hill that February\", with the decision and disclaimer paragraphs in between."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot",
+   "severity": "medium",
+   "note": "The paragraph reports results of a pilot the draft has not introduced; the pilot and the two teams are only identified in \"In March and April, the Payments and\"."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April, the Payments and",
+   "severity": "medium",
+   "note": "The pilot topic is opened in \"Under the pilot, both teams cut their\" and then abandoned for three paragraphs about the current process before its details appear here."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "every high-risk change",
+   "severity": "low",
+   "note": "\"High-risk\" is used here before the draft defines the high-risk list in \"In March and April, the Payments and\"."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "the council has given an undertaking to carry out an assessment of the flood wall",
+   "severity": "low",
+   "note": "The paragraph reports the council's undertaking without its cause, which appears only two paragraphs later in the paragraph beginning \"It was obviously a shock to the whole street\", where a wave of support lit a fire under the council."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "In the weeks after the water went down",
+   "severity": "low",
+   "note": "The paragraph returns to the insurance claim, left at \"The insurance payment, when it came in August\", with four unrelated paragraphs in between."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people on Quay Street",
+   "severity": "medium",
+   "note": "Restates the street-wide impact already made in the paragraph beginning \"It was obviously a shock to the whole street\", which also says the bakery is the beating heart of Quay Street, without adding anything."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a",
+   "severity": "medium",
+   "note": "This paragraph repeats the point already made by the earlier paragraph beginning \"It was decided by the committee thxt\", adding nothing to it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a",
+   "severity": "medium",
+   "note": "This paragraph repeats the point already made by the earlier paragraph beginning \"There was an expectation that\", adding nothing to it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the",
+   "severity": "medium",
+   "note": "This paragraph repeats the point already made by the earlier paragraph beginning \"Some of us left the room with the feeling\", adding nothing to it."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.0003773749999999936,
+   "secs": 115.333090167,
+   "input": 1326,
+   "cacheRead": 0,
+   "output": 3446,
+   "reasoning": 3215,
+   "cost": 0.0019219,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000015250000000001762,
+   "secs": 169.602343833,
+   "input": 1321,
+   "cacheRead": 0,
+   "output": 5134,
+   "reasoning": 4849,
+   "cost": 0.00276515,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000011082999999999287,
+   "secs": 134.357286209,
+   "input": 1294,
+   "cacheRead": 0,
+   "output": 4409,
+   "reasoning": 4078,
+   "cost": 0.0023986,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 3
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.00001070800000000105,
+   "secs": 83.045589333,
+   "input": 952,
+   "cacheRead": 0,
+   "output": 2703,
+   "reasoning": 2429,
+   "cost": 0.0014943,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

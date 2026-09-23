@@ -1,0 +1,750 @@
+[
+  {
+    "id": 1,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The author is the one noting; the actor is obvious."
+  },
+  {
+    "id": 2,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentences share only the pronoun 'I'; the rule compares two or three words."
+  },
+  {
+    "id": 3,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A buried verb, which the nominalization pass reports; not a stock filler phrase."
+  },
+  {
+    "id": 4,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A buried verb, which the nominalization pass reports; not a stock filler phrase."
+  },
+  {
+    "id": 5,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A doubled pair; the rule sends doubled pairs to repeated phrasing."
+  },
+  {
+    "id": 6,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'week' is a common word, not a distinctive one."
+  },
+  {
+    "id": 7,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The time sequence is deliberate narrative; openings belong to the sentence-openings pass."
+  },
+  {
+    "id": 8,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The bus pass is set against the car's cost in the same breath; any reader makes the link."
+  },
+  {
+    "id": 9,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Fenwick Road is new at the opening; the link to the bus routes is left to the reader.",
+    "problem": "essay-fenwick-flow"
+  },
+  {
+    "id": 10,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "The stolen bike opens with no link to the bridge sentence before it.",
+    "problem": "essay-bike-flow"
+  },
+  {
+    "id": 11,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A second live image beside the anchor; it adds nothing the literal claim lacks.",
+    "problem": "essay-cocoon"
+  },
+  {
+    "id": 12,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The repeat is the word 'picturesque', which repeated phrasing reports; not a repeated example."
+  },
+  {
+    "id": 13,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The same dislocation as the reference item 'the top of the hill that February', from the other end."
+  },
+  {
+    "id": 14,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A stock phrase, which the filler pass reports; the topic of the sentence follows the pilot."
+  },
+  {
+    "id": 15,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Approvals link to 'a lead approves' in the paragraph's first sentence."
+  },
+  {
+    "id": 16,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'therefore' links it, and a change is what the board approves."
+  },
+  {
+    "id": 17,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on a hidden decision; the link, 'this process', comes only at the end.",
+    "problem": "memo-2023-flow"
+  },
+  {
+    "id": 18,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "The sentence restates the result the sentence before gives.",
+    "problem": "memo-encouraging-length"
+  },
+  {
+    "id": 19,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The same problem as the reference item 'Under the pilot, both teams', from the other end."
+  },
+  {
+    "id": 20,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Ten words before the subject; the rule needs more than ten."
+  },
+  {
+    "id": 21,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentences share only the pronoun 'She'."
+  },
+  {
+    "id": 22,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A narrative sequence of actions; the template carries the order of events."
+  },
+  {
+    "id": 23,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "'affected' twice within two sentences.",
+    "problem": "story-affected"
+  },
+  {
+    "id": 24,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'many' is a common word, and the quote is its first occurrence."
+  },
+  {
+    "id": 25,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A dead idiom, not a live image."
+  },
+  {
+    "id": 26,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The heart and fire images are the reference items; the quote extends the heart image rather than mixing it."
+  },
+  {
+    "id": 27,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The shock to the street is a new point, not a restatement."
+  },
+  {
+    "id": 28,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Split topic: the street's loss appears in the paragraph on the shock, then returns after the paragraph on Ellen's recovery.",
+    "problem": "story-p8-order"
+  },
+  {
+    "id": 29,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The committee is named in the same sentence."
+  },
+  {
+    "id": 30,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The committee is obvious from context."
+  },
+  {
+    "id": 31,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A buried verb, which the nominalization pass reports."
+  },
+  {
+    "id": 32,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The time sequence is deliberate narrative."
+  },
+  {
+    "id": 33,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'The combination' links to 'lock' at the end of the sentence before: old before new."
+  },
+  {
+    "id": 34,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on the insurance renewal; the link, 'the same week', comes at the end.",
+    "problem": "essay-insurance-flow"
+  },
+  {
+    "id": 35,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The list names what the car cost, which the sentence before announced."
+  },
+  {
+    "id": 36,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Throat-clearing that announces the essay.",
+    "problem": "essay-attempt-length"
+  },
+  {
+    "id": 37,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The same dislocation as the reference item 'the top of the hill that February'."
+  },
+  {
+    "id": 38,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The author is the one noting; the actor is obvious."
+  },
+  {
+    "id": 39,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock preamble that delays the content.",
+    "problem": "memo-clear-filler"
+  },
+  {
+    "id": 40,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock appeal that claims importance the sentence has not shown.",
+    "problem": "memo-lost-filler"
+  },
+  {
+    "id": 41,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentences share only the pronoun 'She'."
+  },
+  {
+    "id": 42,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Three words before the subject; the count in the note is wrong."
+  },
+  {
+    "id": 43,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock hyperbole that adds emphasis only.",
+    "problem": "story-overstate-filler"
+  },
+  {
+    "id": 44,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock hyperbole that adds emphasis only.",
+    "problem": "story-impossible-filler"
+  },
+  {
+    "id": 45,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The repeat is part of the extended heart image, deliberate."
+  },
+  {
+    "id": 46,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'whole' is a common word."
+  },
+  {
+    "id": 47,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A narrative sequence of actions."
+  },
+  {
+    "id": 48,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A deliberate tricolon."
+  },
+  {
+    "id": 49,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on 'A wave of support', which nothing prepared.",
+    "problem": "story-wave-flow"
+  },
+  {
+    "id": 50,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Tom is known from the paragraph on the morning of the flood, and 'sodden' links to the sentence before."
+  },
+  {
+    "id": 51,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The hall kitchen was introduced earlier in the paragraph."
+  },
+  {
+    "id": 52,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Ellen is the protagonist; any reader knows her."
+  },
+  {
+    "id": 53,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "Extends 'a wake-up call', a reference item."
+  },
+  {
+    "id": 54,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The speakers are the actors; the actor is obvious."
+  },
+  {
+    "id": 55,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The committee is named in the same sentence."
+  },
+  {
+    "id": 56,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The committee is obvious from context."
+  },
+  {
+    "id": 57,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The reference item 'decision' covers this repeat; the quote is the first occurrence."
+  },
+  {
+    "id": 58,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The thief is unknown; the rule excludes an unknown actor."
+  },
+  {
+    "id": 59,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock preamble that delays the content.",
+    "problem": "memo-clear-filler"
+  },
+  {
+    "id": 60,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "'resolution' buries 'resolve' under the empty verb 'be arrived at'.",
+    "problem": "ow-resolution-would"
+  },
+  {
+    "id": 61,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "'resolution' buries 'resolve' under the empty verb 'was arrived at'.",
+    "problem": "ow-resolution-was"
+  },
+  {
+    "id": 62,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "The stolen bike opens with no link to the bridge sentence before it.",
+    "problem": "essay-bike-flow"
+  },
+  {
+    "id": 63,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Items of an explicit list."
+  },
+  {
+    "id": 64,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The time sequence is deliberate narrative."
+  },
+  {
+    "id": 65,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'bus routes' is the paragraph's subject, and the quote spans three sentences."
+  },
+  {
+    "id": 66,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'week' is a common word."
+  },
+  {
+    "id": 67,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on the insurance renewal; the link comes at the end.",
+    "problem": "essay-insurance-flow"
+  },
+  {
+    "id": 68,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on 'Concerns', which nothing prepared.",
+    "problem": "memo-concerns-flow"
+  },
+  {
+    "id": 69,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'A safety net' names the sampled review of the sentence before."
+  },
+  {
+    "id": 70,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "'The results were quite encouraging' restates the result before it.",
+    "problem": "memo-encouraging-length"
+  },
+  {
+    "id": 71,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A stock phrase, which the filler pass reports; the sentence carries a fact."
+  },
+  {
+    "id": 72,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The repeat is part of the extended heart image, deliberate."
+  },
+  {
+    "id": 73,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on 'A wave of support', which nothing prepared.",
+    "problem": "story-wave-flow"
+  },
+  {
+    "id": 74,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Sandbags follow from flood warnings; any reader makes the link."
+  },
+  {
+    "id": 75,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A summary sentence that the details after it make redundant.",
+    "problem": "story-damage-length"
+  },
+  {
+    "id": 76,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Only two sentences open with 'It is a'."
+  },
+  {
+    "id": 77,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The subject 'It' is the first word; the quote is a whole paragraph."
+  },
+  {
+    "id": 78,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Intensifiers, which the filler pass reports."
+  },
+  {
+    "id": 79,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The members belong to the committee of the sentence before."
+  },
+  {
+    "id": 80,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Intensifiers, which the filler pass reports."
+  },
+  {
+    "id": 81,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentences share only the pronoun 'I'."
+  },
+  {
+    "id": 82,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The time sequence is deliberate narrative."
+  },
+  {
+    "id": 83,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "The stolen bike opens with no link to the bridge sentence before it.",
+    "problem": "essay-bike-flow"
+  },
+  {
+    "id": 84,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Throat-clearing that announces the essay.",
+    "problem": "essay-attempt-length"
+  },
+  {
+    "id": 85,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "'criticism' buries 'criticize' under 'is'.",
+    "problem": "memo-criticism"
+  },
+  {
+    "id": 86,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'the board' is the subject of the memo, and 'reviewed' is common."
+  },
+  {
+    "id": 87,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The pilot's two months are known from the paragraph before."
+  },
+  {
+    "id": 88,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentence adds a fact: the concerns are a year old."
+  },
+  {
+    "id": 89,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A deliberate tricolon."
+  },
+  {
+    "id": 90,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'way' is a common word."
+  },
+  {
+    "id": 91,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'flood wall' is a name; repeating it is correct."
+  },
+  {
+    "id": 92,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentence states the impact; removing it loses the claim."
+  },
+  {
+    "id": 93,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The reference item for this sentence was matched by another finding of the same run."
+  },
+  {
+    "id": 94,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'Insurance' is an item of the cost list the passage is about."
+  },
+  {
+    "id": 95,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The people are examples of the differing situations the sentence before names."
+  },
+  {
+    "id": 96,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'oversight' is the concept the paragraph discusses."
+  },
+  {
+    "id": 97,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'therefore' links it, and a change is what the board approves."
+  },
+  {
+    "id": 98,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on a hidden decision; the link, 'this process', comes only at the end.",
+    "problem": "memo-2023-flow"
+  },
+  {
+    "id": 99,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "A flood wall follows from the flood; any reader makes the link."
+  },
+  {
+    "id": 100,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Tom is known from the paragraph on the morning of the flood."
+  },
+  {
+    "id": 101,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The first sentence of a paragraph; the rule excludes it."
+  },
+  {
+    "id": 102,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "Extends the heart image, a reference item."
+  },
+  {
+    "id": 103,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'Very few' states a degree; removing 'very' changes the claim."
+  },
+  {
+    "id": 104,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The whole section repeats the one before; the paragraph-order pass reports that."
+  },
+  {
+    "id": 105,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The municipal contracts in the same sentence make the actor obvious."
+  },
+  {
+    "id": 106,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'an argument against' is a dead idiom here."
+  },
+  {
+    "id": 107,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock phrase that points back and adds nothing.",
+    "problem": "memo-noted-filler"
+  },
+  {
+    "id": 108,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock appeal that claims importance the sentence has not shown.",
+    "problem": "memo-lost-filler"
+  },
+  {
+    "id": 109,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "'oversight' is the concept the paragraph discusses."
+  },
+  {
+    "id": 110,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on the handoff; the link, 'cumbersome too', comes at the end.",
+    "problem": "memo-handoff-flow"
+  },
+  {
+    "id": 111,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Approvals link to 'a lead approves' in the paragraph's first sentence."
+  },
+  {
+    "id": 112,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentence adds when the board decides, which the six-day wait depends on."
+  },
+  {
+    "id": 113,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "The sentences share only the pronoun 'She'."
+  },
+  {
+    "id": 114,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "A stock hyperbole that adds emphasis only.",
+    "problem": "story-overstate-filler"
+  },
+  {
+    "id": 115,
+    "verdict": "invalid",
+    "note_leaks": false,
+    "reason": "Sandbags follow from flood warnings; any reader makes the link."
+  },
+  {
+    "id": 116,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on the election and the council; the link, the flood wall, comes at the end.",
+    "problem": "story-election-flow"
+  },
+  {
+    "id": 117,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Opens on 'A wave of support', which nothing prepared.",
+    "problem": "story-wave-flow"
+  },
+  {
+    "id": 118,
+    "verdict": "duplicate",
+    "note_leaks": false,
+    "reason": "The same dislocation as the reference item 'The insurance payment, when it came in August'."
+  },
+  {
+    "id": 119,
+    "verdict": "valid",
+    "note_leaks": false,
+    "reason": "Repeated ground: the paragraph restates the street's loss from the paragraph on the shock.",
+    "problem": "story-p8-order"
+  }
+]

@@ -1,0 +1,324 @@
+{
+ "schema": 1,
+ "label": "or-po-gemini-low-2",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "google-ai-studio",
+  "model": "google/gemini-3.8-flash",
+  "thinking": "low",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 2.2762059999999997,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1361,
+   "cacheRead": 0,
+   "output": 191,
+   "reasoning": 0,
+   "cost": 0.001737,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 2.270210166,
+    "p90": 2.270210166,
+    "max": 2.270210166
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 2.684444584,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1360,
+   "cacheRead": 0,
+   "output": 217,
+   "reasoning": 0,
+   "cost": 0.00183375,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 2.683761,
+    "p90": 2.683761,
+    "max": 2.683761
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 4.455797167000001,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1327,
+   "cacheRead": 0,
+   "output": 263,
+   "reasoning": 0,
+   "cost": 0.0019815,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 4.455559792000001,
+    "p90": 4.455559792000001,
+    "max": 4.455559792000001
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 3.551822208,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 982,
+   "cacheRead": 0,
+   "output": 755,
+   "reasoning": 445,
+   "cost": 0.00356775,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 3.551254375,
+    "p90": 3.551254375,
+    "max": 3.551254375
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 6,
+   "fp": 3,
+   "fn": 0,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.6666666666666666,
+   "recall": 1,
+   "f1": 0.8
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 6,
+    "fp": 3,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.6666666666666666,
+    "recall": 1,
+    "f1": 0.8
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-story.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the top of the hill that February",
+   "severity": "high",
+   "note": "Depends on the winter walking conditions and Carver Hill introduced later in \"The first winter was very hard.\" The reader does not yet know what hill or February is being referenced."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard. The route runs up Carver Hill,",
+   "severity": "medium",
+   "note": "Splits the narrative of walking in winter begun in \"By the time I reached the top of the hill that February\", separated by paragraphs discussing car expenses and caveats."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot, both teams cut their median wait from six days to under one",
+   "severity": "high",
+   "note": "This paragraph refers to \"the pilot\" and \"both teams\" before any pilot or participating teams have been introduced. The pilot is introduced later in the paragraph beginning \"In March and April, the Payments and Search teams ran a pilot.\""
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April, the Payments and Search teams ran a pilot.",
+   "severity": "medium",
+   "note": "This paragraph returns to the details and results of the pilot after three intervening paragraphs about the current board process and oversight concerns."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The insurance payment, when it came in August, covered the ovens but not the flour, the new floor or five months of lost trade.",
+   "severity": "medium",
+   "note": "This paragraph jumps months ahead to August to discuss the insurance settlement before the narrative returns to the morning of the flood in the next paragraph, 'She rang her son Tom, who lives two streets up the hill.' The loss adjuster's visit and aftermath are covered later in 'In the weeks after the water went down'."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people on Quay Street in many different ways.",
+   "severity": "medium",
+   "note": "This paragraph returns to the general impact of the flood on Quay Street, repeating ground already covered in 'It was obviously a shock to the whole street.' and interrupting the narrative of the bakery's recovery."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made regarding the proposal.",
+   "severity": "medium",
+   "note": "Repeated ground. This paragraph repeats the points made in \"It was decided by the committee thxt x determination would be made regarding the proposal.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution would be arrived at.",
+   "severity": "medium",
+   "note": "Repeated ground. This paragraph repeats the points made in \"There was an expectation that **a resolution would be arrived at**.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling that nothing had been accomplished.",
+   "severity": "medium",
+   "note": "Repeated ground. This paragraph repeats the points made in \"*Some of us left the room with the feeling that nothing had been accomplished.\""
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.0003688749999999956,
+   "secs": 2.270210166,
+   "input": 1361,
+   "cacheRead": 0,
+   "output": 191,
+   "reasoning": 0,
+   "cost": 0.001737,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.000023583999999999607,
+   "secs": 2.683761,
+   "input": 1360,
+   "cacheRead": 0,
+   "output": 217,
+   "reasoning": 0,
+   "cost": 0.00183375,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.000009042000000000883,
+   "secs": 4.455559792000001,
+   "input": 1327,
+   "cacheRead": 0,
+   "output": 263,
+   "reasoning": 0,
+   "cost": 0.0019815,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "low",
+   "start": 0.000026457999999998096,
+   "secs": 3.551254375,
+   "input": 982,
+   "cacheRead": 0,
+   "output": 755,
+   "reasoning": 445,
+   "cost": 0.00356775,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

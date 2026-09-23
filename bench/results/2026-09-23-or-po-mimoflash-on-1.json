@@ -1,0 +1,310 @@
+{
+ "schema": 1,
+ "label": "or-po-mimoflash-on-1",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "xiaomi",
+  "model": "xiaomi/mimo-v2.6-flash",
+  "thinking": "on",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 147.954160583,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1333,
+   "cacheRead": 0,
+   "output": 6551,
+   "reasoning": 6337,
+   "cost": 0.0020209,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 147.953569166,
+    "p90": 147.953569166,
+    "max": 147.953569166
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 234.675758292,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1325,
+   "cacheRead": 0,
+   "output": 13292,
+   "reasoning": 13056,
+   "cost": 0.00390726,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 234.67483825,
+    "p90": 234.67483825,
+    "max": 234.67483825
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 270.917910042,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 0,
+   "cacheRead": 0,
+   "output": 0,
+   "reasoning": 0,
+   "cost": 0,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 270.91766691699996,
+    "p90": 270.91766691699996,
+    "max": 270.91766691699996
+   },
+   "errors": 1,
+   "unreadable": 0,
+   "candidates": 0,
+   "kept": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 105.219612375,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 954,
+   "cacheRead": 0,
+   "output": 6873,
+   "reasoning": 6614,
+   "cost": 0.002058,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 105.21270270800001,
+    "p90": 105.21270270800001,
+    "max": 105.21270270800001
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 5,
+   "fp": 2,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.7142857142857143,
+   "recall": 0.8333333333333334,
+   "f1": 0.7692307692307692
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 5,
+    "fp": 2,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.7142857142857143,
+    "recall": 0.8333333333333334,
+    "f1": 0.7692307692307692
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the top of the hill",
+   "severity": "medium",
+   "note": "The route's hill is named and described only in the paragraph beginning \"The first winter was very hard.\"; here it appears as a known referent with no prior introduction."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard.",
+   "severity": "medium",
+   "note": "This resumes the winter-walking-on-the-hill topic opened in the paragraph beginning \"By the time I reached the top of the hill\", after the decision-to-sell paragraph and the disclaimer paragraph have intervened."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "the pilot, both teams cut their median wait from six days",
+   "severity": "high",
+   "note": "The pilot and the two teams are introduced only in the paragraph beginning \"In March and April, the Payments and Search teams ran a pilot.\" The six-day wait is explained only in the paragraph beginning \"Today every production release needs a sign-off from the board.\""
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April, the Payments and Search teams ran a pilot.",
+   "severity": "medium",
+   "note": "The pilot results were already given in the paragraph beginning \"Under the pilot, both teams cut their median wait from six days\", which the draft then leaves for three paragraphs on the board process and oversight."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision",
+   "severity": "medium",
+   "note": "Repeats the point of the paragraph beginning \"It was decided by the committee thxt x determination\" and adds nothing to it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution",
+   "severity": "medium",
+   "note": "Repeats the paragraph beginning \"There was an expectation that\" and adds nothing new."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling",
+   "severity": "medium",
+   "note": "Repeats the paragraph beginning \"Some of us left the room\" and adds nothing new."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.0003697499999999963,
+   "secs": 147.953569166,
+   "input": 1333,
+   "cacheRead": 0,
+   "output": 6551,
+   "reasoning": 6337,
+   "cost": 0.0020209,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000012709000000000969,
+   "secs": 234.67483825,
+   "input": 1325,
+   "cacheRead": 0,
+   "output": 13292,
+   "reasoning": 13056,
+   "cost": 0.00390726,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000008124999999999716,
+   "secs": 270.91766691699996,
+   "input": 0,
+   "cacheRead": 0,
+   "output": 0,
+   "reasoning": 0,
+   "cost": 0,
+   "error": "The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()"
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000007374999999996135,
+   "secs": 105.21270270800001,
+   "input": 954,
+   "cacheRead": 0,
+   "output": 6873,
+   "reasoning": 6614,
+   "cost": 0.002058,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 3
+  }
+ ],
+ "errors": [
+  "The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()"
+ ]
+}

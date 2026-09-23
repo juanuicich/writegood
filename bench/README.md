@@ -19,6 +19,7 @@ reach providers the app does not have yet.
 | `scripts/run.ts` | Runs, scores and writes one result |
 | `scripts/score.ts` | The scorer; also scores one result file on its own |
 | `scripts/table.ts` | Prints the comparison table and writes `RESULTS.md` |
+| `scripts/merge.ts` | Composes a hybrid result from two runs |
 | `scripts/convert.ts` | Converted the runs made before this folder existed |
 | `scripts/lib.ts` | Keys, rule loading, the two providers, the result format |
 | `results/<date>-<label>.json` | One result per run |
@@ -110,6 +111,7 @@ bun bench/scripts/run.ts --provider deepseek --model deepseek-flash \
   --thinking off --rules 2026-09-23-rewrite --pipeline hybrid --label flash-hybrid
 ```
 
+`--passes a,b` runs only those passes, and `--skip a,b` runs all but those.
 Add `--dry` to print the plan without calling a model. Then rebuild the table:
 
 ```
@@ -124,6 +126,26 @@ To score one result again, or to list its unmatched findings for a judge:
 ```
 bun bench/scripts/score.ts bench/results/2026-09-23-R-1.json --by-pass --dump /tmp/unmatched.json
 ```
+
+To measure one model for the fast passes and another for paragraph order,
+run each part on its own, then compose them:
+
+```
+bun bench/scripts/run.ts --provider openrouter --model deepseek/deepseek-v4.1-flash \
+  --thinking off --pipeline fast --skip paragraph-order --label or-dsflash-fast-1
+bun bench/scripts/run.ts --provider openrouter --model google/gemini-3.8-flash \
+  --thinking low --pipeline plain --passes paragraph-order --label or-po-gemini-low-1
+bun bench/scripts/merge.ts --label H-dsflash-gemlow-1 \
+  --base bench/results/2026-09-23-or-dsflash-fast-1.json \
+  --take bench/results/2026-09-23-or-po-gemini-low-1.json
+```
+
+The composed wall is the slower part, and first findings are the base run's.
+
+## Results by date
+
+- `results/2026-09-23-openrouter.md`: nine OpenRouter models for the fast
+  passes and for paragraph order, and the hybrids they make.
 
 ## Adding a model
 
@@ -146,7 +168,12 @@ bun bench/scripts/run.ts --provider openrouter --model openai/gpt-5-mini \
   endpoint on OpenRouter; `deepseek/deepseek-v4.1-flash` had one.
 - `--thinking` maps to OpenRouter's `reasoning` parameter. `off` sends
   `{"enabled": false}`. `low`, `medium`, `high` and `max` send
-  `{"effort": <level>}`. `default` sends nothing.
+  `{"effort": <level>}`. `default` sends nothing. `none` sends
+  `{"effort": "none"}`, which turns reasoning off on OpenAI and Inception
+  models. `on` sends `{"enabled": true}`, for models with no effort levels.
+- `--cache-control` marks the system prompt and the shared head of each
+  prompt with `cache_control` breakpoints. Alibaba caches only what a
+  breakpoint marks.
 - Cost is the `usage.cost` that OpenRouter reports for each call. Each call
   records the provider that served it, as the response names it.
 

@@ -1,0 +1,303 @@
+{
+ "schema": 1,
+ "label": "or-po-gemini-medium-2",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "google-ai-studio",
+  "model": "google/gemini-3.8-flash",
+  "thinking": "medium",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 44.641603709,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1365,
+   "cacheRead": 0,
+   "output": 16227,
+   "reasoning": 16184,
+   "cost": 0.061875,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 44.64053079200001,
+    "p90": 44.64053079200001,
+    "max": 44.64053079200001
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 1,
+   "kept": 1
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 85.022683333,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1362,
+   "cacheRead": 0,
+   "output": 22336,
+   "reasoning": 22278,
+   "cost": 0.0847815,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 85.02256087500001,
+    "p90": 85.02256087500001,
+    "max": 85.02256087500001
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 1,
+   "kept": 1
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 59.036684333,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1332,
+   "cacheRead": 0,
+   "output": 16005,
+   "reasoning": 15909,
+   "cost": 0.06101775,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 59.036518959,
+    "p90": 59.036518959,
+    "max": 59.036518959
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 1,
+   "kept": 1
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 16.016940375,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 982,
+   "cacheRead": 0,
+   "output": 4714,
+   "reasoning": 4392,
+   "cost": 0.018414,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 16.009771625,
+    "p90": 16.009771625,
+    "max": 16.009771625
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 5,
+   "fp": 1,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.8333333333333334,
+   "recall": 0.8333333333333334,
+   "f1": 0.8333333333333334
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 5,
+    "fp": 1,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.8333333333333334,
+    "recall": 0.8333333333333334,
+    "f1": 0.8333333333333334
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 1,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the hill",
+   "severity": "high",
+   "note": "This reference depends on the introduction of Carver Hill in the paragraph beginning 'The first winter was very hard.'"
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "the pilot",
+   "severity": "high",
+   "note": "This paragraph depends on the pilot, which is introduced later in the paragraph beginning 'In March and April, the Payments and Search teams ran a pilot.'"
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "She rang her son Tom, who lives two streets up the hill.",
+   "severity": "medium",
+   "note": "Returns to the events of the morning of the flood introduced in 'At a quarter past four on the ninth of March', after an unrelated paragraph about the insurance payout."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made",
+   "severity": "medium",
+   "note": "This paragraph repeats the point of an earlier paragraph and adds nothing to it. It repeats the paragraph beginning \"It was decided by the committee thxt x determination\"."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution would be arrived at.",
+   "severity": "medium",
+   "note": "This paragraph repeats the point of an earlier paragraph and adds nothing to it. It repeats the paragraph beginning \"There was an expectation that **a resolution would be arrived at**\"."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling that nothing had been accomplished.",
+   "severity": "medium",
+   "note": "This paragraph repeats the point of an earlier paragraph and adds nothing to it. It repeats the paragraph beginning \"*Some of us left the room with the feeling that nothing had been accomplished.\"."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "medium",
+   "start": 0.0003601670000000041,
+   "secs": 44.64053079200001,
+   "input": 1365,
+   "cacheRead": 0,
+   "output": 16227,
+   "reasoning": 16184,
+   "cost": 0.061875,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "medium",
+   "start": 0.00001287500000000108,
+   "secs": 85.02256087500001,
+   "input": 1362,
+   "cacheRead": 0,
+   "output": 22336,
+   "reasoning": 22278,
+   "cost": 0.0847815,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "medium",
+   "start": 0.000007915999999994483,
+   "secs": 59.036518959,
+   "input": 1332,
+   "cacheRead": 0,
+   "output": 16005,
+   "reasoning": 15909,
+   "cost": 0.06101775,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 1
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "medium",
+   "start": 0.000011625000000002217,
+   "secs": 16.009771625,
+   "input": 982,
+   "cacheRead": 0,
+   "output": 4714,
+   "reasoning": 4392,
+   "cost": 0.018414,
+   "costSource": "reported",
+   "servedBy": "Google AI Studio",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

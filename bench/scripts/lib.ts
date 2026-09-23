@@ -50,7 +50,10 @@ export const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 // ---------------------------------------------------------------- rules
 
-export type Thinking = "off" | "low" | "medium" | "high" | "max" | "default";
+export type Thinking = "off" | "none" | "on" | "low" | "medium" | "high" | "max" | "default";
+
+/** A level that asks for no reasoning. */
+export const quick = (t: Thinking) => t === "off" || t === "none";
 
 /** A pass as the app reads it, from one rule file. */
 export function loadRules(name: string): Pass[] {
@@ -127,6 +130,8 @@ const FIRST_PARTY: Record<string, string> = {
   qwen: "alibaba",
   moonshotai: "moonshotai",
   "z-ai": "z-ai",
+  inception: "inception",
+  xiaomi: "xiaomi",
   minimax: "minimax",
   cohere: "cohere",
 };
@@ -179,6 +184,7 @@ export function deepseek(model: string): Provider {
       };
       // DeepSeek's own switch. "low" does not shorten Flash's thinking.
       if (thinking === "off") body.thinking = { type: "disabled" };
+      else if (thinking === "none" || thinking === "on") throw new Error(`DeepSeek has no level "${thinking}"`);
       else if (thinking !== "default") {
         body.thinking = { type: "enabled" };
         body.reasoning_effort = thinking;
@@ -202,22 +208,41 @@ export function deepseek(model: string): Provider {
   };
 }
 
-export function openrouter(model: string, pinned: string): Provider {
+/** `cacheControl` marks the system prompt and the shared head of the user
+ *  prompt (the draft and the task) with `cache_control` breakpoints. Alibaba
+ *  caches only what a breakpoint marks. */
+export function openrouter(model: string, pinned: string, cacheControl = false): Provider {
   const auth = key("OPENROUTER_API_KEY");
   return {
     name: "openrouter",
     model,
     pinned,
     async chat(system, prompt, thinking, ceilingSecs) {
+      const mark = { type: "ephemeral" };
+      const at = prompt.indexOf("\n\n--- examine only this paragraph ---");
+      const messages = cacheControl
+        ? [
+          { role: "system", content: [{ type: "text", text: system, cache_control: mark }] },
+          {
+            role: "user",
+            content: at < 0
+              ? [{ type: "text", text: prompt, cache_control: mark }]
+              : [{ type: "text", text: prompt.slice(0, at), cache_control: mark }, { type: "text", text: prompt.slice(at) }],
+          },
+        ]
+        : [{ role: "system", content: system }, { role: "user", content: prompt }];
       const body: Record<string, unknown> = {
         model,
-        messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+        messages,
         // One upstream provider, no fallback: a result names what served it.
         provider: { only: [pinned], allow_fallbacks: false },
         // Usage is always returned now; the flag is harmless and asks for cost.
         usage: { include: true },
       };
+      // "off" and "on" switch reasoning without a level, for models with no
+      // effort levels. "none" is OpenAI's effort level that turns it off.
       if (thinking === "off") body.reasoning = { enabled: false };
+      else if (thinking === "on") body.reasoning = { enabled: true };
       else if (thinking !== "default") body.reasoning = { effort: thinking };
       const j = await post("https://openrouter.ai/api/v1/chat/completions", auth, body, ceilingSecs);
       const u = j.usage ?? {};
@@ -323,6 +348,8 @@ export interface Result {
     votes: number | null;
     need: number | null;
     ceilingSecs: number;
+    /** OpenRouter: whether prompts carried cache_control breakpoints. */
+    cacheControl?: boolean;
     drafts: string[];
     note?: string;
   };

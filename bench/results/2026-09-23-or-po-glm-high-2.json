@@ -1,0 +1,324 @@
+{
+ "schema": 1,
+ "label": "or-po-glm-high-2",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "z-ai",
+  "model": "z-ai/glm-5.3-flash",
+  "thinking": "high",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 92.425696625,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1324,
+   "cacheRead": 0,
+   "output": 2798,
+   "reasoning": 2579,
+   "cost": 0.0015976,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 92.42480858299999,
+    "p90": 92.42480858299999,
+    "max": 92.42480858299999
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 60.219459416,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1318,
+   "cacheRead": 0,
+   "output": 1905,
+   "reasoning": 1684,
+   "cost": 0.0011502,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 60.218606291,
+    "p90": 60.218606291,
+    "max": 60.218606291
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 160.52501024999998,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1292,
+   "cacheRead": 0,
+   "output": 4732,
+   "reasoning": 4382,
+   "cost": 0.0025598,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 160.52488358300002,
+    "p90": 160.52488358300002,
+    "max": 160.52488358300002
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 13.31513575,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 949,
+   "cacheRead": 0,
+   "output": 355,
+   "reasoning": 156,
+   "cost": 0.00031985,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 13.313508459,
+    "p90": 13.313508459,
+    "max": 13.313508459
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 5,
+   "fp": 4,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.5555555555555556,
+   "recall": 0.8333333333333334,
+   "f1": 0.6666666666666667
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 5,
+    "fp": 4,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5555555555555556,
+    "recall": 0.8333333333333334,
+    "f1": 0.6666666666666667
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-story.md": {
+    "tp": 1,
+    "fp": 2,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.3333333333333333,
+    "recall": 1,
+    "f1": 0.5
+   },
+   "on-writing.md": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 0.6666666666666666,
+    "f1": 0.8
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the top of the hill that February",
+   "severity": "medium",
+   "note": "The walking routine and the hill are not established yet; the route up Carver Hill is only introduced in \"The first winter was very hard. The route\". The reader also cannot tell which February this is, since the sale happened in April."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard. The route",
+   "severity": "low",
+   "note": "This paragraph resumes the winter-walking material opened in \"By the time I reached the top of the hill\", separated from it by the decision and disclaimer paragraphs."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot",
+   "severity": "medium",
+   "note": "The terms \"the pilot\" and \"both teams\" have no antecedent here; the pilot and the teams are only identified in \"In March and April, the Payments and Search teams ran a pilot\", four paragraphs later."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April, the Payments and",
+   "severity": "medium",
+   "note": "Returns to the pilot, first reported in \"Under the pilot, both teams cut their\", with three unrelated paragraphs (board process, bottlenecks, reassurance) in between."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "the new floor or five months of lost trade",
+   "severity": "low",
+   "note": "The definite-article items 'the ovens', 'the flour' and 'the new floor' have no antecedent here; they are introduced in 'She rang her son Tom' and 'The damage was really extensive'. The reader meets the insurance outcome before the draft supplies what was lost."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "It was obviously a shock to the whole street",
+   "severity": "low",
+   "note": "This paragraph returns to the council thread opened in 'Flood warnings for Quay Street', with the unrelated damage paragraph 'The damage was really extensive' between them."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people on Quay Street",
+   "severity": "medium",
+   "note": "This paragraph restates the street-wide impact already made in 'It was obviously a shock to the whole street' and the losses already itemised in 'The insurance payment, when it came in August', without adding new specifics."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision",
+   "severity": "medium",
+   "note": "This paragraph repeats the opening paragraph, \"It was decided by the committee thxt x determination\", point for point and adds nothing."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling",
+   "severity": "medium",
+   "note": "This paragraph repeats the closing paragraph of the opening section, \"Some of us left the room with the feeling\", restating the same point without new content."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.0007576669999999979,
+   "secs": 92.42480858299999,
+   "input": 1324,
+   "cacheRead": 0,
+   "output": 2798,
+   "reasoning": 2579,
+   "cost": 0.0015976,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000018625000000000114,
+   "secs": 60.218606291,
+   "input": 1318,
+   "cacheRead": 0,
+   "output": 1905,
+   "reasoning": 1684,
+   "cost": 0.0011502,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000008625000000002104,
+   "secs": 160.52488358300002,
+   "input": 1292,
+   "cacheRead": 0,
+   "output": 4732,
+   "reasoning": 4382,
+   "cost": 0.0025598,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 3
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000008165999999995676,
+   "secs": 13.313508459,
+   "input": 949,
+   "cacheRead": 0,
+   "output": 355,
+   "reasoning": 156,
+   "cost": 0.00031985,
+   "costSource": "reported",
+   "servedBy": "Z.AI",
+   "candidates": 2
+  }
+ ],
+ "errors": []
+}

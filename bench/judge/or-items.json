@@ -1,0 +1,835 @@
+[
+  {
+    "id": 1,
+    "draft": "draft-essay.md",
+    "category": "passive-actor",
+    "quote": "It should be noted",
+    "note": "The passive construction hides who is doing the noting; the draft never names that actor."
+  },
+  {
+    "id": 2,
+    "draft": "draft-essay.md",
+    "category": "sentence-openings",
+    "quote": "I left",
+    "note": "Three consecutive sentences open with \"I\" plus a past-tense verb (\"I left\", \"I reached\", \"I arrived\"), with the first two words matching in form as subject-plus-verb."
+  },
+  {
+    "id": 3,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "carried out an evaluation of",
+    "note": "A wordy stock phrasing that adds no meaning beyond the plain act of evaluating."
+  },
+  {
+    "id": 4,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "come to the realization that",
+    "note": "\"come to the realization that\" is a stock phrase that delays the content."
+  },
+  {
+    "id": 5,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "plain and simple",
+    "note": "\"plain and simple\" is a stock phrase that asserts emphasis without adding meaning."
+  },
+  {
+    "id": 6,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "My insurance renewal arrived the same week",
+    "note": "\"week\" repeats the \"week\" from the first sentence of this paragraph within two sentences."
+  },
+  {
+    "id": 7,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I reached the bottom of the hill by seven. I arrived at my desk",
+    "note": "Two consecutive sentences are built on the same \"I left/reached/arrived ... at/by [time]\" template, after \"I left the house at six-forty\"."
+  },
+  {
+    "id": 8,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "A monthly bus pass costs sixty.",
+    "note": "The sentence opens on a monthly bus pass, a new element; the previous sentence was about insurance, parking, fuel and repairs. The link exists only at the end, where the second figure is set against the first."
+  },
+  {
+    "id": 9,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "The sidewalks along Fenwick Road are cleared",
+    "note": "The link to the previous sentence, about following the bus routes, comes only at the end of this sentence, with the reference to city crews clearing sidewalks."
+  },
+  {
+    "id": 10,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My bike was stolen in June.",
+    "note": "The sentence opens on the bike, which the previous sentence, about the bridge and crossing it on foot, did not introduce. The reader cannot tell how the theft relates to the crossing."
+  },
+  {
+    "id": 11,
+    "draft": "draft-essay.md",
+    "category": "unearned-metaphor",
+    "quote": "a warm cocoon",
+    "note": "Empty figure. The image supplies no mechanism the plain statement about the car would not, and the draft never returns to warmth or sheltering."
+  },
+  {
+    "id": 12,
+    "draft": "draft-essay.md",
+    "category": "length",
+    "quote": "I pass a picturesque row of Victorian houses on Linden Street, then the picturesque old mill that someone has turned into flats.",
+    "note": "Repeated example. Second sight in the same structure as the first, making the same point."
+  },
+  {
+    "id": 13,
+    "draft": "draft-essay.md",
+    "category": "paragraph-order",
+    "quote": "The first winter was very hard.",
+    "note": "Split topic. This paragraph returns to the subject of walking in winter and the hill in February, which was already introduced in the earlier paragraph starting 'By the time I reached the top of the hill that February', with two intervening paragraphs on unrelated topics."
+  },
+  {
+    "id": 14,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "It should be noted that",
+    "note": "'It should be noted that' is an empty opening; the previous sentence was about the median approval wait, and the new element, the board's eleven changes, arrives after the opening."
+  },
+  {
+    "id": 15,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "Approvals are logged",
+    "note": "\"Approvals\" is a new element; the previous sentence was about the two-month pilot period and its limited evidence. The link to the prior sentence only arrives at the trailing \"on this\"."
+  },
+  {
+    "id": 16,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "A change finished on a Friday",
+    "note": "The previous sentences are about the board and its Thursday meeting; the new element, a change finished on a Friday, appears at the opening and only connects through the later word waits."
+  },
+  {
+    "id": 17,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "It was decided in 2023",
+    "note": "The previous sentence is about a change waiting six days. The opening it has no clear antecedent and the reader cannot tell what was decided relates to the sentence before."
+  },
+  {
+    "id": 18,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "The results were quite encouraging.",
+    "note": "Restatement of the pilot results already given: \"both teams cut their median wait from six days to under one, and neither shipped a change that had to be rolled back.\""
+  },
+  {
+    "id": 19,
+    "draft": "draft-memo.md",
+    "category": "paragraph-order",
+    "quote": "In March and April, the Payments and Search teams ran a pilot.",
+    "note": "This paragraph returns to the pilot results after intervening paragraphs discussing current board processes, bottlenecks, and reassurances about oversight, splitting the discussion started in the second paragraph."
+  },
+  {
+    "id": 20,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "At a quarter past four on the ninth of March,",
+    "note": "Seventeen words precede the main subject \"Ellen Morrow\"."
+  },
+  {
+    "id": 21,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "She rang",
+    "note": "Four consecutive sentences open with \"She\" plus a verb, repeating the same subject-first construction."
+  },
+  {
+    "id": 22,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "She went back for",
+    "note": "Three consecutive clauses open with the same subject-plus-verb template (She rang, She carried, She went back), naming Ellen's actions. The template carries no structural meaning here."
+  },
+  {
+    "id": 23,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "affected",
+    "note": "\"affected\" repeats within two sentences; the first occurrence is in the opening sentence."
+  },
+  {
+    "id": 24,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "many people",
+    "note": "\"many people\" repeats within two sentences; the first occurrence is in the opening sentence."
+  },
+  {
+    "id": 25,
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "harder to put a price on",
+    "note": "Stock image borrowed from accounting, standing in for whatever the losses actually were. The draft never says what those things are, so the figure gestures at content it withholds."
+  },
+  {
+    "id": 26,
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "the whole body feels it",
+    "note": "Mixed figure: the street is first figured as a body with a heart, then in the next sentence as a wave that is followed by fire being lit. The two images cannot both hold."
+  },
+  {
+    "id": 27,
+    "draft": "draft-story.md",
+    "category": "length",
+    "quote": "It was obviously a shock to the whole street. The bakery is the beating heart of Quay Street, and when a heart stops, the whole body feels it. A wave of support followed that lit a fire under the council.",
+    "note": "Restatement. The passage restates the shock to the street already conveyed by the sentences on the flood's damage and its effect."
+  },
+  {
+    "id": 28,
+    "draft": "draft-story.md",
+    "category": "paragraph-order",
+    "quote": "The flood affected many people on Quay Street in many different ways.",
+    "note": "Repeated ground. This paragraph repeats the general community impact already stated in \"It was obviously a shock to the whole street\" without adding specific new information."
+  },
+  {
+    "id": 29,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "a decision would be made",
+    "note": "The clause does not name who would make the decision. The surrounding sentences name the committee as the decider of the first action but never say who the second action belongs to."
+  },
+  {
+    "id": 30,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "a resolution would be arrived at",
+    "note": "The clause does not say who would arrive at the resolution. The surrounding sentences name no one; the members and the chair are mentioned only as readers and as speaker."
+  },
+  {
+    "id": 31,
+    "draft": "on-writing.md",
+    "category": "filler-words",
+    "quote": "made the observation that",
+    "note": "Stock phrase that delays the content in place of a plain verb."
+  },
+  {
+    "id": 32,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I reached the bottom of the hill by seven.",
+    "note": "Three consecutive sentences open with the same subject-verb template (\"I left\", \"I reached\", \"I arrived\"), with the first occurrence in \"I left the house at six-forty.\""
+  },
+  {
+    "id": 33,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "The combination was forgotten twice in the first week.",
+    "note": "The previous sentence was about buying a bike and a lock in July; the new element at the opening, \"The combination\", appears only here. The link to the prior sentence exists only through \"lock\" at its end."
+  },
+  {
+    "id": 34,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My insurance renewal arrived",
+    "note": "The opening names a new element, the insurance renewal, though the previous sentence was about the transmission quote; only the closing phrase \"the same week\" ties it back."
+  },
+  {
+    "id": 35,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "Insurance, parking, fuel and repairs",
+    "note": "The opening is a new list of cost items, while the previous sentence was about sitting at the table making an evaluation."
+  },
+  {
+    "id": 36,
+    "draft": "draft-essay.md",
+    "category": "length",
+    "quote": "People ask me why, and I have never had a good answer, so this is my attempt at one.",
+    "note": "Throat-clearing: it announces what the piece will do before any content arrives."
+  },
+  {
+    "id": 37,
+    "draft": "draft-essay.md",
+    "category": "paragraph-order",
+    "quote": "The first winter was very hard. The route runs up Carver Hill,",
+    "note": "Splits the narrative of walking in winter begun in \"By the time I reached the top of the hill that February\", separated by paragraphs discussing car expenses and caveats."
+  },
+  {
+    "id": 38,
+    "draft": "draft-memo.md",
+    "category": "passive-actor",
+    "quote": "It should be noted",
+    "note": "The draft never says who should note this. The clause hides the person making the point."
+  },
+  {
+    "id": 39,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "I want to be clear that",
+    "note": "Stock preamble that adds emphasis without adding meaning."
+  },
+  {
+    "id": 40,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "and that point should not be lost",
+    "note": "Stock appeal that asserts importance the sentence has not shown."
+  },
+  {
+    "id": 41,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "She ",
+    "note": "Four consecutive sentences open with \"She\" followed by a past-tense verb (rang, carried, went, left), a repeated opening run."
+  },
+  {
+    "id": 42,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "Since the election",
+    "note": "Thirteen words precede the main subject \"the council\"."
+  },
+  {
+    "id": 43,
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "It is difficult to overstate",
+    "note": "A stock phrase that delays the content without adding meaning."
+  },
+  {
+    "id": 44,
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "it would be impossible to describe",
+    "note": "A stock phrase that delays the content without adding meaning."
+  },
+  {
+    "id": 45,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "heart",
+    "note": "\"heart\" appears twice within two sentences; the first is in \"the beating heart of Quay Street\"."
+  },
+  {
+    "id": 46,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "whole",
+    "note": "\"whole\" appears twice, first in \"the whole street\" and again in \"the whole body feels it\"."
+  },
+  {
+    "id": 47,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "She went back for a tray",
+    "note": "Three consecutive clauses open with \"She\" plus a past-tense verb (\"She rang\", \"She carried\"), a template the paragraph gains nothing from."
+  },
+  {
+    "id": 48,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "Some lost stock and some lost income, and some lost things",
+    "note": "Three clauses are built on the same \"some lost\" template in one sentence."
+  },
+  {
+    "id": 49,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "A wave of support followed that lit a fire under the council.",
+    "note": "The sentence opens on \"A wave of support\", a new element, with no link to the previous sentence's metaphor about the heart and body. The support and the council are both introduced at the opening."
+  },
+  {
+    "id": 50,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "Tom pulled out",
+    "note": "The sentence opens on Tom, who has not appeared in this paragraph; the previous sentence described damage effects, not people. The link to the earlier sentence arrives only at the end, with the skirting boards."
+  },
+  {
+    "id": 51,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "The hall kitchen is very small",
+    "note": "The previous sentence is about Ellen selling loaves outside the hall. The sentence opens on the hall kitchen, a new element placed only by its link to the hall."
+  },
+  {
+    "id": 52,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "Ellen has never missed",
+    "note": "The opening names Ellen, who is not the subject of the previous sentence about the reopened bakery. The link to the reopening comes only at the sentence's end."
+  },
+  {
+    "id": 53,
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "answered it",
+    "note": "The call-and-answer figure is carried over from the stock image in the previous sentence and gives no mechanism beyond the literal act that follows."
+  },
+  {
+    "id": 54,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "nothing had been accomplished",
+    "note": "The passive clause does not say who failed to accomplish anything. The draft never names the actor responsible."
+  },
+  {
+    "id": 55,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "x determination would be made",
+    "note": "The passive omits whoever would make the determination. The surrounding sentences name only the committee, which decided to make it, not who would carry it out."
+  },
+  {
+    "id": 56,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "No resolution was arrived at",
+    "note": "The clause does not say who failed to arrive at the resolution. The draft never names the actor."
+  },
+  {
+    "id": 57,
+    "draft": "on-writing.md",
+    "category": "repeated-phrasing",
+    "quote": "decided",
+    "note": "The root \"decid-\" repeats within one sentence: \"decided\" then \"decision\"."
+  },
+  {
+    "id": 58,
+    "draft": "draft-essay.md",
+    "category": "passive-actor",
+    "quote": "My bike was stolen",
+    "note": "The draft does not say who stole the bike."
+  },
+  {
+    "id": 59,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "I want to be clear",
+    "note": "The stock phrase adds emphasis before the point."
+  },
+  {
+    "id": 60,
+    "draft": "on-writing.md",
+    "category": "nominalization",
+    "quote": "would be arrived at",
+    "note": "“Resolution” names the action of resolving; “be arrived at” is the weak verb phrase."
+  },
+  {
+    "id": 61,
+    "draft": "on-writing.md",
+    "category": "nominalization",
+    "quote": "was arrived at",
+    "note": "“Resolution” names the action of resolving; “was arrived at” is the weak verb phrase."
+  },
+  {
+    "id": 62,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My bike",
+    "note": "The opening introduces the bike, while the previous sentence was about crossing the bridge on foot."
+  },
+  {
+    "id": 63,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "or have children to drop off, or have jobs that require a car",
+    "note": "Consecutive clauses share the template 'or have [noun]'. The first occurrence starts earlier in the list."
+  },
+  {
+    "id": 64,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I left the house at six-forty. I reached the bottom of the hill by seven. I arrived at my desk with wet socks and a temper.",
+    "note": "Three consecutive sentences follow the same template: subject, verb, location/time."
+  },
+  {
+    "id": 65,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "bus routes are cleared first, by six in the morning. By February I had come to the realization that the side streets were the problem, and I followed the bus routes instead. The sidewalks along Fenwick Road are cleared by city crews long before I leave the house.",
+    "note": "The phrase 'bus routes' appears twice within three sentences. The word 'cleared' also appears twice within this span."
+  },
+  {
+    "id": 66,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "My insurance renewal arrived the same week.",
+    "note": "The word 'week' is repeated from the previous sentence ('a week after my mechanic...')."
+  },
+  {
+    "id": 67,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My insurance renewal",
+    "note": "The previous sentence ended with the mechanic and transmission; this opens on insurance renewal, which was not introduced."
+  },
+  {
+    "id": 68,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "Concerns have been raised",
+    "note": "The sentence opens on 'Concerns', an abstract noun not previously mentioned, whereas the previous sentence focused on specific process elements (checklist, schedule)."
+  },
+  {
+    "id": 69,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "A safety net should catch mistakes",
+    "note": "The subject 'A safety net' is new; the previous sentence discussed specific board reviews, not general safeguards."
+  },
+  {
+    "id": 70,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "Under the pilot, both teams cut their median wait from six days to under one, and neither shipped a change that had to be rolled back. The results were quite encouraging.",
+    "note": "Throat-clearing/Restatement. The second sentence adds no factual content; the first sentence already provides the positive result."
+  },
+  {
+    "id": 71,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "It should be noted that the board reviewed eleven changes in those two months, compared with more than three hundred in the same period last year.",
+    "note": "Throat-clearing. 'It should be noted that' announces the fact rather than just stating it."
+  },
+  {
+    "id": 72,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "heart stops, the whole body",
+    "note": "The word 'heart' appears in 'beating heart' and then immediately in 'when a heart stops'. This is a close repetition of a distinctive metaphorical noun."
+  },
+  {
+    "id": 73,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "A wave of support",
+    "note": "The sentence opens with 'A wave of support', which is not mentioned in the previous sentence about the bakery's role."
+  },
+  {
+    "id": 74,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "Sandbags had been promised",
+    "note": "Opens with 'Sandbags', which was not present in the previous sentence about flood warnings."
+  },
+  {
+    "id": 75,
+    "draft": "draft-story.md",
+    "category": "length",
+    "quote": "The damage was really extensive.",
+    "note": "Restatement. The specific damage details in the following sentence ('floor tiles lifted', 'plaster came away') make this summary redundant."
+  },
+  {
+    "id": 76,
+    "draft": "on-writing.md",
+    "category": "sentence-openings",
+    "quote": "It is a feeling",
+    "note": "Run of three sentences opening with 'It is a'. The third sentence repeats the construction."
+  },
+  {
+    "id": 77,
+    "draft": "on-writing.md",
+    "category": "sentence-openings",
+    "quote": "It was decided by the committee thxt x determination would be made regarding the proposal. Very few of the members had actually read it. Unfortunately, the meeting was conducted in a manner that was really quite unproductive.",
+    "note": "The first sentence has fifteen words before the subject 'determination'."
+  },
+  {
+    "id": 78,
+    "draft": "on-writing.md",
+    "category": "repeated-phrasing",
+    "quote": "really quite unproductive",
+    "note": "'Really' and 'quite' are intensifiers that do not add distinct meaning to 'unproductive'."
+  },
+  {
+    "id": 79,
+    "draft": "on-writing.md",
+    "category": "topic-flow",
+    "quote": "Very few of the members had actually read it.",
+    "note": "The sentence opens on 'Very few of the members', a specific subset not previously introduced, whereas the previous sentence ended with 'the proposal'."
+  },
+  {
+    "id": 80,
+    "draft": "on-writing.md",
+    "category": "length",
+    "quote": "Unfortunately, the meeting was conducted in a manner that was really quite unproductive.",
+    "note": "Stacked qualification. 'really quite' hedges the adjective twice."
+  },
+  {
+    "id": 81,
+    "draft": "draft-essay.md",
+    "category": "sentence-openings",
+    "quote": "I left the house at six-forty. I reached the bottom of the hill by seven. I arrived at my desk with wet socks and a temper.",
+    "note": "Run of three sentences opening with 'I [verb]'."
+  },
+  {
+    "id": 82,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I left the house at six-forty. I reached the bottom of the hill by seven.",
+    "note": "Three consecutive sentences follow the same template: 'I [verb] ... at/by [time/place]'. The first occurrence is 'I left the house at six-forty.'"
+  },
+  {
+    "id": 83,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My bike was stolen",
+    "note": "The previous sentence discusses crossing the bridge on foot, not the bike itself."
+  },
+  {
+    "id": 84,
+    "draft": "draft-essay.md",
+    "category": "length",
+    "quote": "so this is my attempt at one.",
+    "note": "Throat-clearing. Announces the essay's purpose which is already evident from the title and preceding sentence."
+  },
+  {
+    "id": 85,
+    "draft": "draft-memo.md",
+    "category": "nominalization",
+    "quote": "is not a criticism",
+    "note": "The noun 'criticism' buries the verb 'criticize'. The main verb 'is' is weak."
+  },
+  {
+    "id": 86,
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "the board reviewed",
+    "note": "The subject-verb pair 'the board reviewed' is used twice within three sentences (second sentence: 'the board reviewed only', sixth sentence: 'the board reviewed eleven')."
+  },
+  {
+    "id": 87,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "Two months is a short period,",
+    "note": "The sentence opens with 'Two months', which refers to the duration of the pilot mentioned in a previous paragraph, not the immediate preceding sentence about the risk of misunderstanding."
+  },
+  {
+    "id": 88,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "Concerns have been raised about the delays for over a year.",
+    "note": "Throat-clearing/Restatement. The draft has already argued the board is a 'toll booth' and the schedule 'made sense only when releases were rare.' Stating that concerns exist repeats the problem definition without adding new evidence."
+  },
+  {
+    "id": 89,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "Some lost stock and some lost income, and some lost things that are harder to put a price on.",
+    "note": "The template \"some lost\" is repeated three times within two sentences."
+  },
+  {
+    "id": 90,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "every way",
+    "note": "\"way\" appears in the first sentence (\"different ways\") and again here."
+  },
+  {
+    "id": 91,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "flood wall",
+    "note": "The phrase 'flood wall' appears twice within three sentences (first in sentence 4, second in sentence 5)."
+  },
+  {
+    "id": 92,
+    "draft": "draft-story.md",
+    "category": "length",
+    "quote": "It was obviously a shock to the whole street.",
+    "note": "Throat-clearing: announces the emotional impact which is immediately described by the metaphor that follows."
+  },
+  {
+    "id": 93,
+    "draft": "draft-story.md",
+    "category": "length",
+    "quote": "It is difficult to overstate how much the flood affected the people of the street, and it would be impossible to describe every way in which their lives were changed by it.",
+    "note": "Restatement: Repeats the point made in the preceding sentence ('affected... in many different ways') using hyperbolic qualifiers."
+  },
+  {
+    "id": 94,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "Insurance,",
+    "note": "\"Insurance\" repeats the word first used in \"My insurance renewal\" two sentences earlier."
+  },
+  {
+    "id": 95,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "Many people live too far from work",
+    "note": "The previous sentence was about differing situations and what works for one person. This sentence opens on a new element, many people, with no shared term linking back."
+  },
+  {
+    "id": 96,
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "Oversight",
+    "note": "Oversight repeats from the previous sentence (\"remove oversight from our release process\"), a distinctive word appearing twice within two sentences."
+  },
+  {
+    "id": 97,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "A change finished on a Friday therefore waits six days.",
+    "note": "The sentence opens on a change finished on a Friday, which the previous sentences about board meeting and posting do not prepare. The link arrives only at the end, with the six-day wait."
+  },
+  {
+    "id": 98,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "It was decided in 2023 that all changes would go through this process,",
+    "note": "The sentence opens on an unnamed decision-making event in 2023, which nothing earlier in the paragraph introduces. The previous sentence concerned the six-day wait for a Friday change."
+  },
+  {
+    "id": 99,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "The flood wall was built in 1962",
+    "note": "The sentence opens on the flood wall, which nothing in the paragraph has mentioned. The previous sentence was about the police closing the street."
+  },
+  {
+    "id": 100,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "Tom pulled",
+    "note": "The sentence opens on Tom, who has not appeared in this paragraph or in the two sentences before it. The previous sentences were about the floor tiles, plaster and the smell of sodden flour."
+  },
+  {
+    "id": 101,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "It was obviously",
+    "note": "The sentence opens on the pronoun \"It\", whose referent is unclear; the previous sentence was about Tom pulling out and stacking skirting boards. The reader cannot tell what was a shock."
+  },
+  {
+    "id": 102,
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "when a heart stops, the whole body feels it",
+    "note": "Second image in the same figure, extending the cliché rather than adding a comparison the reader needs."
+  },
+  {
+    "id": 103,
+    "draft": "on-writing.md",
+    "category": "filler-words",
+    "quote": "Very",
+    "note": "\"Very\" adds emphasis but no quantity or meaning."
+  },
+  {
+    "id": 104,
+    "draft": "on-writing.md",
+    "category": "length",
+    "quote": "It was decided by the committee that a decision would be made regarding the proposal.",
+    "note": "Restatement of the opening title and first sentence: \"It was decided by the committee thxt x determination would be made regarding the proposal.\""
+  },
+  {
+    "id": 105,
+    "draft": "draft-essay.md",
+    "category": "passive-actor",
+    "quote": "bus routes are cleared first",
+    "note": "The clause does not say who clears the bus routes. The following sentence names city crews for the sidewalks, but not for this clause."
+  },
+  {
+    "id": 106,
+    "draft": "draft-essay.md",
+    "category": "unearned-metaphor",
+    "quote": "an argument against it",
+    "note": "The cold is figured as something that argues, a live image the paragraph never develops beyond the assertion. Nothing in the paragraph shows the cold making a case."
+  },
+  {
+    "id": 107,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "As noted above,",
+    "note": "A stock phrase that points back rather than adding information."
+  },
+  {
+    "id": 108,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "that point should not be lost",
+    "note": "A stock phrase claiming importance for a point already stated."
+  },
+  {
+    "id": 109,
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "Oversight would remain in place",
+    "note": "\"oversight\" repeats within two sentences; the first occurrence is in \"remove oversight from our release process.\""
+  },
+  {
+    "id": 110,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "The handoff between the author and the board is cumbersome too",
+    "note": "The link to the previous sentence runs through the closing phrase about delays; the sentence opens on the handoff and the author, neither of which appeared earlier."
+  },
+  {
+    "id": 111,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "Approvals are logged automatically by the deploy tool,",
+    "note": "The previous sentence is about the short pilot period and the limited evidence it yields. This sentence opens on a new subject, \"Approvals\", with no term linking back; the connection to the evidence point arrives only through the later consequence."
+  },
+  {
+    "id": 112,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "The board makes a determination on each change during the meeting.",
+    "note": "Restatement: repeats the earlier point that every production release needs a sign-off from the board."
+  },
+  {
+    "id": 113,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "She",
+    "note": "Four consecutive sentences open with the same word, \"She\"."
+  },
+  {
+    "id": 114,
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "It is difficult to overstate how much",
+    "note": "This stock phrase delays the claim without adding information."
+  },
+  {
+    "id": 115,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "Sandbags had been promised to businesses on the street in January, and none had arrived.",
+    "note": "Opens on sandbags, a new element; the previous sentence was about flood warnings and the water in the shops."
+  },
+  {
+    "id": 116,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "Since the election, the council has given an undertaking to carry out an assessment of the flood wall before next winter.",
+    "note": "Opens on the election and the council, neither mentioned earlier; the previous sentence was about the flood wall's construction and raising."
+  },
+  {
+    "id": 117,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "A wave of support followed",
+    "note": "The sentence opens on \"A wave of support\", which nothing earlier in the paragraph has introduced. The previous sentence concerned the heart and body metaphor."
+  },
+  {
+    "id": 118,
+    "draft": "draft-story.md",
+    "category": "paragraph-order",
+    "quote": "She rang her son Tom,",
+    "note": "This paragraph resumes the morning account begun in the paragraph beginning \"At a quarter past four on the ninth of March,\" which the intervening insurance paragraph separates it from."
+  },
+  {
+    "id": 119,
+    "draft": "draft-story.md",
+    "category": "paragraph-order",
+    "quote": "The flood affected many people on Quay Street in many",
+    "note": "It repeats the assertion made in the paragraph beginning \"It was obviously a shock to the whole street,\" that the flood affected the street as a whole, and adds no new information to it."
+  }
+]

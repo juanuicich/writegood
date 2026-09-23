@@ -1,0 +1,317 @@
+{
+ "schema": 1,
+ "label": "or-po-mimoflash-on-2",
+ "date": "2026-09-23",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "openrouter",
+  "orProvider": "xiaomi",
+  "model": "xiaomi/mimo-v2.6-flash",
+  "thinking": "on",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite",
+  "scope": "native",
+  "limit": 32,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "cacheControl": false
+ },
+ "rules": "2026-09-23-rewrite",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 250.618037625,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1331,
+   "cacheRead": 0,
+   "output": 12033,
+   "reasoning": 11836,
+   "cost": 0.00355558,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 250.61705075,
+    "p90": 250.61705075,
+    "max": 250.61705075
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 89.336300875,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1329,
+   "cacheRead": 0,
+   "output": 4100,
+   "reasoning": 3987,
+   "cost": 0.00133406,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 89.332682875,
+    "p90": 89.332682875,
+    "max": 89.332682875
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 1,
+   "kept": 1
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 133.202635625,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1307,
+   "cacheRead": 0,
+   "output": 8111,
+   "reasoning": 7902,
+   "cost": 0.00245406,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 133.201914875,
+    "p90": 133.201914875,
+    "max": 133.201914875
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 97.54196304100002,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 958,
+   "cacheRead": 0,
+   "output": 6535,
+   "reasoning": 6257,
+   "cost": 0.00196392,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 97.54103916700001,
+    "p90": 97.54103916700001,
+    "max": 97.54103916700001
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 5,
+   "fp": 3,
+   "fn": 1,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.625,
+   "recall": 0.8333333333333334,
+   "f1": 0.7142857142857143
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 5,
+    "fp": 3,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.625,
+    "recall": 0.8333333333333334,
+    "f1": 0.7142857142857143
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 2,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "the walk as a punishment",
+   "severity": "medium",
+   "note": "The punishment framing and the hill it refers to depend on the later paragraph beginning \"The first winter was very hard\", which names Carver Hill and supplies the hardship account."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "The first winter was very hard",
+   "severity": "medium",
+   "note": "This resumes the winter walking difficulty opened in the paragraph beginning \"By the time I reached the top of the hill\", with the sale decision and the disclaimer intervening."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot, both teams",
+   "severity": "medium",
+   "note": "The paragraph depends on which pilot is meant and on the identity of \"both teams\"; both are supplied only by the later paragraph beginning \"In March and April, the Payments and Search teams ran a pilot\"."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "In the weeks after the water went down",
+   "severity": "low",
+   "note": "The insurance topic opened by \"The insurance payment, when it came in August\" returns here through the loss adjuster, with the paragraphs on the flood night, the warnings, the damage and the street's reaction in between."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people",
+   "severity": "medium",
+   "note": "This repeats the street-wide impact already stated by \"It was obviously a shock to the whole street\", whose closing sentences make the same point again."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision would be made",
+   "severity": "medium",
+   "note": "Repeats the point already made by the paragraph beginning \"It was decided by the committee thxt x determination\" and adds nothing to it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution would be arrived at",
+   "severity": "medium",
+   "note": "Repeats the paragraph beginning \"There was an expectation that\", which already makes this point."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with the feeling",
+   "severity": "medium",
+   "note": "Repeats the earlier italic paragraph beginning \"Some of us left the room with the feeling\", which already makes this point."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.00036437500000000255,
+   "secs": 250.61705075,
+   "input": 1331,
+   "cacheRead": 0,
+   "output": 12033,
+   "reasoning": 11836,
+   "cost": 0.00355558,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000014958000000000027,
+   "secs": 89.332682875,
+   "input": 1329,
+   "cacheRead": 0,
+   "output": 4100,
+   "reasoning": 3987,
+   "cost": 0.00133406,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000014083999999996877,
+   "secs": 133.201914875,
+   "input": 1307,
+   "cacheRead": 0,
+   "output": 8111,
+   "reasoning": 7902,
+   "cost": 0.00245406,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "on",
+   "start": 0.000008665999999998063,
+   "secs": 97.54103916700001,
+   "input": 958,
+   "cacheRead": 0,
+   "output": 6535,
+   "reasoning": 6257,
+   "cost": 0.00196392,
+   "costSource": "reported",
+   "servedBy": "Xiaomi",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

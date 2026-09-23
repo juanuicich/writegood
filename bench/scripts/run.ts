@@ -9,13 +9,17 @@
  *                                      openrouter: vendor/model, as OpenRouter lists it
  *  --or-provider SLUG                  openrouter: the only upstream provider allowed.
  *                                      Default: the model's vendor (deepseek/… → deepseek)
- *  --thinking off|low|medium|high|max|default   default off
+ *  --thinking off|none|on|low|medium|high|max|default   default off
+ *                                      openrouter: off sends {enabled: false}, on sends
+ *                                      {enabled: true}, none and the rest send {effort}
  *  --rules NAME                        a folder in bench/rules. Default 2026-09-23-rewrite
  *  --pipeline plain|fast|hybrid        default hybrid
  *      plain   every pass at --thinking; findings stored as returned
  *      fast    every pass at --thinking; code filters, then three verifiers vote
  *      hybrid  as the app runs: a pass whose rule file sets `thinking` uses it
  *              and is stored as returned; every other pass runs as in fast
+ *  --passes a,b / --skip a,b           run only these passes, or all but these (slugs)
+ *  --cache-control                     openrouter: mark the shared prompt head with cache_control
  *  --scope native|document             document: every pass sends the whole draft once
  *  --drafts a.md,b.md                  names in bench/corpus. Default: the four scored drafts
  *  --limit N                           calls in flight per draft. Default 32, as the app
@@ -38,12 +42,12 @@ import { limiter } from "../../src/lib/passes/limit";
 import { windowOf, windows } from "../../src/lib/passes/windows";
 import type { NewFinding, Pass } from "../../src/lib/ipc";
 import {
-  deepseek, draftPath, firstParty, flag, loadRules, openrouter, quantiles, RESULTS, SCORED, words,
+  deepseek, draftPath, quick, firstParty, flag, loadRules, openrouter, quantiles, RESULTS, SCORED, words,
   type CallRecord, type DraftRecord, type Finding, type Provider, type Result, type Thinking,
 } from "./lib";
 import { describe, passesRun, score } from "./score";
 
-const LEVELS = ["off", "low", "medium", "high", "max", "default"];
+const LEVELS = ["off", "none", "on", "low", "medium", "high", "max", "default"];
 const providerName = flag("--provider", "deepseek")!;
 const model = flag("--model", providerName === "deepseek" ? "deepseek-flash" : undefined);
 const thinking = flag("--thinking", "off") as Thinking;
@@ -68,12 +72,16 @@ if (!["deepseek", "openrouter"].includes(providerName)) throw new Error("--provi
 const outFile = join(RESULTS, `${date}-${label}.json`);
 if (existsSync(outFile) && !process.argv.includes("--force")) throw new Error(`${outFile} exists; pick another --label or pass --force`);
 
-const passes = loadRules(rulesName);
+const only = flag("--passes")?.split(",");
+const skip = flag("--skip")?.split(",") ?? [];
+const cacheControl = process.argv.includes("--cache-control");
+const passes = loadRules(rulesName).filter((p) => (!only || only.includes(p.slug)) && !skip.includes(p.slug));
+if (!passes.length) throw new Error("--passes and --skip leave no pass to run");
 const orProvider = providerName === "openrouter" ? flag("--or-provider") ?? firstParty(model) : null;
 
 /** The thinking level of each pass, and whether it is verified. */
 const levelOf = (p: Pass): Thinking => (pipeline === "hybrid" && p.thinking ? (p.thinking as Thinking) : thinking);
-const verifiedOf = (p: Pass) => pipeline === "fast" || (pipeline === "hybrid" && levelOf(p) === "off");
+const verifiedOf = (p: Pass) => pipeline === "fast" || (pipeline === "hybrid" && quick(levelOf(p)));
 const thinkingPasses = Object.fromEntries(passes.filter((p) => levelOf(p) !== thinking).map((p) => [p.slug, levelOf(p)]));
 
 console.log(
@@ -83,7 +91,7 @@ console.log(
 for (const p of passes) console.log(`  ${p.slug.padEnd(18)} ${p.scope.padEnd(9)} thinking ${levelOf(p)}${verifiedOf(p) ? ", verified" : ""}`);
 if (process.argv.includes("--dry")) process.exit(0);
 
-const provider: Provider = providerName === "deepseek" ? deepseek(model) : openrouter(model, orProvider!);
+const provider: Provider = providerName === "deepseek" ? deepseek(model) : openrouter(model, orProvider!, cacheControl);
 
 const rules = { allowSuggestions: false, redactSuggestions: true, forbidPraise: true, blindJudge: true };
 
@@ -166,11 +174,11 @@ async function runDraft(name: string) {
       kept.push(cands.filter((_, i) => keep[i]));
     }));
     for (const f of kept.flat()) findings.push({ draft: name, pass: pass.slug, quote: f.quote, severity: f.severity, note: f.note });
-    if (levelOf(pass) === "off") quickDone = Math.max(quickDone, now());
+    if (quick(levelOf(pass))) quickDone = Math.max(quickDone, now());
   };
 
   // Passes that think queue first, as in the app.
-  const ordered = [...passes].sort((a, b) => Number(levelOf(a) === "off") - Number(levelOf(b) === "off"));
+  const ordered = [...passes].sort((a, b) => Number(quick(levelOf(a))) - Number(quick(levelOf(b))));
   await Promise.all(ordered.map(runPass));
   const wall = now();
 
@@ -181,7 +189,7 @@ async function runDraft(name: string) {
     words: words(draft),
     paragraphs: paras.length,
     wall,
-    firstFindings: passes.some((p) => levelOf(p) === "off") ? quickDone : null,
+    firstFindings: passes.some((p) => quick(levelOf(p))) ? quickDone : null,
     calls: calls.length,
     input: sum((c) => c.input),
     cacheRead: sum((c) => c.cacheRead),
@@ -209,6 +217,7 @@ const result: Result = {
   config: {
     provider: providerName, orProvider, model, thinking, thinkingPasses, pipeline, rules: rulesName, scope,
     limit, votes: pipeline === "plain" ? null : votes, need: pipeline === "plain" ? null : need, ceilingSecs: ceiling, drafts,
+    ...(providerName === "openrouter" ? { cacheControl } : {}),
     ...(note ? { note } : {}),
   },
   rules: rulesName,
