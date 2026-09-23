@@ -817,17 +817,17 @@ the chrome are set in `em` and `rem` against the body size.
 also takes its paper from its palette. The dark theme keeps its neutral dark
 paper, `#16161A`, and its greys.
 
-| Role | Light | Dark |
-|---|---|---|
-| Paper | `#FFF6DC` | `#16161A` |
-| Headings and list markers | `#425B9A` | `#FF467A` |
-| "You are here": the bar beside the selected note, its category, the selected revision and palette row, the duel's verdict, the working state | `#425B9A` | `#FFD51E` |
-| Caret | ink | `#FFD51E` |
-| Finding underlines | `#76C0EC`; `#425B9A` when high | `#AB03A9` |
-| Text selection | a wash of `#FF95A5` | `#5003C0` |
-| The selected finding's highlight | a wash of `#76C0EC` | `#5003C0` |
-| Quote bars, rules, link underlines | `#76C0EC` | `#AB03A9` |
-| The unsaved mark, additions in a diff | `#FF95A5` | `#FF467A` |
+| Role | Variable | Light | Dark |
+|---|---|---|---|
+| Paper | `--paper` | `#FFF6DC` | `#16161A` |
+| Headings and list markers | `--primary` | `#425B9A` | `#FF467A` |
+| "You are here": the bar beside the selected note, its category, the selected revision, the duel's verdict, the working state | `--accent` | `#425B9A` | `#FFD51E` |
+| Caret | `--caret` | ink | `#FFD51E` |
+| Finding underlines | `--underline`; `--underline-strong` when high | `#76C0EC`; `#425B9A` when high | `#AB03A9` |
+| Text selection | `--selection` | a wash of `#FF95A5` | `#5003C0` |
+| The selected finding's highlight | `--accent-wash` | a wash of `#76C0EC` | `#5003C0` |
+| Quote bars, rules, link underlines, the bar beside the selected palette row | `--secondary` | `#76C0EC` | `#AB03A9` |
+| The unsaved mark, additions in a diff | `--tertiary` | `#FF95A5` | `#FF467A` |
 
 Body text stays in ink, a near-black navy in light and a near-white in dark.
 No palette colour carries running text: the light `#76C0EC` and `#FF95A5` are

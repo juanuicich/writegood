@@ -71,8 +71,17 @@
   $effect(() => {
     void selected;
     void options;
-    void tick().then(() => list?.querySelector("li.on")?.scrollIntoView({ block: "nearest" }));
+    void tick().then(() => {
+      list?.querySelector("li.on")?.scrollIntoView({ block: "nearest" });
+      measure();
+    });
   });
+
+  // Fade the bottom edge only while rows remain below it.
+  let more = $state(false);
+  function measure() {
+    more = !!list && list.scrollTop + list.clientHeight < list.scrollHeight - 1;
+  }
 
   function close() {
     app.paletteOpen = false;
@@ -184,7 +193,7 @@
       autocomplete="off"
     />
     {#if options.length > 0}
-      <ul bind:this={list}>
+      <ul bind:this={list} class:more onscroll={measure}>
         {#each options as o, i (o.key)}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -239,10 +248,12 @@
     overflow-y: auto;
     font-size: 0.8rem;
     flex: 1 1 auto;
-    /* Fade the last row rather than slicing it in half. */
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.2rem), transparent);
     /* A row scrolled into view stops above the fade, not under it. */
     scroll-padding-bottom: 1.2rem;
+  }
+  /* Fade the last visible row rather than slicing it in half. */
+  ul.more {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.2rem), transparent);
   }
 
   li {
@@ -258,7 +269,7 @@
   li.on {
     color: var(--ink);
     background: var(--wash);
-    box-shadow: inset 2px 0 0 var(--accent);
+    box-shadow: inset 2px 0 0 var(--secondary);
   }
 
   .hint {
