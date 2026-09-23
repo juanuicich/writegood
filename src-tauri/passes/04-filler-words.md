@@ -4,6 +4,13 @@ name = "Filler words"
 category = "filler-words"
 scope = "paragraph"
 enabled = true
+
+# Read only by a jev provider. To run this pass on Jev, add
+# provider = "jev" above this table.
+[jev]
+method = "sentence"
+keep = 0.5
+note = "A word or phrase that adds emphasis or hedging and no meaning."
 +++
 
 Find words and stock phrases that add emphasis or hedging but no meaning.
