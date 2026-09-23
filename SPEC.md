@@ -130,7 +130,12 @@ svelte                 5.57.1      rusqlite            0.40.2
 vite                   8.3.0       similar             3.2.0
 prosemirror-markdown   1.13.4      keyring             4.2.0
 markdown-it            14.1.0      toml                1.1.6
+webdriverio            9.32.0      tauri-plugin-wdio-webdriver 1.4.0
 ```
+
+The last row was checked on 23 September 2026. Both are for driving the app
+in tests and in dev (§16). `webdriverio` is a dev dependency, and a release
+build does not register the plugin.
 
 The npm side has no model provider package. Every provider call runs in Rust
 through `genai` (§9.2), so the webview neither holds a key nor makes a request.
@@ -817,3 +822,108 @@ another (8.3).
   cost.
 - **Diff granularity in revision history.** Word-level diff is more useful than
   line-level for prose, and more work. Probably `similar` in Rust.
+
+---
+
+## 16. Driving the real app
+
+The browser fixture (`bun run browser`) shows the interface in Chrome with fake
+data. It cannot show the real WebKit view, the real Rust core or the real
+database. This section adds a way to drive the real app from a script, for two
+uses: end-to-end tests, and looking at a running dev build while debugging.
+
+### 16.1 Mechanism
+
+Debug builds carry a W3C WebDriver server inside the app:
+`tauri-plugin-wdio-webdriver`, registered in `lib.rs` under
+`#[cfg(debug_assertions)]`. It listens on `127.0.0.1` only. The port comes from
+`TAURI_WEBDRIVER_PORT` and defaults to 4445. A release build does not register
+the plugin, so the `.app` has no server.
+
+The client is `webdriverio`, called as a library with `remote()` from Bun. The
+WDIO test runner, `@wdio/tauri-service`, Mocha and Node are not used. The
+service was tried: it needs Node, it adds a second plugin, a frontend import
+and `withGlobalTauri`, and without them it waits 5 seconds before every element
+command. Plain `remote()` against the plugin needs none of that. It ran the
+trial's three checks in under 2 seconds.
+
+What the driver can do: find elements, read the DOM, run JavaScript in the
+page, click, type, send keys, and take a screenshot of the page.
+
+What it cannot do, on macOS:
+
+- **Native input.** Keys and clicks arrive as DOM events made in JavaScript.
+  The native menu bar never sees them, so a menu accelerator such as `⌘⏎`
+  reaches the webview's own key handler, not the menu. The menu stays a
+  manual check.
+- **The clipboard.** A synthetic `⌘C` or `⌘V` does not reach WebKit's copy and
+  paste commands. Copy and paste stay a manual check.
+- **Typing into ProseMirror with `keys()`.** Key events insert no text in a
+  contenteditable. `addValue()` on the editor element works, because the
+  plugin inserts text with `execCommand("insertText")`.
+- **The window frame.** A screenshot is the page only.
+
+### 16.2 End-to-end tests
+
+`e2e/*.e2e.ts`, run with `bun run e2e`. The script builds a debug binary with
+the frontend embedded (`tauri build --debug --no-bundle`) into its own target
+directory, `src-tauri/target/e2e`, so it does not force `tauri dev` to rebuild.
+Then it runs the tests with `bun test`. `bun test src/lib` does not pick them
+up, because the file names do not match its pattern.
+
+Each test file launches its own copy of the app with:
+
+- **A fresh home.** A new temporary `WRITEGOOD_HOME` holds a config, a fixture
+  document, one test pass and a `prices.json` dated now. The real
+  `~/.writegood` is never read or written. No `.env` is copied in.
+- **Its own port.** A free port is chosen for `TAURI_WEBDRIVER_PORT`, so a test
+  never connects to a dev build that is already running on 4445.
+- **A fake model.** The test process serves an OpenAI-compatible endpoint on
+  `127.0.0.1`. The config points an `openai-compatible` provider at it, so a
+  pass goes through the real Rust client, `genai`, the usage count and the
+  price lookup. The fake returns fixed findings for the test pass, an empty
+  array for every other pass, and a verdict for the judge. It reports token
+  counts, and `prices.json` has a rate for it, so the cost label can be
+  checked. Nothing leaves the machine and no key is needed.
+
+The first set of tests covers:
+
+- **Editor.** The fixture opens. Typed text reaches the editor, and a save
+  writes it to the Markdown file on disk.
+- **Review.** Running the passes puts one note in the margin per finding, and
+  each highlight covers exactly its quoted words. `Esc` then `j` moves the
+  focus. The focused note is in view. `x` marks a finding addressed.
+- **Cost.** After a run, the status bar shows the cost that the fake model's
+  token counts and rates give.
+- **Duel.** `⌘D` opens the duel. A typed rewrite goes to the judge, and the
+  result names the version the judge picked, whichever side it was shuffled
+  to.
+
+A test fails with the app's own log attached, read from the test home.
+
+### 16.3 Driving a dev build
+
+`bun run app` is a debug build, so the server runs there too, on port 4445.
+`bun dev/drive.ts` connects to it and does one thing per call:
+
+```
+bun dev/drive.ts shot [file]          screenshot of the page (default /tmp/writegood.png)
+bun dev/drive.ts text [selector]      the text of an element (default the editor)
+bun dev/drive.ts html [selector]      the outer HTML of an element
+bun dev/drive.ts eval '<js>'          run JavaScript in the page, print the result
+bun dev/drive.ts click <selector>     click an element
+bun dev/drive.ts keys <key>...        send keys, e.g. Escape j j
+bun dev/drive.ts type '<text>'        insert text in the editor at the cursor
+```
+
+`TAURI_WEBDRIVER_PORT` overrides the port. Each call opens a WebDriver session
+and closes it after. Closing a session does not close the window.
+
+A dev build reads and writes the real `~/.writegood`. `click`, `keys` and
+`type` change whatever file is open, and the app saves it. To drive edits
+safely, start the dev build with `WRITEGOOD_HOME` set to a scratch directory.
+
+The server also lets any local process run JavaScript in the page, and through
+it call any Tauri command. That is acceptable for a debug build on
+`127.0.0.1`. It is the reason the plugin is never registered in a release
+build.
