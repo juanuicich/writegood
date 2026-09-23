@@ -269,6 +269,8 @@ export async function launch(): Promise<App> {
     WRITEGOOD_PICK: join(home, "pick.txt"),
     WRITEGOOD_E2E_KEY: "fake",
     TAURI_WEBDRIVER_PORT: String(port),
+    // Open the window behind the author's own, without taking the focus.
+    WRITEGOOD_BACKGROUND: "1",
   };
   const proc: ChildProcess = spawn(BINARY, [], { env, stdio: "ignore" });
 

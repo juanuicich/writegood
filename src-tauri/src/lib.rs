@@ -203,10 +203,18 @@ pub fn run() {
     #[cfg(debug_assertions)]
     let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
 
-    builder
+    #[allow(unused_mut)]
+    let mut app = builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // The launch could not activate the app, so the window opened
+            // behind whatever was in front. Accessory lets it be shown and
+            // driven without a Dock icon, and it still never takes the focus.
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            if background() {
+                app.handle().set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+            }
             config::ensure_scaffold()?;
             let conn = db::open(&config::db_path())?;
             let recovered = db::recover_orphaned_runs(&conn)?;
@@ -266,6 +274,24 @@ pub fn run() {
             log::log_path,
             diff::diff_words,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running writegood");
+        .build(tauri::generate_context!())
+        .expect("error while building writegood");
+
+    // Debug builds only: the end-to-end tests launch one window per test file,
+    // and each would take the focus from whatever the author is doing. macOS
+    // cannot activate an app under the Prohibited policy, so the launch
+    // leaves the focus where it was.
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    if background() {
+        app.set_activation_policy(tauri::ActivationPolicy::Prohibited);
+    }
+
+    app.run(|_, _| {});
+}
+
+/// Debug builds only: `WRITEGOOD_BACKGROUND` opens the window without taking
+/// the focus. The end-to-end harness sets it.
+#[cfg(all(debug_assertions, target_os = "macos"))]
+fn background() -> bool {
+    std::env::var_os("WRITEGOOD_BACKGROUND").is_some()
 }
