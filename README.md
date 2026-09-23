@@ -10,6 +10,11 @@ You write a draft. You run editing passes over it. Each pass is a prompt you
 wrote. A model reads the draft and marks what it finds in the margin. You do
 the rewriting.
 
+<p align="center">
+  <img src="docs/light.png" width="49%" alt="writegood in the light theme, with findings in the margin">
+  <img src="docs/dark.png" width="49%" alt="writegood in the dark theme, with findings in the margin">
+</p>
+
 The idea comes from Thomas Ptacek's [*How To Write With An
 LLM*](https://sockpuppet.org/blog/2026/09/17/how-to-write-with-an-llm/). The
 app enforces his two rules:
