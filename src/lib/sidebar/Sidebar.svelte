@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import { app } from "../state.svelte";
+  import { app, FOCUS_META } from "../state.svelte";
   import { guard } from "./redact";
 
   let tops = $state<Record<number, number>>({});
@@ -180,23 +180,56 @@
     fade = cutTop && cutBottom ? "both" : cutTop ? "top" : cutBottom ? "bottom" : "none";
   });
 
-  /** Moving the focus must bring the focused note into the band. Stepping with
-   *  j or k scrolls the prose, but stacking can still leave the note below the
-   *  foot of the band. A click on a highlight goes further and sets the note
-   *  level with it (SPEC §12.3). Every focus change bumps `seq`, so clicking
-   *  the same highlight again aligns it again. */
+  /** Moving the focus brings the focused note into the band. A click on a
+   *  highlight sets the note level with it, and so does a step with j or k,
+   *  which also scrolls the draft if the words are out of view. A click on
+   *  the note only reveals it (SPEC §12.3). Every focus change bumps `seq`,
+   *  so clicking the same highlight again aligns it again. */
   $effect(() => {
     const { by } = app.focus;
     const id = app.current?.id;
     if (id === undefined) return;
     // Read the layout after the DOM has caught up, and outside the effect's
     // dependencies, so a scroll of our own does not retrigger this.
-    void tick().then(() => (by === "text" ? align(id) : reveal(id)));
+    void tick().then(() => (by === "text" ? align(id) : by === "step" ? step(id) : reveal(id)));
   });
 
+  /** The caret moving into a highlight sets its note level with it, in either
+   *  mode. Nothing is lit and the draft stays put. Outside every highlight the
+   *  margin keeps its offset. Typing is left alone: the notes are placed from
+   *  offsets that only catch up with the text after re-anchoring. */
+  $effect(() => {
+    const editor = app.editor;
+    if (!editor) return;
+    const moved = ({ transaction }: { transaction: { docChanged: boolean; getMeta(key: string): unknown } }) => {
+      if (transaction.docChanged || transaction.getMeta(FOCUS_META)) return;
+      void tick().then(() => {
+        const id = atCaret();
+        if (id !== null) align(id);
+      });
+    };
+    editor.on("selectionUpdate", moved);
+    return () => {
+      editor.off("selectionUpdate", moved);
+    };
+  });
+
+  /** The finding whose words hold the caret. Where findings overlap, the
+   *  focused one if it is among them, or else the first in document order. */
+  function atCaret(): number | null {
+    const editor = app.editor;
+    if (!editor) return null;
+    const pos = editor.state.selection.head;
+    const holds = (f: { from: number | null; to: number | null }) =>
+      f.from !== null && f.to !== null && f.from <= pos && pos <= f.to;
+    const current = app.current;
+    if (current && holds(current)) return current.id;
+    return app.visible.find(holds)?.id ?? null;
+  }
+
   /** Scroll the margin until the note's top is level with its highlight. The
-   *  draft stays put: the reader just clicked those words. The offset holds
-   *  until the reader next scrolls the draft. */
+   *  draft stays put. The offset holds until the reader next scrolls the
+   *  draft. */
   function align(id: number) {
     const page = pageEl();
     const card = band?.querySelector<HTMLElement>(`[data-note="${id}"]`);
@@ -210,11 +243,45 @@
     } catch {
       return;
     }
-    const delta = card.getBoundingClientRect().top - words;
-    if (Math.abs(delta) < 1) return;
-    const want = band.scrollTop + delta;
+    // Record the offset even when the note is already level: a step may have
+    // just scrolled the draft, and the offset is measured against it.
+    const want = band.scrollTop + card.getBoundingClientRect().top - words;
     offset = want - alignedScrollTop(page, band);
     setBand(want);
+  }
+
+  /** Set a stepped-to note level with its words. The draft scrolls only when
+   *  it must: to bring the words into the band, and then far enough that the
+   *  whole note fits beside them, without pushing the words off the top. */
+  function step(id: number) {
+    const page = pageEl();
+    const card = band?.querySelector<HTMLElement>(`[data-note="${id}"]`);
+    const f = app.visible.find((x) => x.id === id);
+    if (!page || !band || !card || !app.editor || f?.from == null) return;
+    let top: number;
+    let bottom: number;
+    try {
+      top = app.editor.view.coordsAtPos(f.from).top;
+      bottom = app.editor.view.coordsAtPos(f.to ?? f.from).bottom;
+    } catch {
+      return;
+    }
+    // A neighbour cut at either end fades it, and the fade would hide part
+    // of this note, so keep clear of both.
+    const edge = band.getBoundingClientRect();
+    const head = edge.top + FADE;
+    const foot = edge.bottom - FADE;
+    let shift = 0;
+    if (top < head) shift = top - head;
+    else if (bottom > foot) shift = bottom - foot;
+    const over = top - shift + card.offsetHeight - foot;
+    if (over > 0) shift += Math.max(0, Math.min(over, top - shift - head));
+    if (Math.abs(shift) >= 1) {
+      const before = page.scrollTop;
+      page.scrollTop = before + shift;
+      if (Math.abs(page.scrollTop - before) >= 1) revealing = true;
+    }
+    align(id);
   }
 
   /** Bring the focused note into the band. The draft moves first, so the

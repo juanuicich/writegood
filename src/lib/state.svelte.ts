@@ -94,16 +94,23 @@ class App {
    *  lit, the focused one, which is every case but that click (SPEC §12.3). */
   group = $state<number[] | null>(null);
 
+  /** Set when the author goes back to writing, so nothing is lit while they
+   *  write. The focus is kept, so the next step goes on from it. Any focus
+   *  change, or a return to review mode, lights it again (SPEC §12.4). */
+  quiet = $state(false);
+
   /** What is lit, in the text and in the margin. */
   lit = $derived.by(() => {
+    if (this.quiet) return [];
     const shown = this.group?.filter((id) => this.visible.some((f) => f.id === id));
     if (shown && shown.length > 0) return shown;
     return this.current ? [this.current.id] : [];
   });
 
   /** Bumped on every focus change, with how it was made, so the margin can
-   *  align a note to a clicked highlight and only reveal it otherwise. */
-  focus = $state<{ seq: number; by: "text" | "other" }>({ seq: 0, by: "other" });
+   *  align a note to its highlight after a click in the text or a step, and
+   *  only reveal it after a click on the note (SPEC §12.3). */
+  focus = $state<{ seq: number; by: "text" | "step" | "note" }>({ seq: 0, by: "note" });
 
   showSidebar = $derived(this.sidebarForced || this.visible.length > 0);
 
@@ -335,8 +342,9 @@ class App {
     const n = this.visible.length;
     if (n === 0) return;
     this.cursor = nextCursor(this.cursor, delta, n);
-    this.focused("other");
-    this.scrollToCurrent();
+    this.focused("step");
+    // The margin scrolls the draft for a step, and only as far as it must.
+    this.selectCurrent();
   }
 
   /** Focus one finding, from a click on its note in the margin. */
@@ -344,7 +352,7 @@ class App {
     const i = this.visible.findIndex((f) => f.id === id);
     if (i >= 0) {
       this.cursor = i;
-      this.focused("other");
+      this.focused("note");
       this.scrollToCurrent();
     }
   }
@@ -356,22 +364,30 @@ class App {
     if (i < 0) return;
     this.cursor = i;
     this.focused("text", ids);
-    const f = this.current;
-    if (f?.from != null && this.editor) {
-      this.editor.commands.setTextSelection({ from: f.from, to: f.to ?? f.from });
-    }
+    this.selectCurrent();
   }
 
-  private focused(by: "text" | "other", group: number[] | null = null) {
+  private focused(by: "text" | "step" | "note", group: number[] | null = null) {
     this.group = group && group.length > 1 ? group : null;
+    this.quiet = false;
     this.focus = { seq: this.focus.seq + 1, by };
   }
 
-  scrollToCurrent() {
+  /** Select the focused finding's words. The selection is marked as the
+   *  focus's own, so the margin does not treat it as the caret moving. */
+  private selectCurrent(): boolean {
     const f = this.current;
-    if (!f || f.from === null || !this.editor) return;
-    this.editor.commands.setTextSelection({ from: f.from, to: f.to ?? f.from });
-    this.editor.commands.scrollIntoView();
+    if (!f || f.from === null || !this.editor) return false;
+    this.editor
+      .chain()
+      .setTextSelection({ from: f.from, to: f.to ?? f.from })
+      .setMeta(FOCUS_META, true)
+      .run();
+    return true;
+  }
+
+  scrollToCurrent() {
+    if (this.selectCurrent()) this.editor?.commands.scrollIntoView();
   }
 
   toggleReveal(id?: number) {
@@ -481,6 +497,19 @@ class App {
     this.help = true;
   }
 
+  /** Review mode: the single-letter keys act on the focus, so it is lit. */
+  enterReview() {
+    this.mode = "review";
+    this.quiet = false;
+  }
+
+  /** Back to writing, with the margin quiet. */
+  leaveReview() {
+    this.mode = "write";
+    this.quiet = true;
+    this.editor?.commands.focus();
+  }
+
   closeHelp() {
     this.help = false;
     this.editor?.setEditable(true, false);
@@ -503,6 +532,9 @@ class App {
     }
   }
 }
+
+/** Marks a selection made by a focus change, not by the caret. */
+export const FOCUS_META = "writegood:focus";
 
 /** Step the focus through the list, wrapping at both ends. A cursor of -1
  *  means nothing is focused yet, so stepping forward lands on the first. */

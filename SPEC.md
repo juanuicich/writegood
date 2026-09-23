@@ -890,14 +890,23 @@ the margin. The first of them in document order takes the focus, so `x`, `d`
 and `r` act on it and `j` / `k` step on from it. The next step lights one
 finding again.
 
-A click in the text also scrolls the margin until the focused note's top is
-level with the highlight that was clicked. The draft does not move. Stacking
-can put a note far below its sentence. This brings it back beside the words
-the reader is looking at, and the notes above it scroll out past the top of
-the band. The next scroll of the draft brings the margin back level with it.
-Stepping with `j` / `k`, and clicking a note in the margin, only bring the note
-into view. Aligning a note under the mouse would move it away from the
-pointer.
+**Notes align with their highlights.** Stacking can put a note far below its
+sentence. Aligning scrolls the margin until the note's top is level with its
+highlight, and the notes above it scroll out past the top of the band. The
+next scroll of the draft brings the margin back level with the draft.
+
+- A click on a highlight aligns the focused note. The draft does not move.
+- The caret moving into a highlight aligns its note, in writing mode and in
+  review mode. Where findings overlap, the focused one aligns if the caret is
+  in it, or else the first in document order. Nothing is lit, so the margin
+  stays quiet while you write. The draft does not move. Typing does not align.
+  A caret outside every highlight leaves the margin where it is.
+- A step with `j` / `k` aligns the note. If the highlight is out of view, the
+  draft first scrolls as little as it can to bring it into the band. If the
+  aligned note would run past the foot of the band, the draft scrolls up
+  until the note fits, but never so far that the highlight leaves the top.
+- A click on a note in the margin only brings the note into view. Aligning a
+  note under the mouse would move it away from the pointer.
 
 **Drawn ranges are tidied.** Models are loose about the edges of a quote: one
 includes the full stop, another stops before it, a third starts with the space
@@ -919,6 +928,11 @@ The app is driven from the keyboard.
 A bare `n` has to type an "n", so the single-letter keys live in a **review
 mode**. `Esc` leaves the text and enters it; the editor dims and the margin
 becomes the active pane. `Esc`, `Enter` or `i` returns to writing.
+
+Returning to writing unlights the focused finding, in the text and in the
+margin, so nothing is lit while you write. The focus is kept, and the next
+`j` / `k` steps on from it. A click on a highlight or a step with `⌥↓` /
+`⌥↑` lights again while writing, and so does entering review mode.
 
 Always available:
 

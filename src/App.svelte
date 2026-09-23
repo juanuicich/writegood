@@ -52,7 +52,7 @@
     // Design review: open the app already showing the state being reviewed.
     const show = new URLSearchParams(location.search).get("show");
     if (show === "review") {
-      app.mode = "review";
+      app.enterReview();
       app.step(1);
     } else if (show === "history") {
       await app.openHistory();
@@ -336,12 +336,11 @@
     if (e.key === "Escape") {
       e.preventDefault();
       if (app.mode === "write") {
-        app.mode = "review";
+        app.enterReview();
         (document.activeElement as HTMLElement | null)?.blur();
         if (app.cursor < 0 && app.visible.length > 0) app.step(1);
       } else {
-        app.mode = "write";
-        app.editor?.commands.focus();
+        app.leaveReview();
       }
       return;
     }
@@ -374,8 +373,7 @@
       case "i":
       case "Enter":
         e.preventDefault();
-        app.mode = "write";
-        app.editor?.commands.focus();
+        app.leaveReview();
         break;
     }
   }
