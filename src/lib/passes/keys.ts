@@ -36,6 +36,33 @@ export function fingerprint(parts: {
   ]);
 }
 
+/** The fingerprint of a pass on Jev (SPEC §8.4): the rule text and the
+ *  category, the `[jev]` table after its defaults, the provider and model,
+ *  and the fixed texts and constants of the method. The system preamble and
+ *  the output note do not go to Jev, so they are not in it. */
+export function jevFingerprint(parts: {
+  rule: string;
+  category: string;
+  method: string;
+  keep: number;
+  note: string;
+  provider: string;
+  model: string | null | undefined;
+  fixed: string;
+}): Promise<string> {
+  return sha256([
+    "jev",
+    parts.rule,
+    parts.category,
+    parts.method,
+    String(parts.keep),
+    parts.note,
+    parts.provider,
+    parts.model ?? "",
+    parts.fixed,
+  ]);
+}
+
 /** A paragraph-scope answer: the paragraph and the one before it. */
 export function paragraphKey(fp: string, paragraph: string, previous: string | null): Promise<string> {
   return sha256(["paragraph", fp, previous ?? "", paragraph]);

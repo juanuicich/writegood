@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Config, Provider } from "../ipc";
-import { callLimits } from "./index";
+import { callLimits, providerFor } from "./index";
 
 const cli = (maxInFlight?: number): Provider => ({ kind: "cli", command: "agy", args: [], timeoutSecs: 180, maxInFlight });
 const net: Provider = { kind: "openai-compatible", args: [], timeoutSecs: 180 };
@@ -89,5 +89,36 @@ describe("callLimits", () => {
     busy.open();
     await Promise.all(jobs);
     expect(order).toEqual(["slow", "quick"]);
+  });
+});
+
+describe("providerFor", () => {
+  const jevProvider: Provider = { kind: "jev", model: "jev-1.13.0", args: [], timeoutSecs: 60 };
+  const cfg = {
+    defaultProvider: "deepseek",
+    providers: { deepseek: net, agy: cli(8), jev: jevProvider },
+  } as unknown as Config;
+  const filler = { provider: "jev", scope: "paragraph" as const, jev: { keep: 0.5 } };
+  const plain = { provider: null, scope: "paragraph" as const, jev: null };
+  const order = { provider: "agy", scope: "document" as const, jev: null };
+  const docJev = { provider: null, scope: "document" as const, jev: {} };
+
+  test("without an override, a pass uses its own provider or the default", () => {
+    expect(providerFor(cfg, filler)).toBe("jev");
+    expect(providerFor(cfg, plain)).toBe("deepseek");
+    expect(providerFor(cfg, order)).toBe("agy");
+  });
+
+  test("a jev override applies only to paragraph passes written for Jev", () => {
+    expect(providerFor(cfg, { ...filler, provider: null }, "jev")).toBe("jev");
+    expect(providerFor(cfg, plain, "jev")).toBe("deepseek");
+    expect(providerFor(cfg, order, "jev")).toBe("agy");
+    expect(providerFor(cfg, docJev, "jev")).toBe("deepseek");
+  });
+
+  test("any other override applies to every pass, the Jev passes included", () => {
+    expect(providerFor(cfg, filler, "agy")).toBe("agy");
+    expect(providerFor(cfg, plain, "agy")).toBe("agy");
+    expect(providerFor(cfg, order, "deepseek")).toBe("deepseek");
   });
 });

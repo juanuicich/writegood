@@ -50,6 +50,9 @@ export async function runDuel(
   } catch (e) {
     throw new Error(e instanceof ProviderError ? e.message : String(e));
   }
+  if (judge.provider.kind === "jev") {
+    throw new Error(`judge_provider "${name}" is a jev provider, and Jev cannot write a verdict and a reason`);
+  }
 
   const { aText, bText, aIsOriginal } = shuffle(original, rewrite);
   const { system, prompt } = judgePrompt(aText, bText);

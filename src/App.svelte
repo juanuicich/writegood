@@ -238,7 +238,15 @@
       ],
       run: (name) => {
         override = name || null;
-        app.say(override ? `provider: ${override}` : "provider: as configured");
+        // A jev override reaches only the passes written for Jev (SPEC §9.1).
+        const jev = override !== null && app.config?.providers[override]?.kind === "jev";
+        app.say(
+          override === null
+            ? "provider: as configured"
+            : jev
+              ? `provider: ${override}, for the passes written for Jev`
+              : `provider: ${override}`,
+        );
       },
     },
     {

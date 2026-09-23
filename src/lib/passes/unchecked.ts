@@ -50,7 +50,7 @@ export async function uncheckedParagraphs(
     passes
       .filter((p) => p.enabled && p.scope === "paragraph")
       .map(async (pass): Promise<PassCheck | null> => {
-        const name = providerFor(config, pass.provider, override);
+        const name = providerFor(config, pass, override);
         let resolved: Resolved;
         try {
           resolved = withPass(resolve(config, name), pass);
