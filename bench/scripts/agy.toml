@@ -1,0 +1,8 @@
+# The agy provider's thinking settings, in the shape of the app's
+# config.toml (SPEC §9.3). The benchmark reads the mapping from here, so the
+# app's config and the benchmark keep one copy of it.
+[providers.agy]
+kind           = "cli"
+command        = "agy"
+thinking       = "off"
+thinking_names = { off = "low", max = "high" }

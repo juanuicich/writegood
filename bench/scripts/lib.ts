@@ -305,10 +305,22 @@ export const AGY_DENY_HOOKS = JSON.stringify({
   },
 });
 
+/** agy's provider settings from `agy.toml`, in the app's config shape. */
+const AGY_CONFIG = (Bun.TOML.parse(readFileSync(join(import.meta.dir, "agy.toml"), "utf8")) as {
+  providers: { agy: { thinking: string; thinking_names: Record<string, string> } };
+}).providers.agy;
+
+/** The model variant for a thinking level, as the app's runner names it:
+ *  the level's entry in `thinking_names`, else the level as written. The
+ *  level `default` takes the provider's `thinking`. */
+export function agyVariant(thinking: Thinking): string {
+  const level = thinking === "default" ? AGY_CONFIG.thinking : thinking;
+  return AGY_CONFIG.thinking_names[level] ?? level;
+}
+
 /** Google's Antigravity CLI, on the author's Google AI subscription. `model`
  *  is the family, such as `gemini-3.8-flash`; the thinking level picks the
- *  variant, because agy has no way to turn thinking off. `off` and `low` both
- *  take `-low`.
+ *  variant through `agyVariant`, because agy has no way to turn thinking off.
  *
  *  Every call runs in a fresh empty directory that agy treats as its
  *  workspace, as a custom agent with no tools, behind a hook that denies
@@ -317,7 +329,6 @@ export const AGY_DENY_HOOKS = JSON.stringify({
  *  side by side and each has its own limiter. */
 export function agy(model: string, maxInFlight: number): Provider {
   const lim = limiter(maxInFlight);
-  const variant = (t: Thinking) => (t === "high" || t === "max" ? "high" : t === "medium" ? "medium" : "low");
   return {
     name: "agy",
     model,
@@ -329,7 +340,7 @@ export function agy(model: string, maxInFlight: number): Provider {
         const proc = Bun.spawn([
           "agy", "-p", `${system}\n\n${prompt}`,
           "--agent", "writegood",
-          "--model", `${model}-${variant(thinking)}`,
+          "--model", `${model}-${agyVariant(thinking)}`,
           "--add-dir", dir,
           "--output-format", "json",
           "--print-timeout", `${ceilingSecs}s`,
@@ -359,7 +370,7 @@ export function agy(model: string, maxInFlight: number): Provider {
             reasoning: u.thinking_tokens ?? 0,
             cost: 0,
             costSource: "rates",
-            servedBy: `agy ${model}-${variant(thinking)}`,
+            servedBy: `agy ${model}-${agyVariant(thinking)}`,
             serviceSecs: (performance.now() - t0) / 1000,
           },
         };

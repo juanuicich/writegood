@@ -189,7 +189,8 @@ bun bench/scripts/run.ts --provider agy --model gemini-3.8-flash \
   --thinking off --agy-limit 8 --rules 2026-09-23-rewrite --pipeline hybrid --label agy-flash38-hybrid-1
 ```
 
-- The thinking level picks agy's model variant: `off` and `low` take
+- The thinking level picks agy's model variant through `thinking_names` in
+  `scripts/agy.toml`, as in the app (SPEC §9.3): `off` and `low` take
   `gemini-3.8-flash-low`, `medium` takes `-medium`, and `high` and `max` take
   `-high`.
 - Each call runs agy as the app does (SPEC §9.3): in a new empty directory,
