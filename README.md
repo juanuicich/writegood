@@ -57,6 +57,9 @@ about a minute. A run costs about three cents. A 5,000-word chapter takes
 about 25 seconds, two minutes for paragraph order, and ten to twenty cents. The
 app saves every answer, so a rerun asks only about the paragraphs you changed.
 
+[`BENCHMARKS.md`](./BENCHMARKS.md) has the measurements behind those numbers,
+the setup I use, and how to run the passes on a plan you already pay for.
+
 ## Tests
 
 ```
