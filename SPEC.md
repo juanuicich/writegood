@@ -1246,6 +1246,17 @@ Measured on the four scored drafts (bench, 23 September 2026), two runs:
 - 8 calls in flight gave no errors. 16 gave five rate-limit errors in 347
   calls. The plan charges nothing per call.
 
+agy also works as the duel judge (§11). `runDuel` sends a `cli` judge the
+judge's system text and prompt as one prompt, through the same runner and
+guards. Tested on 23 September 2026 with DeepSeek as the pass provider: two
+memo paragraphs, each against a version with its reference problems fixed by
+hand, ten calls per pair, each order five times. The judge chose the fixed
+version in 20 of 20 calls, in both orders. No reply was unreadable. A call took
+about 4.5 seconds (median; 3.8 to 8.2), and every call ended in one turn with
+no tool call. `dev/probe-duel.ts` cannot run a `cli` judge, because its probe
+binary calls `llm::chat` only. The test called the runner through
+`examples/cli.rs` with the same prompt `runDuel` builds.
+
 Both backends satisfy one interface:
 
 ```ts

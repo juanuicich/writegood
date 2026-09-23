@@ -264,6 +264,21 @@ So agy scores 6 to 7 points above the DeepSeek setup and costs nothing. It
 takes about ten times as long for the fast passes, and paragraph order takes
 about two minutes instead of three seconds.
 
+agy also works as the duel judge. Set `judge_provider = "agy"` with a pass
+provider from another vendor, such as DeepSeek. The test used two memo
+paragraphs, each against a version with its reference problems fixed by hand.
+Each pair went to the judge ten times, five in each order:
+
+- The judge chose the fixed version in 20 of 20 calls. Swapping the sides did
+  not change a verdict.
+- No reply was unreadable, and no call failed.
+- A call took about 4.5 seconds at the median, 3.8 to 8.2 in all.
+- Every call ended in one turn. No call tried a tool.
+
+Both pairs are easy cases: each fix removes problems that the passes flag.
+The test says the judge runs and is steady. It does not say how the judge
+does on two close versions.
+
 ### claude-cli, on a Claude plan
 
 Not benchmarked. The block from the default config:
