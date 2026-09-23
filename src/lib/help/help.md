@@ -20,6 +20,18 @@ Type. The app saves as you go. `⌘S` saves now.
 
 *open recent* in the command bar lists the files you opened before. So does File > Open Recent.
 
+## Find and replace
+
+`⌘F` opens the find bar. `⌥⌘F` opens it with a field for the replacement. The search ignores case unless you type a capital letter.
+
+- `Enter` or `⌘G`: next match
+- `⇧Enter` or `⌘⇧G`: previous match
+- `Enter` in the replace field: replace this match and go to the next
+- `⌥Enter` in the replace field: replace every match
+- Esc: close the bar and go back to the text
+
+Review mode hides the bar. `⌘Z` undoes a replacement.
+
 ## Running passes
 
 `⌘R` or `⌘⏎` runs every enabled pass. `⌘⇧R` runs one pass, and asks which.

@@ -125,7 +125,7 @@ arrows. SPEC §16.1 lists the limits.
 
 `bun run browser` serves the app at http://localhost:1421 with Tauri replaced
 by fixtures in `dev/browser/`. Nothing touches disk and no key is needed. Add
-`?theme=dark`, and `?show=review|history|duel|palette` to open straight into a
+`?theme=dark`, and `?show=review|history|duel|palette|find` to open straight into a
 state worth reviewing. Screenshot it with headless Chrome:
 
 ```

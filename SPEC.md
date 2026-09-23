@@ -132,10 +132,12 @@ vite                   8.3.0       similar             3.2.0
 prosemirror-markdown   1.13.4      keyring             4.2.0
 markdown-it            14.1.0      toml                1.1.6
 webdriverio            9.32.0      tauri-plugin-wdio-webdriver 1.4.0
+prosemirror-search     1.1.1
 ```
 
-The last row was checked on 23 September 2026. Both are for driving the app
-in tests and in dev (§16). `webdriverio` is a dev dependency, and a release
+The last two rows were checked on 23 September 2026. `webdriverio` and the
+WebDriver plugin are for driving the app in tests and in dev (§16).
+`prosemirror-search` does find and replace (§12.6). `webdriverio` is a dev dependency, and a release
 build does not register the plugin.
 
 The npm side has no model provider package. Every provider call runs in Rust
@@ -164,7 +166,9 @@ writegood/
 │   │   ├── palette/Palette.svelte  the only chrome (§12.2)
 │   │   ├── editor/
 │   │   │   ├── Editor.svelte     TipTap instance
-│   │   │   └── findings.ts       decoration plugin for highlights
+│   │   │   ├── FindBar.svelte    the find bar (§12.6)
+│   │   │   ├── findings.ts       decoration plugin for highlights
+│   │   │   └── search.ts         find and replace (§12.6)
 │   │   ├── sidebar/
 │   │   │   ├── Sidebar.svelte    Genius-style margin notes
 │   │   │   └── redact.ts         Rule One guard (§10.3)
@@ -827,7 +831,8 @@ paper, `#16161A`, and its greys.
 | Text selection | `--selection` | a wash of `#FF95A5` | `#5003C0` |
 | The selected finding's highlight | `--accent-wash` | a wash of `#76C0EC` | `#5003C0` |
 | Quote bars, rules, link underlines, the bar beside the selected palette row | `--secondary` | `#76C0EC` | `#AB03A9` |
-| The unsaved mark, additions in a diff | `--tertiary` | `#FF95A5` | `#FF467A` |
+| The unsaved mark, additions in a diff, the bar under the selected search match | `--tertiary` | `#FF95A5` | `#FF467A` |
+| Search matches (§12.6) | `--match` | `#FBE7A6`, a highlighter wash | `#3D3515`, a wash of `#FFD51E` |
 
 Body text stays in ink, a near-black navy in light and a near-white in dark.
 No palette colour carries running text: the light `#76C0EC` and `#FF95A5` are
@@ -866,7 +871,8 @@ command, and the palette runs it, so the menu and the keyboard cannot drift
 apart. A command that needs an argument opens the palette on that command. The
 Edit submenu carries Undo, Redo, Cut, Copy, Paste and Select All: WKWebView
 takes those keystrokes from the menu, and without the items the editor cannot
-copy or paste. File carries New, Open…, Open Recent, Save, Save As… and Save
+copy or paste. It also carries a Find submenu: Find…, Find and Replace…,
+Find Next and Find Previous (§12.6). File carries New, Open…, Open Recent, Save, Save As… and Save
 as major revision (§6.3). Open Recent is rebuilt by Rust and its items open a
 document, not a palette command. File > Open the writegood folder is handled
 in Rust, because Rust owns the filesystem. View carries Bigger text (`⌘+`), Smaller text
@@ -951,6 +957,8 @@ Always available:
 | `⌘+` / `⌘-` | bigger / smaller text, saved to the config |
 | `⌘0` | text back to the base size, saved to the config |
 | `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
+| `⌘F` / `⌥⌘F` | find; find and replace (§12.6) |
+| `⌘G` / `⌘⇧G` | next / previous match |
 | `⌘?` | help |
 | `Esc` | review mode |
 
@@ -1003,6 +1011,56 @@ plainly, "no findings", not "looks good". Pass failed. Provider key missing.
 Every finding stale after a heavy rewrite.
 
 Note the second-to-last: the empty result must not become a compliment.
+
+### 12.6 Find and replace
+
+`⌘F` opens a find bar at the top of the editor pane. `⌥⌘F` opens it with a
+second field for the replacement. The bar belongs to writing: entering review
+mode hides it and clears its highlights.
+
+**The bar.** One line: a *find* label, the field and a count. With replace,
+a second line holds a *replace* label and its field. The fields use the
+palette's type and the same rule under what you type. There are no buttons
+and no option toggles. Every action is a key.
+
+**Matching.** The search is literal text within one paragraph, from
+`prosemirror-search`. It ignores case unless the query holds a capital
+letter. Matches are highlighted as you type, and the first match at or after
+the caret is selected. The count reads "3 of 12", "12 matches" when the
+selection is on none of them, or "no matches".
+
+**Keys.**
+
+| Key | Where | Action |
+|---|---|---|
+| `⌘F` | anywhere | open the bar and select the find field |
+| `⌥⌘F` | anywhere | open the bar with the replace field |
+| `⌘G` / `⌘⇧G` | anywhere | next / previous match |
+| `Enter` / `⇧Enter` | find field | next / previous match |
+| `Enter` | replace field | replace this match and select the next |
+| `⌥Enter` | replace field | replace every match |
+| `Tab` | the bar | move between the fields |
+| `Esc` | the bar | close the bar; the caret goes back to the text |
+
+`Esc` in the text still enters review mode, and that hides the bar. `⌘F` in
+review mode returns to writing and opens the bar. `⌘G` with the bar closed
+opens it on the last query. The query and the replacement are kept for the
+session and are not saved.
+
+**Colour.** Every match takes `--match`, a wash under the words. The selected
+match adds a bar under the words in `--tertiary`. Both differ from the
+finding underlines and the selected finding's wash, so a match on a finding
+reads as both.
+
+**The rest of the app.** A replacement is one edit, so `⌘Z` undoes it. Replace
+all is one edit too. The findings move with the text and re-anchor as they do
+for typing (§7). A finding on the replaced words goes stale.
+
+The replace field holds only what the author types. Nothing fills it from a
+finding, a note or a model reply (§2).
+
+The palette has *find*, *find and replace*, *find next*, *find previous* and
+*replace all*. The Edit menu has a Find submenu with the first four.
 
 ---
 

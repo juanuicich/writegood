@@ -79,6 +79,20 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
+    // Find and replace (SPEC §12.6). The page handles the same keys, so the
+    // items only name them.
+    let find = Submenu::with_items(
+        app,
+        "Find",
+        true,
+        &[
+            &MenuItem::with_id(app, "find", "Find…", true, Some("CmdOrCtrl+F"))?,
+            &MenuItem::with_id(app, "replace", "Find and Replace…", true, Some("CmdOrCtrl+Alt+F"))?,
+            &MenuItem::with_id(app, "find-next", "Find Next", true, Some("CmdOrCtrl+G"))?,
+            &MenuItem::with_id(app, "find-prev", "Find Previous", true, Some("CmdOrCtrl+Shift+G"))?,
+        ],
+    )?;
+
     // WKWebView takes copy, paste, undo and the rest from the menu. Without
     // these items a writing app cannot copy or paste.
     let edit = Submenu::with_items(
@@ -93,6 +107,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::copy(app, None)?,
             &PredefinedMenuItem::paste(app, None)?,
             &PredefinedMenuItem::select_all(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &find,
         ],
     )?;
 

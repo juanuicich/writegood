@@ -6,6 +6,7 @@
   import { app } from "../state.svelte";
   import { Findings, setFindings, setFocus, type Mark } from "./findings";
   import { ActiveParagraph } from "./paragraph";
+  import { Search } from "./search";
 
   let host: HTMLDivElement;
   let editor: Editor | null = null;
@@ -20,6 +21,7 @@
         Placeholder.configure({ placeholder: "Start writing good" }),
         Findings.configure({ onSelect: (ids) => app.selectInText(ids) }),
         ActiveParagraph,
+        Search.configure({ top: findBarDepth }),
       ],
       content: "",
       autofocus: "end",
@@ -38,6 +40,15 @@
     });
     app.editor = editor;
   });
+
+  /** How far the find bar reaches into the page, so a match it scrolls to
+   *  stops below the bar. Zero when the bar is closed. */
+  function findBarDepth(): number {
+    const bar = document.querySelector(".find");
+    const page = host?.closest(".page");
+    if (!bar || !page) return 0;
+    return bar.getBoundingClientRect().bottom - page.getBoundingClientRect().top + 16;
+  }
 
   onDestroy(() => {
     clearTimeout(saveTimer);

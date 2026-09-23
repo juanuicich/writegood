@@ -76,6 +76,7 @@
   --accent:     var(--primary);
   --accent-wash:#c1dde3;
   --selection:  #ffd4c9;
+  --match:      #fbe7a6;
   --underline:  var(--secondary);
   --underline-strong: var(--primary);
   --caret:      var(--ink);
@@ -110,6 +111,7 @@
   --accent:     #ffd51e;
   --accent-wash:#5003c0;
   --selection:  #5003c0;
+  --match:      #3d3515;
   --underline-strong: var(--secondary);
   --caret:      #ffd51e;
   color-scheme: dark;
@@ -131,6 +133,7 @@
     --accent:     #ffd51e;
     --accent-wash:#5003c0;
     --selection:  #5003c0;
+  --match:      #3d3515;
     --underline-strong: var(--secondary);
     --caret:      #ffd51e;
     color-scheme: dark;
@@ -297,6 +300,19 @@ input {
 .finding-high   { text-decoration-thickness: 2px; text-decoration-color: var(--underline-strong); }
 .finding-low    { text-decoration-style: dotted; }
 .finding-stale  { text-decoration: none; color: var(--ink-faint); }
+
+/* --- search matches (SPEC §12.6) -----------------------------------
+   A wash under every match, and a bar under the selected one. Neither is
+   an underline or the selected finding's wash, so a match on a finding
+   reads as both. */
+.ProseMirror-search-match,
+.ProseMirror-active-search-match {
+  background: var(--match);
+  border-radius: 1px;
+}
+.ProseMirror-active-search-match {
+  box-shadow: inset 0 -2px 0 var(--tertiary);
+}
 
 /* Where you are. */
 .finding-current {

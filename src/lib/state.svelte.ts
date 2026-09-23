@@ -22,6 +22,7 @@ import { buildTextIndex, codePointRangeToPM, type TextIndex } from "./text";
 import type { DuelOutcome } from "./duel/run";
 import { markdownToJSON, jsonToMarkdown } from "./markdown";
 import { tidy } from "./spans";
+import * as find from "./editor/search";
 
 export interface HistoryState {
   revisions: Revision[];
@@ -74,6 +75,13 @@ class App {
    *  so its text, selection, undo history and scroll survive. */
   help = $state(false);
   sidebarForced = $state(false);
+
+  /** The find bar, when open. `seq` is bumped on every open, so the bar
+   *  selects its field again (SPEC §12.6). */
+  find = $state<{ replace: boolean; seq: number } | null>(null);
+  /** The query and the replacement, kept for the session. */
+  findText = $state("");
+  replaceText = $state("");
 
   /** Only open findings are worth stepping through, and the margin reads in
    *  document order. Findings that no longer place sort last. */
@@ -499,6 +507,7 @@ class App {
 
   /** Review mode: the single-letter keys act on the focus, so it is lit. */
   enterReview() {
+    this.closeFind(false);
     this.mode = "review";
     this.quiet = false;
   }
@@ -508,6 +517,69 @@ class App {
     this.mode = "write";
     this.quiet = true;
     this.editor?.commands.focus();
+  }
+
+  // ------------------------------------------------------------------ find
+
+  /** Open the find bar, with the replace field if asked. The bar belongs to
+   *  writing, so review mode ends. A selection within one paragraph becomes
+   *  the query. */
+  openFind(replace: boolean) {
+    const editor = this.editor;
+    if (!editor) return;
+    if (this.mode === "review") this.leaveReview();
+    const selection = editor.state.selection;
+    const { from, to } = selection;
+    if (from < to && selection.$from.sameParent(selection.$to) && to - from <= 200) {
+      const picked = editor.state.doc.textBetween(from, to);
+      if (picked.trim()) this.findText = picked;
+    }
+    this.find = { replace: replace || (this.find?.replace ?? false), seq: (this.find?.seq ?? 0) + 1 };
+    this.search(true);
+  }
+
+  /** Close the bar and clear its highlights. The match stays selected, and
+   *  the caret goes back to the text when asked. */
+  closeFind(focusText: boolean) {
+    if (!this.find) return;
+    this.find = null;
+    const editor = this.editor;
+    if (!editor) return;
+    find.setQuery(editor.state, editor.view.dispatch, "", "", false);
+    if (focusText) editor.commands.focus();
+  }
+
+  /** Hand the query to the editor. With `select`, the first match at or
+   *  after the caret is selected. */
+  search(select: boolean) {
+    const editor = this.editor;
+    if (!editor || !this.find) return;
+    find.setQuery(editor.state, editor.view.dispatch, this.findText, this.replaceText, select);
+  }
+
+  /** The next or previous match. With the bar closed, open it on the last
+   *  query, which selects the next match. */
+  findStep(delta: 1 | -1) {
+    const editor = this.editor;
+    if (!editor) return;
+    if (!this.find) return this.openFind(false);
+    (delta > 0 ? find.next : find.prev)(editor.state, editor.view.dispatch);
+  }
+
+  replaceOne() {
+    const editor = this.editor;
+    if (!editor || !this.find) return;
+    find.replaceOne(editor.state, editor.view.dispatch);
+  }
+
+  replaceAll() {
+    const editor = this.editor;
+    if (!editor) return;
+    if (!this.find) this.openFind(true);
+    const before = find.count(editor.state).total;
+    if (find.replaceEvery(editor.state, editor.view.dispatch)) {
+      this.say(`replaced ${before === 1 ? "1 match" : `${before} matches`}`);
+    }
   }
 
   closeHelp() {

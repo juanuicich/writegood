@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { app } from "./lib/state.svelte";
   import Editor from "./lib/editor/Editor.svelte";
+  import FindBar from "./lib/editor/FindBar.svelte";
   import Sidebar from "./lib/sidebar/Sidebar.svelte";
   import Palette, { type Command } from "./lib/palette/Palette.svelte";
   import Duel from "./lib/duel/Duel.svelte";
@@ -58,6 +59,14 @@
       await app.openHistory();
     } else if (show === "duel") {
       app.openDuel();
+    } else if (show === "find") {
+      // After the editor's own autofocus, which puts the caret at the end.
+      setTimeout(() => {
+        app.findText = "the";
+        app.replaceText = "a";
+        app.openFind(true);
+        app.findStep(1);
+      }, 300);
     } else if (show === "palette") {
       app.paletteOpen = true;
     } else if (show === "help") {
@@ -150,6 +159,11 @@
         app.passes.map((p) => ({ value: p.slug, label: p.name, hint: p.scope })),
       run: (slug) => run(slug),
     },
+    { id: "find", label: "find", hint: "⌘F", run: () => app.openFind(false) },
+    { id: "replace", label: "find and replace", hint: "⌥⌘F", run: () => app.openFind(true) },
+    { id: "find-next", label: "find next", hint: "⌘G", run: () => app.findStep(1) },
+    { id: "find-prev", label: "find previous", hint: "⌘⇧G", run: () => app.findStep(-1) },
+    { id: "replace-all", label: "replace all", hint: "⌥⏎", run: () => app.replaceAll() },
     { id: "save", label: "save", hint: "⌘S", run: () => app.saveNow() },
     { id: "save-as", label: "save as…", hint: "⌘⇧S", run: () => app.saveAs() },
     {
@@ -327,6 +341,18 @@
       else void run();
       return;
     }
+    // Find (SPEC §12.6). ⌥ and ⇧ change e.key, so the letters are matched by
+    // their physical keys.
+    if (meta && e.code === "KeyF") {
+      e.preventDefault();
+      app.openFind(e.altKey);
+      return;
+    }
+    if (meta && e.code === "KeyG") {
+      e.preventDefault();
+      app.findStep(e.shiftKey ? -1 : 1);
+      return;
+    }
     if (e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       e.preventDefault();
       app.step(e.key === "ArrowDown" ? 1 : -1);
@@ -382,7 +408,7 @@
 <svelte:window onkeydown={keydown} />
 
 <main class:reviewing={app.mode === "review"}>
-  <div class="centre"><Editor /></div>
+  <div class="centre"><Editor /><FindBar /></div>
   {#if app.showSidebar}<Sidebar />{/if}
 </main>
 
@@ -413,6 +439,7 @@
   }
 
   .centre {
+    position: relative;
     flex: 1 1 auto;
     min-width: 0;
   }
