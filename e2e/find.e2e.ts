@@ -1,6 +1,6 @@
 /** Find and replace in the real window (SPEC §12.6): the bar opens on ⌘F,
- *  counts and steps through matches, closes on Esc, hides when review mode
- *  starts, and replaces one match or all of them. */
+ *  counts and steps through matches, closes on Esc before a selection clears
+ *  or review mode starts (SPEC §12.4), and replaces one match or all. */
 import { afterAll, beforeAll, expect } from "bun:test";
 import { Key } from "webdriverio";
 import { e2e, editorText, launch, statusText, until, type App } from "./harness";
@@ -59,22 +59,35 @@ e2e("Esc in the bar closes it and puts the caret back in the text", async () => 
   expect(await statusText(app.browser)).not.toContain("review");
 }, () => app);
 
-e2e("entering review mode hides the bar, and ⌘F there returns to writing", async () => {
+e2e("Esc closes one thing at a time: the bar, the selection, then review mode", async () => {
   const { browser } = app;
+  const collapsed = () => browser.execute(() => document.getSelection()?.isCollapsed ?? true);
+  const reviewing = async () => (await statusText(browser)).includes("review");
+
   await browser.keys([Key.Command, "f"]);
   await until(app, "the bar to open", async () => (await bar()) !== null, 5_000);
+  // Esc closes the bar even with the caret in the text.
   await browser.execute(() => document.querySelector<HTMLElement>(".ProseMirror")!.focus());
   await browser.keys("Escape");
-  await until(app, "review mode", async () => (await statusText(browser)).includes("review"), 5_000);
-  expect(await bar()).toBeNull();
-  expect(await browser.execute(() => document.querySelectorAll(".ProseMirror-search-match").length)).toBe(0);
+  await until(app, "the bar to close", async () => (await bar()) === null, 5_000);
+  expect(await reviewing()).toBe(false);
+  // The match the bar found is still selected. The next Esc clears it.
+  expect(await collapsed()).toBe(false);
+  await browser.keys("Escape");
+  await until(app, "the selection to clear", collapsed, 5_000);
+  expect(await reviewing()).toBe(false);
+  await browser.keys("Escape");
+  await until(app, "review mode", reviewing, 5_000);
+}, () => app);
 
+e2e("⌘F in review mode returns to writing and opens the bar on the last query", async () => {
+  const { browser } = app;
   await browser.keys([Key.Command, "f"]);
   await until(app, "the bar to open in writing mode", async () => (await bar()) !== null, 5_000);
   expect(await statusText(browser)).not.toContain("review");
-  // The query was kept for the session.
   expect((await bar())!.count).toMatch(/of 3$/);
   await browser.keys("Escape");
+  await until(app, "the bar to close", async () => (await bar()) === null, 5_000);
 }, () => app);
 
 e2e("⌥⌘F adds the replace field, and Enter there replaces one match", async () => {

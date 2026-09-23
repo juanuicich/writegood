@@ -36,10 +36,6 @@
     if (e.key === "Enter") {
       e.preventDefault();
       app.findStep(e.shiftKey ? -1 : 1);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      e.stopPropagation();
-      app.closeFind(true);
     }
   }
 
@@ -48,10 +44,6 @@
       e.preventDefault();
       if (e.altKey) app.replaceAll();
       else app.replaceOne();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      e.stopPropagation();
-      app.closeFind(true);
     }
   }
 </script>

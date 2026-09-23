@@ -30,7 +30,7 @@ Type. The app saves as you go. `⌘S` saves now.
 - `⌥Enter` in the replace field: replace every match
 - Esc: close the bar and go back to the text
 
-Review mode hides the bar. `⌘Z` undoes a replacement.
+`⌘Z` undoes a replacement.
 
 ## Running passes
 
@@ -43,6 +43,8 @@ Findings appear as underlines in the text and as notes in the margin. A heavier 
 ## Review mode
 
 Esc leaves the text and enters review mode. The draft dims and single keys act on the findings.
+
+If the find bar is open, Esc closes it first. If you selected text, Esc clears the selection first. Press Esc again to enter review mode.
 
 - `n` or `j`: next finding
 - `p` or `k`: previous finding

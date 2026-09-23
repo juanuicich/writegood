@@ -391,7 +391,29 @@ class App {
       .setTextSelection({ from: f.from, to: f.to ?? f.from })
       .setMeta(FOCUS_META, true)
       .run();
+    this.picked = { from: f.from, to: f.to ?? f.from };
     return true;
+  }
+
+  /** The range the last focus change selected. Esc treats it as the app's
+   *  selection, not the author's, so it does not stop Esc entering review. */
+  private picked: { from: number; to: number } | null = null;
+
+  /** Esc in writing mode closes one thing at a time: the find bar, then a
+   *  selection the author made, which collapses to its end. With neither, it
+   *  enters review mode (SPEC §12.4). */
+  escape() {
+    if (this.find) return this.closeFind(true);
+    const editor = this.editor;
+    const selection = editor?.state.selection;
+    const ours = selection && this.picked?.from === selection.from && this.picked.to === selection.to;
+    if (editor && selection && !selection.empty && !ours) {
+      editor.commands.setTextSelection(selection.to);
+      return;
+    }
+    this.enterReview();
+    (document.activeElement as HTMLElement | null)?.blur();
+    if (this.cursor < 0 && this.visible.length > 0) this.step(1);
   }
 
   scrollToCurrent() {

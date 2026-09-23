@@ -935,6 +935,16 @@ A bare `n` has to type an "n", so the single-letter keys live in a **review
 mode**. `Esc` leaves the text and enters it; the editor dims and the margin
 becomes the active pane. `Esc`, `Enter` or `i` returns to writing.
 
+In writing mode, `Esc` is also the key that closes things, as it is across
+macOS. Each press closes one thing, in this order:
+
+1. The find bar (§12.6), wherever the focus is. The caret goes back to the
+   text.
+2. A selection the author made. It collapses to a caret at its end. The
+   selection a focus change makes, over a finding's words, does not count,
+   so `Esc` after a click on a highlight still enters review mode.
+3. With neither, review mode starts.
+
 Returning to writing unlights the focused finding, in the text and in the
 margin, so nothing is lit while you write. The focus is kept, and the next
 `j` / `k` steps on from it. A click on a highlight or a step with `⌥↓` /
@@ -960,7 +970,7 @@ Always available:
 | `⌘F` / `⌥⌘F` | find; find and replace (§12.6) |
 | `⌘G` / `⌘⇧G` | next / previous match |
 | `⌘?` | help |
-| `Esc` | review mode |
+| `Esc` | close the find bar, then clear the selection, then review mode |
 
 In review mode:
 
@@ -1015,8 +1025,9 @@ Note the second-to-last: the empty result must not become a compliment.
 ### 12.6 Find and replace
 
 `⌘F` opens a find bar at the top of the editor pane. `⌥⌘F` opens it with a
-second field for the replacement. The bar belongs to writing: entering review
-mode hides it and clears its highlights.
+second field for the replacement. The bar belongs to writing: `Esc` closes it
+before review mode can start, and entering review mode by any other path hides
+it and clears its highlights.
 
 **The bar.** One line: a *find* label, the field and a count. With replace,
 a second line holds a *replace* label and its field. The fields use the
@@ -1040,9 +1051,10 @@ selection is on none of them, or "no matches".
 | `Enter` | replace field | replace this match and select the next |
 | `⌥Enter` | replace field | replace every match |
 | `Tab` | the bar | move between the fields |
-| `Esc` | the bar | close the bar; the caret goes back to the text |
+| `Esc` | anywhere | close the bar; the caret goes back to the text |
 
-`Esc` in the text still enters review mode, and that hides the bar. `⌘F` in
+`Esc` closes the bar before it does anything else (§12.4). Review mode cannot
+start with the bar open, and anything that enters it hides the bar. `⌘F` in
 review mode returns to writing and opens the bar. `⌘G` with the bar closed
 opens it on the last query. The query and the replacement are kept for the
 session and are not saved.

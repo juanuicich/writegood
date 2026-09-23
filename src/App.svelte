@@ -361,13 +361,8 @@
 
     if (e.key === "Escape") {
       e.preventDefault();
-      if (app.mode === "write") {
-        app.enterReview();
-        (document.activeElement as HTMLElement | null)?.blur();
-        if (app.cursor < 0 && app.visible.length > 0) app.step(1);
-      } else {
-        app.leaveReview();
-      }
+      if (app.mode === "write") app.escape();
+      else app.leaveReview();
       return;
     }
 
