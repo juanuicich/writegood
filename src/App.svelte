@@ -160,7 +160,7 @@
     },
     {
       id: "duel",
-      label: "compare a rewrite of this paragraph",
+      label: "paragraph duel",
       hint: "⌘D",
       run: () => app.openDuel(),
     },
