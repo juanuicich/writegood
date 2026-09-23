@@ -158,25 +158,11 @@ export async function runPasses(
     let unread: string | null = null;
 
     // The questions this pass asks, each with the key of its answer.
-    const fp = await fingerprint({
-      system,
-      builder: buildPrompt(pass, "", pass.scope === "paragraph" ? "" : null),
-      scope: pass.scope,
-      provider: name,
-      model: resolved.provider.model,
-      thinking: resolved.provider.thinking,
-      verifier: verified ? `${VERIFY_SYSTEM}\n${buildVerifyPrompt("", "", [])}` : null,
-    });
+    const keys = await passKeys(pass, name, resolved, system, paras, draft);
     const questions: Question[] =
       pass.scope === "paragraph"
-        ? await Promise.all(
-            paras.map(async (p, i) => ({
-              key: await paragraphKey(fp, p, i > 0 ? paras[i - 1]! : null),
-              chunk: p,
-              window: windowOf(wins, i),
-            })),
-          )
-        : [{ key: await documentKey(fp, draft), chunk: null, window: null }];
+        ? paras.map((p, i) => ({ key: keys[i]!, chunk: p, window: windowOf(wins, i) }))
+        : [{ key: keys[0]!, chunk: null, window: null }];
 
     // Skip what is already answered, and ask a repeated question once.
     const saved = options.fresh ? new Set<string>() : new Set(await store.reviewedKeys(docId, pass.slug));
@@ -305,9 +291,35 @@ export async function runPasses(
   return passes.map((p) => results.get(p)!);
 }
 
+/** The keys of the answers a pass gives for a draft (SPEC §8.3): one per
+ *  paragraph, in order, for a paragraph-scope pass, or one for the whole
+ *  draft. The runner and the review-mode markers (SPEC §12.4) both call
+ *  this, so they compute the same keys. `provider` is the provider's name,
+ *  and `resolved` is the provider as the pass uses it, after `withPass`. */
+export async function passKeys(
+  pass: Pass,
+  provider: string,
+  resolved: Resolved,
+  system: string,
+  paras: string[],
+  draft: string,
+): Promise<string[]> {
+  const fp = await fingerprint({
+    system,
+    builder: buildPrompt(pass, "", pass.scope === "paragraph" ? "" : null),
+    scope: pass.scope,
+    provider,
+    model: resolved.provider.model,
+    thinking: resolved.provider.thinking,
+    verifier: verifies(resolved) ? `${VERIFY_SYSTEM}\n${buildVerifyPrompt("", "", [])}` : null,
+  });
+  if (pass.scope !== "paragraph") return [await documentKey(fp, draft)];
+  return Promise.all(paras.map((p, i) => paragraphKey(fp, p, i > 0 ? paras[i - 1]! : null)));
+}
+
 /** The provider as this pass uses it: the pass's thinking and ceiling win
  *  over the provider's (SPEC §8.1). */
-function withPass(resolved: Resolved, pass: Pass): Resolved {
+export function withPass(resolved: Resolved, pass: Pass): Resolved {
   const provider = {
     ...resolved.provider,
     thinking: pass.thinking ?? resolved.provider.thinking ?? null,

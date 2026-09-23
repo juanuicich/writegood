@@ -130,6 +130,27 @@ function resolveAnchors(text: string, selectors: { id: number; quote: string }[]
   });
 }
 
+/** The saved-answer keys a pass has for the open draft (SPEC §8.3), so review
+ *  mode marks some paragraphs as not checked (SPEC §12.4). The keys are the
+ *  app's own, computed from the text in the editor. Buried verbs has no
+ *  answer for the title or the second paragraph, so those two carry a
+ *  marker. The modules load on first use, because they import this one. */
+async function reviewed(slug: string): Promise<string[]> {
+  const { app } = await import("../../src/lib/state.svelte");
+  const { paragraphs } = await import("../../src/lib/passes/parse");
+  const { preamble } = await import("../../src/lib/passes/schema");
+  const { passKeys, withPass } = await import("../../src/lib/passes/run");
+  const { resolve } = await import("../../src/lib/providers");
+  const config = app.config;
+  const pass = app.passes.find((p) => p.slug === slug);
+  if (!config || !pass) return [];
+  const draft = app.plainText();
+  const name = config.defaultProvider;
+  const resolved = withPass(resolve(config, name), pass);
+  const keys = await passKeys(pass, name, resolved, preamble(config.rules), paragraphs(draft), draft);
+  return slug === "nominalization" ? keys.filter((_, i) => i !== 0 && i !== 2) : keys;
+}
+
 export async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<unknown> {
   switch (cmd) {
     case "config_load":
@@ -164,6 +185,8 @@ export async function invoke(cmd: string, args: Record<string, unknown> = {}): P
       return [];
     case "findings_list":
       return FINDINGS;
+    case "findings_reviewed":
+      return reviewed(args.passSlug as string);
     case "findings_status":
     case "findings_clear":
     case "rev_flag":

@@ -1154,6 +1154,33 @@ margin, so nothing is lit while you write. The focus is kept, and the next
 `j` / `k` steps on from it. A click on a highlight or a step with `⌥↓` /
 `⌥↑` lights again while writing, and so does entering review mode.
 
+**Unchecked paragraphs.** In review mode a grey dot in the left gutter marks
+each paragraph that is not checked. A paragraph is not checked when at least
+one enabled paragraph-scope pass has no saved answer for its current key
+(§8.3). This is the paragraph the next run would ask about: one edited since
+the last run, or the one after it. The rules:
+
+- The markers show only in review mode. Returning to writing removes them.
+- The app marks the paragraphs that are not checked, not the checked ones.
+  After a run nearly every paragraph is checked, so the exception carries the
+  information.
+- Before the first run there are no markers. If no enabled paragraph-scope
+  pass has any saved answer for the document, every paragraph would carry
+  one. Entering review mode then says "no passes run yet" in the status line.
+- Document-scope passes get no markers. Their one key covers the whole draft,
+  so any edit unchecks every paragraph.
+- The keys are the runner's own. `passKeys` in `run.ts` computes them for
+  both, with the provider the session override selects.
+- The markers are computed on entering review mode, and again when a run
+  ends in review mode. The computation is async. A result that arrives after
+  the mode or the text has changed is discarded.
+
+The dot is 4px at the base text size, and scales with ⌘+ and ⌘-. It sits
+where the top of the focus bar would sit, level with the paragraph's first
+line. It has no text, no hover and no click. Its colour is `--ink-faint`,
+the grey of the status bar. The accent means "you are here", and the
+tertiary colour means "unsaved", so neither fits.
+
 Always available:
 
 | Key | Action |
@@ -1436,6 +1463,10 @@ The first set of tests covers:
 - **Rerun.** A second run replaces the first run's notes, so the margin holds
   one note per finding. `⌃⌘S` hides the margin and leaves the underlines.
   `⌃⌘S` shows it again, and so does entering review mode.
+- **Unchecked paragraphs.** Before a run, review mode shows no markers and
+  says "no passes run yet". After a run it shows none. An edit to one
+  paragraph marks that paragraph and the one after it. Returning to writing
+  removes the markers.
 - **Duel.** `⌘D` opens the duel. A typed rewrite goes to the judge on `⌘R`,
   and the result names the version the judge picked, whichever side the
   shuffle put it on.

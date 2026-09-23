@@ -574,3 +574,24 @@ draft, so any edit sends it again, and it is the slowest call.
 the reference scores say nothing about windows. Measuring needs a long draft
 with reference findings.
 
+
+## 2026-09-23 — markers for unchecked paragraphs
+
+**DECISION — review mode marks the paragraphs that are not checked.** A
+paragraph is not checked when an enabled paragraph-scope pass has no saved
+answer for its current key. After a run most paragraphs are checked, so the
+app marks the exception. The marker is a grey dot in the left gutter,
+level with the first line. It shows only in review mode.
+
+**DECISION — the runner and the markers share one key function.**
+`passKeys` in `run.ts` computes a pass's fingerprint and keys. The markers
+call it with the session's provider override, as the runner does, so the two
+cannot disagree about which paragraphs have answers.
+
+**ASSUMPTION — a pass whose provider does not resolve has no answers.** The
+markers leave such a pass out. With no paragraph-scope pass enabled, there
+are no markers and no status message.
+
+**CHANGED — the browser fixtures return saved-answer keys.** `mock-core.ts`
+computes the app's own keys for the open draft and leaves out two
+paragraphs, so `?show=review` shows two markers.

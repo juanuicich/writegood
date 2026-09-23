@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { app } from "./lib/state.svelte";
   import Editor from "./lib/editor/Editor.svelte";
   import FindBar from "./lib/editor/FindBar.svelte";
@@ -10,6 +10,8 @@
   import Help from "./lib/help/Help.svelte";
   import { isHelpKey } from "./lib/help/keys";
   import { runPasses, summarise } from "./lib/passes/run";
+  import { uncheckedParagraphs } from "./lib/passes/unchecked";
+  import { paragraphBlocks, setUnchecked } from "./lib/editor/unchecked";
   import { cfg, log, onMenuCommand, shell, store } from "./lib/ipc";
   import { label } from "./lib/usage";
   import { BASE_SIZE, nextSize, otherTheme } from "./lib/appearance";
@@ -115,7 +117,42 @@
         app.progress = null;
       }
     });
+    if (app.mode === "review") void markUnchecked(false);
   }
+
+  /** Bumped on every call of markUnchecked, so a slower, older call cannot
+   *  draw over a newer one. */
+  let marking = 0;
+
+  /** Review mode marks the paragraphs that are not checked (SPEC §12.4).
+   *  Outside review mode, and before any pass has run, there are no
+   *  markers. `entering` says whether review mode has just started; only
+   *  then does the status line say that no pass has run. */
+  async function markUnchecked(entering: boolean) {
+    const seq = ++marking;
+    const editor = app.editor;
+    if (!editor) return;
+    if (app.mode !== "review" || !app.doc) return setUnchecked(editor, []);
+    const doc = editor.state.doc;
+    const index = app.index();
+    try {
+      const found = await uncheckedParagraphs(app.passes, override, index.text);
+      // The keys were computed for this text in this mode. If either has
+      // changed since, the result is stale.
+      if (seq !== marking || app.mode !== "review" || app.editor !== editor || editor.state.doc !== doc) return;
+      if (found === null && entering) app.say("no passes run yet");
+      const blocks = paragraphBlocks(doc, index);
+      setUnchecked(editor, (found ?? []).map((i) => blocks[i]!));
+    } catch (e) {
+      void log.write("error", `unchecked paragraphs: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  // Entering review mode draws the markers; leaving it removes them.
+  $effect(() => {
+    const mode = app.mode;
+    untrack(() => void markUnchecked(mode === "review"));
+  });
 
   /** ⌘+ and ⌘-: the whole window's text, and ⌘0 back to the base size, saved so the next launch keeps it
    *  (SPEC §12.1). */

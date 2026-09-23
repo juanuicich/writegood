@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { NewFinding, Pass } from '../ipc'
-import { arrayShape, buildPrompt, extractArray, paragraphs, parseFindings, readFindings } from './parse'
+import { arrayShape, buildPrompt, extractArray, paragraphs, paragraphStarts, parseFindings, readFindings } from './parse'
 
 /** One well-formed finding, as a model would write it. */
 const good = {
@@ -400,5 +400,31 @@ describe('paragraphs', () => {
 
 	test('a whitespace only string gives no paragraphs', () => {
 		expect(paragraphs('   \n \n  ')).toEqual([])
+	})
+})
+
+describe('paragraphStarts', () => {
+	/** Each start, read as code points, begins the paragraph `paragraphs` gives. */
+	const agrees = (text: string) => {
+		const cps = Array.from(text)
+		const paras = paragraphs(text)
+		const starts = paragraphStarts(text)
+		expect(starts).toHaveLength(paras.length)
+		paras.forEach((p, i) => expect(cps.slice(starts[i]!, starts[i]! + Array.from(p).length).join('')).toBe(p))
+	}
+
+	test('counts code points, not UTF-16 units', () => {
+		expect(paragraphStarts('🦊 fox\n\nhen')).toEqual([0, 7])
+		agrees('🦊 fox\n\nhen')
+	})
+
+	test('skips the whitespace that paragraphs trims', () => {
+		expect(paragraphStarts('  one  \n\n\ttwo\t')).toEqual([2, 10])
+		agrees('  one  \n\n\ttwo\t')
+	})
+
+	test('skips empty parts and runs of blank lines', () => {
+		agrees('\n\none\n\n\n\n 😀 \n\ntwo 𝒳\n\n   \n\nthree')
+		expect(paragraphStarts('   \n \n  ')).toEqual([])
 	})
 })

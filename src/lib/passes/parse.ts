@@ -16,6 +16,37 @@ export function paragraphs(text: string): string[] {
     .filter((p) => p.length > 0);
 }
 
+/** Where each paragraph that `paragraphs` returns starts in `text`: the
+ *  offset of its first character, in code points, not UTF-16 code units.
+ *  The review-mode markers use it to find a paragraph's block in the editor
+ *  (SPEC §12.4). It splits and trims exactly as `paragraphs` does. */
+export function paragraphStarts(text: string): number[] {
+  // Offsets in UTF-16 code units first, as the string methods count.
+  const units: number[] = [];
+  const add = (part: string, at: number) => {
+    if (part.trim().length > 0) units.push(at + part.length - part.trimStart().length);
+  };
+  let from = 0;
+  for (const m of text.matchAll(/\n{2,}/g)) {
+    add(text.slice(from, m.index), from);
+    from = m.index + m[0].length;
+  }
+  add(text.slice(from), from);
+
+  // Then code points, in one walk over the text.
+  const starts: number[] = [];
+  let unit = 0;
+  let point = 0;
+  for (const target of units) {
+    while (unit < target) {
+      unit += text.codePointAt(unit)! > 0xffff ? 2 : 1;
+      point += 1;
+    }
+    starts.push(point);
+  }
+  return starts;
+}
+
 /** The draft comes first. Every call in a run then starts with the same
  *  tokens, the preamble and the draft, and a provider's prompt cache serves
  *  that prefix to every pass and every paragraph (SPEC §8.3). What differs

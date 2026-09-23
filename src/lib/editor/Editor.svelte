@@ -7,6 +7,7 @@
   import { Findings, setFindings, setFocus, type Mark } from "./findings";
   import { ActiveParagraph } from "./paragraph";
   import { Search } from "./search";
+  import { Unchecked } from "./unchecked";
 
   let host: HTMLDivElement;
   let editor: Editor | null = null;
@@ -21,6 +22,7 @@
         Placeholder.configure({ placeholder: "Start writing good" }),
         Findings.configure({ onSelect: (ids) => app.selectInText(ids) }),
         ActiveParagraph,
+        Unchecked,
         Search.configure({ top: findBarDepth }),
       ],
       content: "",

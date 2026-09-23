@@ -54,6 +54,8 @@ Esc leaves the text and enters review mode. The draft dims and single keys act o
 
 If the find bar is open, Esc closes it first. If you selected text, Esc clears the selection first. Press Esc again to enter review mode.
 
+In review mode, a grey dot in the left margin marks each paragraph that is not checked. The next run asks about these paragraphs: the ones you edited since the last run, and the paragraph after each. Before the first run there are no dots.
+
 - `n` or `j`: next finding
 - `p` or `k`: previous finding
 - `x`: mark the finding addressed

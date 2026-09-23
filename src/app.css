@@ -286,6 +286,25 @@ input {
   pointer-events: none;
 }
 
+/* In review mode, a paragraph that is not checked carries a dot in the
+   margin, level with its first line, where the top of the bar would sit
+   (SPEC §12.4). The dot is centred on the bar's line. Sizes are in rem, so
+   ⌘+ and ⌘- scale the dot with the body text, and a heading's larger em
+   does not. ::after belongs to the bar, so the dot uses ::before; the
+   placeholder's ::before is only on an empty block, which is never marked. */
+.ProseMirror .unchecked { position: relative; }
+.ProseMirror .unchecked::before {
+  content: "";
+  position: absolute;
+  top: calc(0.5lh - 0.125rem);
+  left: calc(-1.4rem - 0.125rem + 0.5px);
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  pointer-events: none;
+}
+
 /* --- findings in the text --------------------------------------------
    Severity is carried by the weight of the underline. In light, a high
    finding also takes the primary colour, one rank above the rest. */
