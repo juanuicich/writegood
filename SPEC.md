@@ -1136,8 +1136,11 @@ Each test file launches its own copy of the app with:
   never connects to a dev build that is already running on 4445.
 - **No focus.** `WRITEGOOD_BACKGROUND` makes a debug build launch under the
   Prohibited activation policy, which macOS cannot activate, and switch to
-  Accessory once the window exists. The window opens behind the author's
-  own, with no Dock icon, and never takes the focus.
+  Accessory once the window exists. The window has no Dock icon and never
+  takes the focus. It floats above the author's windows: WebKit treats a
+  covered page as hidden and stops animation frames, and TipTap focuses the
+  editor in one. WebKit's private `_setWindowOcclusionDetectionEnabled:` was
+  tried and did not keep a covered page visible.
 - **A fake model.** The test process serves an OpenAI-compatible endpoint on
   `127.0.0.1`. The config points an `openai-compatible` provider at it, so a
   pass goes through the real Rust client, `genai`, the usage count and the

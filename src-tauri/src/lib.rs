@@ -209,11 +209,17 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // The launch could not activate the app, so the window opened
-            // behind whatever was in front. Accessory lets it be shown and
-            // driven without a Dock icon, and it still never takes the focus.
+            // without the focus. Accessory lets it be shown and driven without
+            // a Dock icon, and it still never takes the focus. A window behind
+            // others is covered, and WebKit treats a covered page as hidden:
+            // it stops animation frames, and TipTap focuses the editor in one.
+            // So the window floats above the others, without the focus.
             #[cfg(all(debug_assertions, target_os = "macos"))]
             if background() {
                 app.handle().set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+                if let Some(window) = app.get_webview_window("main") {
+                    window.set_always_on_top(true)?;
+                }
             }
             config::ensure_scaffold()?;
             let conn = db::open(&config::db_path())?;
