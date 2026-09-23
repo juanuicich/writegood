@@ -24,10 +24,11 @@ const FILES: Record<string, string> = {
   length: "09-length.md",
 };
 
-export function ruleText(slug: string): string {
+/** `set` names another folder in bench/rules with the same file names. */
+export function ruleText(slug: string, set = RULE_SET): string {
   const file = FILES[slug];
   if (!file) throw new Error(`no rule file known for pass "${slug}"`);
-  const text = readFileSync(join(RULES, RULE_SET, file), "utf8");
+  const text = readFileSync(join(RULES, set, file), "utf8");
   const parts = text.split(/^\+\+\+$/m);
   return parts.slice(2).join("+++").trim();
 }

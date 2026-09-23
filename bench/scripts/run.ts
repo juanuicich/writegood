@@ -9,7 +9,7 @@
  *                                      openrouter: vendor/model, as OpenRouter lists it
  *  --or-provider SLUG                  openrouter: the only upstream provider allowed.
  *                                      Default: the model's vendor (deepseek/… → deepseek)
- *  --thinking off|none|on|low|medium|high|max|default   default off
+ *  --thinking off|none|on|minimal|low|medium|high|max|default   default off
  *                                      openrouter: off sends {enabled: false}, on sends
  *                                      {enabled: true}, none and the rest send {effort}
  *  --rules NAME                        a folder in bench/rules. Default 2026-09-23-rewrite
@@ -23,6 +23,8 @@
  *  --scope native|document             document: every pass sends the whole draft once
  *  --drafts a.md,b.md                  names in bench/corpus. Default: the four scored drafts
  *  --limit N                           calls in flight per draft. Default 32, as the app
+ *  --serial SECS                       run the drafts one at a time, SECS apart, as a writer
+ *                                      would. Default: all drafts at once
  *  --ceiling SECS                      per call, unless the rule file sets timeout_secs. Default 100
  *  --votes N --need K                  verifier votes and keeps needed. Default 3 and 2, as the app
  *  --label NAME                        required; the file is results/<date>-<label>.json
@@ -47,7 +49,7 @@ import {
 } from "./lib";
 import { describe, passesRun, score } from "./score";
 
-const LEVELS = ["off", "none", "on", "low", "medium", "high", "max", "default"];
+const LEVELS = ["off", "none", "on", "minimal", "low", "medium", "high", "max", "default"];
 const providerName = flag("--provider", "deepseek")!;
 const model = flag("--model", providerName === "deepseek" ? "deepseek-flash" : undefined);
 const thinking = flag("--thinking", "off") as Thinking;
@@ -61,6 +63,7 @@ const need = Number(flag("--need", "2"));
 const label = flag("--label");
 const note = flag("--note");
 const drafts = (flag("--drafts") ?? SCORED.join(",")).split(",");
+const serial = flag("--serial");
 const date = new Date().toISOString().slice(0, 10);
 
 if (!model) throw new Error("--model is required");
@@ -206,7 +209,14 @@ async function runDraft(name: string) {
   return { record, calls, findings, replies };
 }
 
-const runs = await Promise.all(drafts.map(runDraft));
+// All drafts at once, or one at a time with a pause. A provider with a
+// requests-per-minute limit needs the pause.
+const runs: Awaited<ReturnType<typeof runDraft>>[] = [];
+if (serial === undefined) runs.push(...(await Promise.all(drafts.map(runDraft))));
+else for (const [i, d] of drafts.entries()) {
+  if (i > 0) await Bun.sleep(Number(serial) * 1000);
+  runs.push(await runDraft(d));
+}
 const calls = runs.flatMap((r) => r.calls);
 const findings = runs.flatMap((r) => r.findings);
 const result: Result = {
@@ -216,7 +226,7 @@ const result: Result = {
   source: "bench/scripts/run.ts",
   config: {
     provider: providerName, orProvider, model, thinking, thinkingPasses, pipeline, rules: rulesName, scope,
-    limit, votes: pipeline === "plain" ? null : votes, need: pipeline === "plain" ? null : need, ceilingSecs: ceiling, drafts,
+    limit, ...(serial !== undefined ? { serialSecs: Number(serial) } : {}), votes: pipeline === "plain" ? null : votes, need: pipeline === "plain" ? null : need, ceilingSecs: ceiling, drafts,
     ...(providerName === "openrouter" ? { cacheControl } : {}),
     ...(note ? { note } : {}),
   },

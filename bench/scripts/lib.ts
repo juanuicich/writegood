@@ -50,7 +50,7 @@ export const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 // ---------------------------------------------------------------- rules
 
-export type Thinking = "off" | "none" | "on" | "low" | "medium" | "high" | "max" | "default";
+export type Thinking = "off" | "none" | "on" | "minimal" | "low" | "medium" | "high" | "max" | "default";
 
 /** A level that asks for no reasoning. */
 export const quick = (t: Thinking) => t === "off" || t === "none";
@@ -345,6 +345,8 @@ export interface Result {
     rules: string;
     scope: "native" | "document";
     limit: number;
+    /** Seconds between drafts when they ran one at a time. */
+    serialSecs?: number;
     votes: number | null;
     need: number | null;
     ceilingSecs: number;
