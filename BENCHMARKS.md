@@ -317,6 +317,11 @@ Per pass, on the four drafts, two runs each:
 
 Sources: `2026-09-23-jev-nolist.md` and `2026-09-23-followup.md`.
 
+The two sentence-openings rows do not measure a rule-text-only method. The
+script `run-sentence-openings.ts` puts rule logic in code: questions that name
+the two problems, counting of runs by pairs, and a count of words before the
+subject.
+
 - Method 2 quotes exactly the reference words for all 18 filler-word hits.
   Method 1 always quotes the whole sentence, which the scorer accepts but a
   writer would not want.
@@ -334,8 +339,10 @@ Sources: `2026-09-23-jev-nolist.md` and `2026-09-23-followup.md`.
   from one run to the next. Every keep threshold here is 0.45 or 0.5. The
   thresholds are a compromise and were not tuned.
 
-Recommendation. Jev is promising for filler words with Method 2, and for
-sentence openings. Keep the LLM for nominalization and missing actor for now.
+Recommendation. Jev is promising for filler words with Method 2. Keep the
+LLM for sentence openings, nominalization and missing actor for now. The
+method `across` in SPEC §8.4 is for sentence openings, and it is not yet
+measured.
 Jev is not in the app yet. A spec is being written.
 
 The list-based code in `bench/scripts/jev/` scored higher on some passes and
