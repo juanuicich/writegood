@@ -14,7 +14,9 @@
  *                                      Default: the model's vendor (deepseek/… → deepseek)
  *  --thinking off|none|on|low|medium|high|max|default   default off
  *                                      openrouter: off sends {enabled: false}, on sends
- *                                      {enabled: true}, none and the rest send {effort}
+ *                                      {enabled: true}, none and the rest send {effort}.
+ *                                      none and on are OpenRouter's; a level the provider
+ *                                      cannot take stops the run before any call
  *  --rules NAME                        a folder in bench/rules. Default 2026-09-23-rewrite
  *  --pipeline plain|fast|hybrid        default hybrid
  *      plain   every pass at --thinking; findings stored as returned
@@ -45,7 +47,7 @@ import { limiter } from "../../src/lib/passes/limit";
 import { windowOf, windows } from "../../src/lib/passes/windows";
 import type { NewFinding, Pass } from "../../src/lib/ipc";
 import {
-  agy, deepseek, draftPath, quick, firstParty, flag, loadRules, openrouter, quantiles, RESULTS, SCORED, words,
+  agy, deepseek, draftPath, quick, firstParty, flag, loadRules, openrouter, quantiles, refuseLevels, RESULTS, SCORED, words,
   type CallRecord, type DraftRecord, type Finding, type Provider, type Result, type Thinking,
 } from "./lib";
 import { describe, passesRun, score } from "./score";
@@ -86,6 +88,9 @@ const orProvider = providerName === "openrouter" ? flag("--or-provider") ?? firs
 /** The thinking level of each pass, and whether it is verified. */
 const levelOf = (p: Pass): Thinking => (pipeline === "hybrid" && p.thinking ? (p.thinking as Thinking) : thinking);
 const verifiedOf = (p: Pass) => pipeline === "fast" || (pipeline === "hybrid" && quick(levelOf(p)));
+// A level the provider cannot take stops the run before any call.
+const refused = refuseLevels(providerName as Provider["name"], passes.map(levelOf));
+if (refused) throw new Error(refused);
 const thinkingPasses = Object.fromEntries(passes.filter((p) => levelOf(p) !== thinking).map((p) => [p.slug, levelOf(p)]));
 
 console.log(

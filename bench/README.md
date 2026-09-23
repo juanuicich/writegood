@@ -171,6 +171,8 @@ bun bench/scripts/run.ts --provider openrouter --model openai/gpt-5-mini \
   `{"effort": <level>}`. `default` sends nothing. `none` sends
   `{"effort": "none"}`, which turns reasoning off on OpenAI and Inception
   models. `on` sends `{"enabled": true}`, for models with no effort levels.
+  `none` and `on` are OpenRouter's. With DeepSeek or agy, `run.ts` refuses
+  them before any call.
 - `--cache-control` marks the system prompt and the shared head of each
   prompt with `cache_control` breakpoints. Alibaba caches only what a
   breakpoint marks.

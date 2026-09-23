@@ -53,6 +53,23 @@ export const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 export type Thinking = "off" | "none" | "on" | "low" | "medium" | "high" | "max" | "default";
 
+/** The thinking levels each provider can take. `none` and `on` are
+ *  OpenRouter's. DeepSeek has an on and off switch and effort levels. agy
+ *  takes the app's levels, which its `thinking_names` map to a model. */
+export const LEVELS_FOR: Record<Provider["name"], Thinking[]> = {
+  openrouter: ["off", "none", "on", "low", "medium", "high", "max", "default"],
+  deepseek: ["off", "low", "medium", "high", "max", "default"],
+  agy: ["off", "low", "medium", "high", "max", "default"],
+};
+
+/** An error that names the levels a provider cannot take, or null. */
+export function refuseLevels(provider: Provider["name"], levels: Iterable<Thinking>): string | null {
+  const allowed = LEVELS_FOR[provider];
+  const bad = [...new Set(levels)].filter((l) => !allowed.includes(l));
+  if (!bad.length) return null;
+  return `${provider} cannot take thinking ${bad.map((l) => `"${l}"`).join(", ")}; it takes ${allowed.join(", ")}`;
+}
+
 /** A level that asks for no reasoning. */
 export const quick = (t: Thinking) => t === "off" || t === "none";
 
