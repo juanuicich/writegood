@@ -7,6 +7,7 @@ pub mod db;
 pub mod diff;
 pub mod documents;
 pub mod error;
+pub mod jev;
 pub mod llm;
 pub mod log;
 #[cfg(target_os = "macos")]
@@ -293,6 +294,7 @@ pub fn run() {
             secrets::key_resolve,
             runner::cli_run,
             llm::llm_chat,
+            jev::jev_ask,
             doc_usage,
             documents::doc_pick_open,
             documents::doc_pick_save,

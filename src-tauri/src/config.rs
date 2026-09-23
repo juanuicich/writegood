@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
+use crate::prices::Rates;
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -253,11 +254,23 @@ pub struct Provider {
     /// the command has another name for it or lacks it (SPEC §9.3).
     #[serde(default, alias = "thinking_names")]
     pub thinking_names: BTreeMap<String, String>,
+    /// A jev provider: the keep threshold for its passes. A pass's own
+    /// `[jev] keep` wins over it (SPEC §8.4).
+    #[serde(default)]
+    pub keep: Option<f64>,
+    /// US dollars per million tokens, for a model the price catalog does
+    /// not list. The catalog wins when it has a price (SPEC §9.4).
+    #[serde(default)]
+    pub price: Option<Rates>,
 }
 
 fn default_timeout() -> u64 {
     180
 }
+
+/// A jev provider waits 60 seconds when `timeout_secs` is left out, the
+/// ceiling the benchmark used (SPEC §9.5). Every other kind waits 180.
+const JEV_TIMEOUT: u64 = 60;
 
 impl Default for Provider {
     fn default() -> Self {
@@ -276,6 +289,8 @@ impl Default for Provider {
             catalog: None,
             thinking: None,
             thinking_names: BTreeMap::new(),
+            keep: None,
+            price: None,
         }
     }
 }
@@ -283,6 +298,7 @@ impl Default for Provider {
 /// Serialisation-only mirrors that write snake_case keys back to `config.toml`.
 mod wire {
     use super::{Appearance, Config, Provider, Rules};
+    use crate::prices::Rates;
     use serde::Serialize;
     use std::collections::BTreeMap;
 
@@ -337,11 +353,34 @@ mod wire {
         pub catalog: Option<&'a str>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub thinking: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub keep: Option<f64>,
         // Last, because TOML writes a table after the plain keys.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub price: Option<WRates>,
         #[serde(skip_serializing_if = "BTreeMap::is_empty")]
         pub files: BTreeMap<&'a str, &'a str>,
         #[serde(skip_serializing_if = "BTreeMap::is_empty")]
         pub thinking_names: BTreeMap<&'a str, &'a str>,
+    }
+
+    #[derive(Serialize)]
+    pub struct WRates {
+        pub input: f64,
+        pub output: f64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub cache_read: Option<f64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub cache_write: Option<f64>,
+    }
+
+    fn rates(r: &Rates) -> WRates {
+        WRates {
+            input: r.input,
+            output: r.output,
+            cache_read: r.cache_read,
+            cache_write: r.cache_write,
+        }
     }
 
     pub fn borrow(cfg: &Config) -> WConfig<'_> {
@@ -391,6 +430,8 @@ mod wire {
             timeout_secs: p.timeout_secs,
             catalog: p.catalog.as_deref(),
             thinking: p.thinking.as_deref(),
+            keep: p.keep,
+            price: p.price.as_ref().map(rates),
             files: p
                 .files
                 .iter()
@@ -452,6 +493,17 @@ key_ref = "keychain:writegood/anthropic"
 # kind     = "openai-compatible"
 # base_url = "http://localhost:11434/v1"
 # model    = "qwen3:32b"
+
+# TypeSafe's Jev, a decision model. It runs a pass that has a [jev] table,
+# such as filler words, when the pass names it. Pin a version, not jev-latest.
+# [providers.jev]
+# kind          = "jev"
+# model         = "jev-1.13.0"
+# key_ref       = "env:TYPESAFE_API_KEY"
+# keep          = 0.45          # a pass's [jev] keep wins over this
+# max_in_flight = 8
+# timeout_secs  = 60
+# price         = { input = 0.042, output = 0 }  # per million tokens, when models.dev has none
 
 # [providers.claude-cli]
 # kind    = "cli"
@@ -575,7 +627,25 @@ pub fn load_config() -> AppResult<Config> {
 fn load_config_in(home: &Path) -> AppResult<Config> {
     ensure_scaffold_in(home)?;
     let text = std::fs::read_to_string(home.join("config.toml"))?;
-    Ok(toml::from_str(&text)?)
+    parse_config(&text)
+}
+
+/// Read `config.toml`. A default that depends on the kind is filled in
+/// here, because serde's defaults cannot see the other fields.
+fn parse_config(text: &str) -> AppResult<Config> {
+    let mut cfg: Config = toml::from_str(text)?;
+    let raw: toml::Table = toml::from_str(text)?;
+    let tables = raw.get("providers").and_then(toml::Value::as_table);
+    for (name, provider) in cfg.providers.iter_mut() {
+        let set = tables
+            .and_then(|t| t.get(name))
+            .and_then(toml::Value::as_table)
+            .is_some_and(|t| t.contains_key("timeout_secs"));
+        if provider.kind == "jev" && !set {
+            provider.timeout_secs = JEV_TIMEOUT;
+        }
+    }
+    Ok(cfg)
 }
 
 pub fn save_config(cfg: &Config) -> AppResult<()> {
@@ -621,6 +691,13 @@ fn merge(old: &mut toml_edit::Table, new: &toml_edit::Table) {
                 *o = n.clone();
                 *o.decor_mut() = decor;
             }
+            // The author wrote an inline table, such as `price = { ... }`.
+            // It stays inline, so the save adds no new section.
+            (Some(Item::Value(o)), Item::Table(n)) if o.is_inline_table() => {
+                let decor = o.decor().clone();
+                *o = toml_edit::Value::InlineTable(n.clone().into_inline_table());
+                *o.decor_mut() = decor;
+            }
             _ => {
                 old.insert(key, item.clone());
             }
@@ -647,6 +724,24 @@ pub struct Pass {
     pub thinking: Option<String>,
     /// Overrides the provider's ceiling for this pass.
     pub timeout_secs: Option<u64>,
+    /// The `[jev]` table. Only a jev provider reads it (SPEC §8.4).
+    pub jev: Option<JevSettings>,
+}
+
+/// A pass's `[jev]` table, as written. The frontend applies the defaults,
+/// because it builds the questions and the fingerprint (SPEC §8.4).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct JevSettings {
+    /// `sentence` or `across`.
+    #[serde(default)]
+    pub method: Option<String>,
+    /// The keep threshold for a Noul answer.
+    #[serde(default)]
+    pub keep: Option<f64>,
+    /// The note on every finding of the pass. Jev writes no text.
+    #[serde(default)]
+    pub note: Option<String>,
 }
 
 /// The frontmatter as it appears in the file. TOML is snake_case throughout,
@@ -662,6 +757,7 @@ struct Frontmatter {
     enabled: bool,
     thinking: Option<String>,
     timeout_secs: Option<u64>,
+    jev: Option<JevSettings>,
 }
 
 fn default_scope() -> String {
@@ -757,6 +853,7 @@ fn parse_pass(path: &Path, text: &str) -> AppResult<Pass> {
         path: path.to_string_lossy().into_owned(),
         thinking: fm.thinking,
         timeout_secs: fm.timeout_secs,
+        jev: fm.jev,
     })
 }
 
@@ -1017,6 +1114,81 @@ timeout_secs = 90
     }
 
     #[test]
+    fn a_jev_provider_reads_its_keep_and_price_and_waits_60_seconds() {
+        let text = r#"
+[providers.jev]
+kind          = "jev"
+model         = "jev-1.13.0"
+key_ref       = "env:TYPESAFE_API_KEY"
+keep          = 0.5
+max_in_flight = 8
+price         = { input = 0.042, output = 0 }
+
+[providers.slow-jev]
+kind         = "jev"
+model        = "jev-1.13.0"
+timeout_secs = 90
+"#;
+        let cfg = parse_config(text).unwrap();
+        let jev = &cfg.providers["jev"];
+        assert_eq!(jev.keep, Some(0.5));
+        assert_eq!(jev.max_in_flight, Some(8));
+        let price = jev.price.unwrap();
+        assert_eq!((price.input, price.output), (0.042, 0.0));
+        assert_eq!(price.cache_read, None);
+        assert_eq!(jev.timeout_secs, 60);
+        // A ceiling the author sets stays as set.
+        assert_eq!(cfg.providers["slow-jev"].timeout_secs, 90);
+    }
+
+    #[test]
+    fn the_commented_jev_example_parses_once_uncommented() {
+        let start = DEFAULT_CONFIG.find("# [providers.jev]").unwrap();
+        let end = DEFAULT_CONFIG[start..].find("\n\n").unwrap() + start;
+        let block: String = DEFAULT_CONFIG[start..end]
+            .lines()
+            .map(|l| l.strip_prefix("# ").unwrap_or(l))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let cfg = parse_config(&block).unwrap();
+        let jev = &cfg.providers["jev"];
+        assert_eq!(jev.kind, "jev");
+        // A version, not the alias that moves (SPEC §9.5).
+        assert_eq!(jev.model.as_deref(), Some("jev-1.13.0"));
+        assert_eq!(jev.key_ref.as_deref(), Some("env:TYPESAFE_API_KEY"));
+        assert_eq!(jev.keep, Some(0.45));
+        assert_eq!(jev.timeout_secs, 60);
+        assert_eq!(jev.price.unwrap().input, 0.042);
+    }
+
+    #[test]
+    fn a_save_keeps_an_inline_price_inline() {
+        let home = TempHome::new();
+        let written = "default_provider = \"jev\"\n\
+\n\
+[providers.jev]\n\
+kind  = \"jev\"\n\
+model = \"jev-1.13.0\"\n\
+price = { input = 0.042, output = 0 }  # from the Models page\n";
+        std::fs::create_dir_all(home.at()).unwrap();
+        std::fs::write(home.at().join("config.toml"), written).unwrap();
+
+        let mut cfg = load_config_in(home.at()).unwrap();
+        cfg.appearance.theme = "dark".into();
+        save_config_in(home.at(), &cfg).unwrap();
+
+        let text = std::fs::read_to_string(home.at().join("config.toml")).unwrap();
+        assert!(
+            text.contains("price = { input = 0.042, output = 0"),
+            "{text}"
+        );
+        assert!(text.contains("# from the Models page"), "{text}");
+        assert!(!text.contains("[providers.jev.price]"), "{text}");
+        let back = load_config_in(home.at()).unwrap();
+        assert_eq!(back.providers["jev"].price.unwrap().input, 0.042);
+    }
+
+    #[test]
     fn saving_writes_snake_case_and_reloads() {
         let home = TempHome::new();
         ensure_scaffold_in(home.at()).unwrap();
@@ -1182,6 +1354,24 @@ key_ref = \"keychain:writegood/anthropic\"\n";
     }
 
     #[test]
+    fn a_pass_reads_its_jev_table() {
+        let text = "+++\nname = \"Filler\"\nprovider = \"jev\"\n\n[jev]\nmethod = \"sentence\"\nkeep = 0.5\nnote = \"Adds nothing.\"\n+++\nThe rule.";
+        let p = parse_pass(Path::new("04-filler-words.md"), text).unwrap();
+        let jev = p.jev.unwrap();
+        assert_eq!(jev.method.as_deref(), Some("sentence"));
+        assert_eq!(jev.keep, Some(0.5));
+        assert_eq!(jev.note.as_deref(), Some("Adds nothing."));
+        assert_eq!(p.prompt, "The rule.");
+
+        let plain = parse_pass(Path::new("x.md"), "+++\nname = \"X\"\n+++\nbody").unwrap();
+        assert!(plain.jev.is_none());
+
+        let typo = "+++\nname = \"X\"\n\n[jev]\nmehtod = \"sentence\"\n+++\nbody";
+        let err = parse_pass(Path::new("x.md"), typo).unwrap_err().to_string();
+        assert!(err.contains("mehtod"), "{err}");
+    }
+
+    #[test]
     fn a_disabled_pass_stays_disabled() {
         let text = "+++\nname = \"x\"\nenabled = false\n+++\nbody\n";
         let pass = parse_pass(Path::new("/tmp/01-x.md"), text).unwrap();
@@ -1300,6 +1490,20 @@ key_ref = \"keychain:writegood/anthropic\"\n";
             .map(|p| p.slug.as_str())
             .collect();
         assert_eq!(thinking, vec!["paragraph-order"]);
+        // Filler words carries a [jev] table and names no provider, because
+        // a new home has no TypeSafe key (SPEC §8.4).
+        let with_jev: Vec<&str> = passes
+            .iter()
+            .filter(|p| p.jev.is_some())
+            .map(|p| p.slug.as_str())
+            .collect();
+        assert_eq!(with_jev, vec!["filler-words"]);
+        let filler = passes.iter().find(|p| p.slug == "filler-words").unwrap();
+        let jev = filler.jev.as_ref().unwrap();
+        assert_eq!(jev.method.as_deref(), Some("sentence"));
+        assert_eq!(jev.keep, Some(0.5));
+        assert!(jev.note.is_some());
+        assert!(passes.iter().all(|p| p.provider.is_none()));
     }
 
     #[test]
