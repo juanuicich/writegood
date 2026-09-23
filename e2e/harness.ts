@@ -175,6 +175,9 @@ export function makeHome(modelUrl: string): string {
   mkdirSync(join(home, "documents"));
   mkdirSync(join(home, "passes"));
   writeFileSync(join(home, "documents", "committee.md"), DRAFT);
+  // The answer the open and save dialogs give (SPEC §6.3). The app starts on
+  // an untitled draft, and launch() opens the draft with ⌘O through this.
+  writeFileSync(join(home, "pick.txt"), join(home, "documents", "committee.md"));
   writeFileSync(join(home, "passes", "00-e2e.md"), PASS);
   writeFileSync(
     join(home, "config.toml"),
@@ -263,6 +266,7 @@ export async function launch(): Promise<App> {
     HOME: process.env.HOME ?? home,
     TMPDIR: process.env.TMPDIR ?? "/tmp",
     WRITEGOOD_HOME: home,
+    WRITEGOOD_PICK: join(home, "pick.txt"),
     WRITEGOOD_E2E_KEY: "fake",
     TAURI_WEBDRIVER_PORT: String(port),
   };
@@ -287,6 +291,9 @@ export async function launch(): Promise<App> {
     await waitFor("the WebDriver server", async () => (await fetch(`http://127.0.0.1:${port}/status`)).ok, 30_000);
     browser = await remote({ hostname: "127.0.0.1", port, capabilities: {}, logLevel: "error" });
     const b = browser;
+    // A fresh home has no recent document, so the app starts untitled.
+    await waitFor("the untitled draft", async () => (await statusText(b)).includes("untitled"), 30_000);
+    await b.keys([Key.Command, "o"]);
     await waitFor("the draft", async () => (await editorText(b)).includes(TITLE), 30_000);
   } catch (e) {
     const tail = log();
@@ -297,6 +304,11 @@ export async function launch(): Promise<App> {
 }
 
 // ------------------------------------------------------------------- helpers
+
+/** Set what the next open or save dialog answers. An empty answer cancels. */
+export function pick(app: App, path: string) {
+  writeFileSync(join(app.home, "pick.txt"), path);
+}
 
 export const editorText = (b: WebdriverIO.Browser) =>
   b.execute(() => document.querySelector(".ProseMirror")?.textContent ?? "");

@@ -2,21 +2,15 @@
 //! only keeps history and findings. Everything here is ordinary file IO, kept
 //! in Rust so the webview never touches the filesystem.
 
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Runtime, State};
+use tauri_plugin_dialog::DialogExt;
 
 use crate::config;
+use crate::db;
 use crate::error::{AppError, AppResult};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DocSummary {
-    pub path: String,
-    pub title: String,
-    /// Seconds since the epoch, for ordering. Zero when the platform will not say.
-    pub modified: u64,
-    pub words: usize,
-}
 
 /// The document's title: its first level-one heading, else the file name.
 pub fn title_of(text: &str, path: &Path) -> String {
@@ -32,10 +26,6 @@ pub fn title_of(text: &str, path: &Path) -> String {
     path.file_stem()
         .map(|s| s.to_string_lossy().replace(['-', '_'], " "))
         .unwrap_or_else(|| "Untitled".into())
-}
-
-pub fn word_count(text: &str) -> usize {
-    text.split_whitespace().filter(|w| w.chars().any(char::is_alphanumeric)).count()
 }
 
 /// A file name that will not surprise anyone later: lowercase, dashes, ASCII.
@@ -57,42 +47,6 @@ pub fn slugify(title: &str) -> String {
     } else {
         trimmed.chars().take(60).collect()
     }
-}
-
-fn is_markdown(path: &Path) -> bool {
-    matches!(
-        path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref(),
-        Some("md") | Some("markdown") | Some("mdown") | Some("txt")
-    )
-}
-
-pub fn list() -> AppResult<Vec<DocSummary>> {
-    config::ensure_scaffold()?;
-    let dir = config::documents_dir();
-    let mut out = Vec::new();
-    for entry in std::fs::read_dir(&dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_file() || !is_markdown(&path) {
-            continue;
-        }
-        let text = std::fs::read_to_string(&path).unwrap_or_default();
-        let modified = entry
-            .metadata()
-            .and_then(|m| m.modified())
-            .ok()
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        out.push(DocSummary {
-            title: title_of(&text, &path),
-            words: word_count(&text),
-            path: path.to_string_lossy().into_owned(),
-            modified,
-        });
-    }
-    out.sort_by(|a, b| b.modified.cmp(&a.modified).then_with(|| a.title.cmp(&b.title)));
-    Ok(out)
 }
 
 pub fn read(path: &str) -> AppResult<String> {
@@ -128,72 +82,209 @@ pub fn write(path: &str, text: &str) -> AppResult<()> {
     Ok(())
 }
 
-/// Create a new draft. Never overwrites: a clashing name gets a numeric suffix.
-pub fn create(title: &str) -> AppResult<String> {
-    config::ensure_scaffold()?;
-    let dir = config::documents_dir();
-    let stem = slugify(title);
-    let mut path = dir.join(format!("{stem}.md"));
-    let mut n = 2;
-    while path.exists() {
-        path = dir.join(format!("{stem}-{n}.md"));
-        n += 1;
+/// A path with no extension gets `.md` (SPEC §6.3).
+pub fn with_markdown_extension(path: &str) -> String {
+    if Path::new(path).extension().is_some() {
+        path.to_string()
+    } else {
+        format!("{path}.md")
     }
-    let body = format!("# {}\n\n", title.trim());
-    write(&path.to_string_lossy(), &body)?;
-    Ok(path.to_string_lossy().into_owned())
 }
 
-pub fn delete(path: &str) -> AppResult<()> {
-    std::fs::remove_file(path)?;
-    Ok(())
+/// Where a dialog starts: the open document's folder, else the documents
+/// folder.
+fn start_dir(from: Option<&str>) -> PathBuf {
+    from.and_then(|p| Path::new(p).parent())
+        .filter(|d| d.is_dir())
+        .map(Path::to_path_buf)
+        .unwrap_or_else(config::documents_dir)
 }
 
-pub fn rename(path: &str, new_title: &str) -> AppResult<String> {
-    let old = PathBuf::from(path);
-    let dir = old.parent().ok_or_else(|| AppError::invalid("no parent directory"))?;
-    let mut target = dir.join(format!("{}.md", slugify(new_title)));
-    let mut n = 2;
-    while target.exists() && target != old {
-        target = dir.join(format!("{}-{n}.md", slugify(new_title)));
-        n += 1;
+/// The recovery file of an untitled draft. Autosave writes here until the
+/// first save gives the draft a file of its own.
+pub fn recovery_path(id: i64) -> PathBuf {
+    config::untitled_dir().join(format!("{id}.md"))
+}
+
+/// Where a document's text lives now: its file, or its recovery file.
+fn text_path(doc: &db::Document) -> PathBuf {
+    doc.path.as_ref().map(PathBuf::from).unwrap_or_else(|| recovery_path(doc.id))
+}
+
+fn title_for(text: &str, path: Option<&str>) -> String {
+    title_of(text, Path::new(path.unwrap_or("untitled")))
+}
+
+/// A document and its text, as the editor loads it.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Opened {
+    pub doc: db::Document,
+    pub text: String,
+}
+
+/// One line of the recent list.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recent {
+    pub id: i64,
+    pub path: Option<String>,
+    pub title: String,
+}
+
+/// Opened documents whose text is still on disk, newest first. A missing
+/// file is left out of the list. Its row stays.
+pub fn recent(conn: &Connection) -> AppResult<Vec<Recent>> {
+    Ok(db::opened_documents(conn)?
+        .into_iter()
+        .filter(|d| text_path(d).is_file())
+        .take(20)
+        .map(|d| Recent { id: d.id, path: d.path, title: d.title })
+        .collect())
+}
+
+/// Record the open, then rebuild File > Open Recent.
+fn opened<R: Runtime>(app: &AppHandle<R>, conn: &Connection, doc: db::Document, text: String) -> AppResult<Opened> {
+    db::touch_opened(conn, doc.id)?;
+    refresh_menu(app, conn);
+    Ok(Opened { doc: db::get_document(conn, doc.id)?, text })
+}
+
+#[cfg(target_os = "macos")]
+fn refresh_menu<R: Runtime>(app: &AppHandle<R>, conn: &Connection) {
+    if let Ok(list) = recent(conn) {
+        crate::menu::refresh_recent(app, &list);
     }
-    if target != old {
-        std::fs::rename(&old, &target)?;
+}
+
+#[cfg(not(target_os = "macos"))]
+fn refresh_menu<R: Runtime>(_app: &AppHandle<R>, _conn: &Connection) {}
+
+/// Debug builds only: when `WRITEGOOD_PICK` names a file, the pick commands
+/// return its first line and show no dialog. An empty line is a cancel.
+/// WebDriver cannot drive a native dialog, so the e2e tests answer here
+/// (SPEC §6.3).
+fn test_pick() -> Option<Option<String>> {
+    if !cfg!(debug_assertions) {
+        return None;
     }
-    Ok(target.to_string_lossy().into_owned())
+    let file = std::env::var_os("WRITEGOOD_PICK")?;
+    let text = std::fs::read_to_string(file).unwrap_or_default();
+    let line = text.lines().next().unwrap_or("").trim().to_string();
+    Some(if line.is_empty() { None } else { Some(line) })
+}
+
+fn picked(path: Option<tauri_plugin_dialog::FilePath>) -> Option<String> {
+    path.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned())
 }
 
 // ----------------------------------------------------------------- commands
 
+/// The native open dialog. None when the author cancels.
 #[tauri::command]
-pub fn doc_list() -> AppResult<Vec<DocSummary>> {
-    list()
+pub async fn doc_pick_open(app: AppHandle, from: Option<String>) -> AppResult<Option<String>> {
+    if let Some(answer) = test_pick() {
+        return Ok(answer);
+    }
+    let path = app
+        .dialog()
+        .file()
+        .add_filter("Markdown", &["md", "markdown", "mdown"])
+        .add_filter("Text", &["txt"])
+        .set_directory(start_dir(from.as_deref()))
+        .blocking_pick_file();
+    Ok(picked(path))
 }
 
+/// The native save dialog. The name it returns always has an extension.
 #[tauri::command]
-pub fn doc_read(path: String) -> AppResult<String> {
-    read(&path)
+pub async fn doc_pick_save(
+    app: AppHandle,
+    suggested: String,
+    from: Option<String>,
+) -> AppResult<Option<String>> {
+    let answer = match test_pick() {
+        Some(answer) => answer,
+        None => picked(
+            app.dialog()
+                .file()
+                .add_filter("Markdown", &["md", "markdown", "mdown"])
+                .add_filter("Text", &["txt"])
+                .set_directory(start_dir(from.as_deref()))
+                .set_file_name(format!("{}.md", slugify(&suggested)))
+                .blocking_save_file(),
+        ),
+    };
+    Ok(answer.map(|p| with_markdown_extension(&p)))
 }
 
+/// Open a file by path. A path the database knows keeps its row and history.
 #[tauri::command]
-pub fn doc_write(path: String, text: String) -> AppResult<()> {
-    write(&path, &text)
+pub fn doc_open(app: AppHandle, db: State<db::Db>, path: String) -> AppResult<Opened> {
+    let text = read(&path)?;
+    let conn = db.0.lock().unwrap();
+    let doc = db::upsert_document(&conn, &path, &title_for(&text, Some(&path)))?;
+    opened(&app, &conn, doc, text)
 }
 
+/// Open a document by id: a recent file, or an untitled draft's recovery file.
 #[tauri::command]
-pub fn doc_create(title: String) -> AppResult<String> {
-    create(&title)
+pub fn doc_reopen(app: AppHandle, db: State<db::Db>, id: i64) -> AppResult<Opened> {
+    let conn = db.0.lock().unwrap();
+    let doc = db::get_document(&conn, id)?;
+    let text = read(&text_path(&doc).to_string_lossy())?;
+    opened(&app, &conn, doc, text)
 }
 
+/// A new untitled draft. It has no file until the first save.
 #[tauri::command]
-pub fn doc_delete(path: String) -> AppResult<()> {
-    delete(&path)
+pub fn doc_new(app: AppHandle, db: State<db::Db>) -> AppResult<Opened> {
+    let conn = db.0.lock().unwrap();
+    let doc = db::create_untitled(&conn, "untitled")?;
+    opened(&app, &conn, doc, String::new())
 }
 
+/// Write a document where it lives: its file, or its recovery file. The path
+/// comes from the row, so the webview cannot name a file to write.
 #[tauri::command]
-pub fn doc_rename(path: String, title: String) -> AppResult<String> {
-    rename(&path, &title)
+pub fn doc_save(db: State<db::Db>, id: i64, text: String) -> AppResult<db::Document> {
+    let conn = db.0.lock().unwrap();
+    let doc = db::get_document(&conn, id)?;
+    write(&text_path(&doc).to_string_lossy(), &text)?;
+    db::rename_document(&conn, id, &title_for(&text, doc.path.as_deref()))?;
+    db::get_document(&conn, id)
+}
+
+/// Write a document to a new file and point its row there. The first save of
+/// an untitled draft is a Save As. The old file stays; a recovery file goes.
+#[tauri::command]
+pub fn doc_save_as(app: AppHandle, db: State<db::Db>, id: i64, path: String, text: String) -> AppResult<db::Document> {
+    let path = with_markdown_extension(&path);
+    let conn = db.0.lock().unwrap();
+    // Refuse before writing: the file must not change under another row.
+    if let Ok(other) = db::get_document_by_path(&conn, &path) {
+        if other.id != id {
+            return Err(AppError::invalid(format!(
+                "{path} is already open as another document. Choose another name."
+            )));
+        }
+    }
+    write(&path, &text)?;
+    let doc = db::move_document(&conn, id, &path, &title_for(&text, Some(&path)))?;
+    let recovery = recovery_path(id);
+    if recovery.exists() {
+        std::fs::remove_file(recovery)?;
+    }
+    db::touch_opened(&conn, id)?;
+    refresh_menu(&app, &conn);
+    Ok(doc)
+}
+
+/// Recent documents for the command bar.
+#[tauri::command]
+pub fn doc_recent(db: State<db::Db>) -> AppResult<Vec<Recent>> {
+    let conn = db.0.lock().unwrap();
+    recent(&conn)
 }
 
 #[cfg(test)]
@@ -228,13 +319,6 @@ mod tests {
     }
 
     #[test]
-    fn counts_words_not_punctuation() {
-        assert_eq!(word_count("one two three"), 3);
-        assert_eq!(word_count("one — two"), 2);
-        assert_eq!(word_count(""), 0);
-    }
-
-    #[test]
     fn writes_atomically_and_leaves_no_temp_file() {
         let home = env_home("docs-write");
         let path = home.dir.join("documents").join("a.md");
@@ -251,23 +335,15 @@ mod tests {
     }
 
     #[test]
-    fn creating_twice_does_not_overwrite() {
-        let _home = env_home("docs-create");
-        let a = create("Draft").unwrap();
-        let b = create("Draft").unwrap();
-        assert_ne!(a, b);
-        assert!(b.ends_with("draft-2.md"), "got {b}");
+    fn a_name_with_no_extension_gets_md() {
+        assert_eq!(with_markdown_extension("/x/draft"), "/x/draft.md");
+        assert_eq!(with_markdown_extension("/x/draft.md"), "/x/draft.md");
+        assert_eq!(with_markdown_extension("/x/notes.txt"), "/x/notes.txt");
     }
 
     #[test]
-    fn lists_only_markdown_and_newest_first() {
-        let home = env_home("docs-list");
-        create("Older").unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1100));
-        create("Newer").unwrap();
-        std::fs::write(home.dir.join("documents").join("notes.png"), "x").unwrap();
-        let docs = list().unwrap();
-        assert_eq!(docs.len(), 2, "png should be ignored");
-        assert_eq!(docs[0].title, "Newer");
+    fn an_untitled_draft_takes_its_title_from_its_heading() {
+        assert_eq!(title_for("", None), "untitled");
+        assert_eq!(title_for("# A Piece\n\ntext", None), "A Piece");
     }
 }

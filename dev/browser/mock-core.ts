@@ -109,6 +109,15 @@ const PASSES = [
   { slug: "filler-words", name: "Sawdust", category: "filler", scope: "paragraph", provider: null, enabled: true, prompt: "", path: "" },
 ];
 
+const DOC = {
+  id: 1,
+  path: "/d/on-writing.md",
+  title: "The Determination of the Committee",
+  createdAt: "",
+  updatedAt: "",
+  openedAt: "",
+};
+
 /** Exact, case-insensitive matching. Enough to place the fixtures. */
 function resolveAnchors(text: string, selectors: { id: number; quote: string }[]) {
   const chars = Array.from(text);
@@ -129,26 +138,36 @@ export async function invoke(cmd: string, args: Record<string, unknown> = {}): P
       return { home: "~/.writegood", config: "", documents: "", passes: "", db: "" };
     case "passes_list":
       return PASSES;
-    case "doc_list":
+    // Files (SPEC §6.3). The dialogs answer with a fixture path, and the
+    // draft opens whatever is asked for.
+    case "doc_recent":
       return [
-        { path: "/d/on-writing.md", title: "The Determination of the Committee", modified: 1, words: 105 },
-        { path: "/d/notes.md", title: "Notes towards a second piece", modified: 0, words: 12 },
+        { id: 1, path: "/d/on-writing.md", title: "The Determination of the Committee" },
+        { id: 2, path: "/elsewhere/notes.md", title: "Notes towards a second piece" },
       ];
-    case "doc_read":
-      return DRAFT;
+    case "doc_pick_open":
+      return "/d/on-writing.md";
+    case "doc_pick_save":
+      return "/d/saved.md";
+    case "doc_open":
+    case "doc_reopen":
+      return { doc: DOC, text: DRAFT };
+    case "doc_new":
+      return { doc: { ...DOC, id: 9, path: null, title: "untitled" }, text: "" };
+    case "doc_save":
+      return args.id === DOC.id ? DOC : { ...DOC, id: args.id, path: null, title: "untitled" };
+    case "doc_save_as":
+      return { ...DOC, id: args.id, path: args.path };
     case "db_register":
-      return { id: 1, path: "/d/on-writing.md", title: "The Determination of the Committee", createdAt: "", updatedAt: "" };
+      return DOC;
     case "db_documents":
       return [];
-    case "db_forget_missing":
-      return 0;
     case "findings_list":
       return FINDINGS;
     case "findings_status":
     case "findings_clear":
     case "rev_flag":
     case "run_finish":
-    case "doc_write":
       return null;
     case "rev_list":
       return [

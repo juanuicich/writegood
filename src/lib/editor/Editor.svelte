@@ -16,7 +16,7 @@
       element: host,
       extensions: [
         StarterKit.configure({ link: { openOnClick: false } }),
-        Placeholder.configure({ placeholder: "Write." }),
+        Placeholder.configure({ placeholder: "Start writing good" }),
         Findings.configure({ onSelect: (ids) => app.selectInText(ids) }),
       ],
       content: "",

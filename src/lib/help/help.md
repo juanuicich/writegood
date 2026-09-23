@@ -1,0 +1,70 @@
+# writegood
+
+You write a draft here. You run editing passes over it. Each pass is a prompt you wrote. The app shows what the model found, next to the words it found it in. You do the rewriting.
+
+Press Esc to go back to your draft.
+
+## The two rules
+
+The app never puts a word from the model into your document. There is no accept button. A note that quotes wording your draft does not contain is hidden until you press `r`.
+
+The app never shows praise. A pass that finds nothing says "no findings".
+
+## Writing
+
+Type. The app saves as you go. `⌘S` saves now.
+
+`⌘N` starts an untitled draft. The first `⌘S` asks where to save it. Until then the app keeps it in `~/.writegood/untitled`, so nothing is lost.
+
+`⌘O` opens a Markdown or text file from any folder. `⌘⇧S` saves the draft to a new file, and its history and findings go with it. `⌘⌥S` saves and flags a major revision, and asks what changed.
+
+*open recent* in the command bar lists the files you opened before. So does File > Open Recent.
+
+## Running passes
+
+`⌘R` or `⌘⏎` runs every enabled pass. `⌘⇧R` runs one pass, and asks which.
+
+Findings appear as underlines in the text and as notes in the margin. A heavier underline is a more serious finding. Click an underline to light its notes.
+
+`⌥↓` and `⌥↑` step to the next and previous finding without leaving the text.
+
+## Review mode
+
+Esc leaves the text and enters review mode. The draft dims and single keys act on the findings.
+
+- `n` or `j`: next finding
+- `p` or `k`: previous finding
+- `x`: mark the finding addressed
+- `d`: dismiss the finding
+- `r`: reveal a hidden span
+- `i`, `Enter` or Esc: back to writing
+
+## Revisions
+
+`⌘Y` opens the revisions. `j` and `k` move between them. The diff shows what changed since the selected revision. `Enter` puts that revision back. Esc closes.
+
+## The duel
+
+`⌘D` copies the current paragraph and gives you a box to rewrite it. `⌘R` or `⌘⏎` asks a judge which version is better. The judge does not know which version is new. Esc closes.
+
+## The command bar
+
+`⌘K` opens the command bar. Every command is there: open, new, run, provider, theme, clear findings, and the rest. Type to filter. `Enter` runs the selected command.
+
+## Text size and theme
+
+`⌘+` and `⌘-` change the text size. `⌘0` returns to the base size. The theme commands are in the command bar and in the View menu. The app saves each change to `config.toml`.
+
+## Files
+
+Everything lives in `~/.writegood`.
+
+- `config.toml`: providers, rules and appearance
+- `documents/`: where the open and save dialogs start
+- `untitled/`: drafts you have not saved yet
+- `passes/`: your prompts, one Markdown file each
+- `writegood.db`: revisions, findings and duels
+
+A pass is a Markdown file with TOML frontmatter. Edit the files, then run *reload passes and config* from the command bar.
+
+`⌘?` opens this page.

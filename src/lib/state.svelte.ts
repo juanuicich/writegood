@@ -9,7 +9,8 @@ import {
   diff as diffApi,
   type Config,
   type DocUsage,
-  type DocSummary,
+  type Opened,
+  type Recent,
   type DocumentRow,
   type Finding,
   type Pass,
@@ -49,7 +50,8 @@ class App {
   paths = $state<Paths | null>(null);
   passes = $state<Pass[]>([]);
 
-  docs = $state<DocSummary[]>([]);
+  /** Documents opened before, newest first, from any folder (SPEC §6.3). */
+  recent = $state<Recent[]>([]);
   doc = $state<DocumentRow | null>(null);
   editor = $state<Editor | null>(null);
 
@@ -68,6 +70,9 @@ class App {
   /** What the pass runner is waiting for, so the status bar can say it. */
   progress = $state<{ done: number; total: number; active: string[] } | null>(null);
   paletteOpen = $state(false);
+  /** The help page covers the draft. The draft stays mounted underneath it,
+   *  so its text, selection, undo history and scroll survive. */
+  help = $state(false);
   sidebarForced = $state(false);
 
   /** Only open findings are worth stepping through, and the margin reads in
@@ -109,10 +114,16 @@ class App {
     this.paths = await cfg.paths();
     this.passes = await cfg.passes();
     this.applyAppearance();
-    await this.refreshDocs();
-    if (!this.doc && this.docs.length > 0) {
-      await this.open(this.docs[0].path);
+    // Reopen the last document. With none, or with its file gone, start an
+    // untitled draft (SPEC §6.3).
+    await this.refreshRecent();
+    const last = this.recent[0];
+    try {
+      if (last) return await this.reopen(last.id);
+    } catch (e) {
+      this.say(String(e));
     }
+    await this.create();
   }
 
   applyAppearance() {
@@ -126,23 +137,56 @@ class App {
     else root.setAttribute("data-theme", a.theme);
   }
 
-  async refreshDocs() {
-    this.docs = await files.list();
-    await store.forgetMissing(this.docs.map((d) => d.path));
+  async refreshRecent() {
+    this.recent = await files.recent();
   }
 
   // -------------------------------------------------------------- document
 
+  /** True while the open draft has no file. The unsaved mark stays on: the
+   *  recovery file is not the author's file. */
+  get untitled(): boolean {
+    return this.doc !== null && this.doc.path === null;
+  }
+
+  /** The native open dialog, starting in the open document's folder. */
+  async openDialog() {
+    const path = await files.pickOpen(this.doc?.path ?? null);
+    if (path) await this.open(path);
+  }
+
   async open(path: string) {
-    const text = await files.read(path);
-    const summary = this.docs.find((d) => d.path === path);
-    this.doc = await store.register(path, summary?.title ?? path);
-    this.editor?.commands.setContent(markdownToContent(text));
+    await this.flush();
+    await this.load(await files.open(path));
+  }
+
+  /** Open by id: a recent file, or an untitled draft's recovery file. */
+  async reopen(id: number) {
+    await this.flush();
+    await this.load(await files.reopen(id));
+  }
+
+  /** ⌘N: an untitled draft. It asks nothing; the first ⌘S asks where. */
+  async create() {
+    await this.flush();
+    await this.load(await files.create());
+  }
+
+  /** Write what autosave has not written yet, before the editor is reused
+   *  for another document. */
+  private async flush() {
+    if (this.doc && this.dirty) await this.save(false);
+  }
+
+  private async load(opened: Opened) {
+    this.doc = opened.doc;
+    this.editor?.commands.setContent(markdownToContent(opened.text));
     this.dirty = false;
     this.cursor = -1;
     this.group = null;
     await this.loadFindings();
     await this.loadUsage();
+    await this.refreshRecent();
     this.say(this.doc.title);
   }
 
@@ -153,18 +197,63 @@ class App {
     this.usage = doc ? await store.usage(doc.id) : null;
   }
 
-  async create(title: string) {
-    const path = await files.create(title || "Untitled");
-    await this.refreshDocs();
-    await this.open(path);
+  /** Write the Markdown file first, the revision row second. A failed write
+   *  must not advance the history (SPEC 6.1). Autosave calls this too. An
+   *  untitled draft is written to its recovery file. */
+  async save(major = false, label?: string) {
+    const doc = this.doc;
+    if (!doc || !this.editor) return;
+    const md = contentToMarkdown(this.editor);
+    const saved = await files.save(doc.id, md);
+    // Another document opened while this one was written. Its row is not
+    // this one, and neither is the editor's text.
+    if (this.doc?.id !== doc.id) return;
+    this.doc = saved;
+    await this.revision(major, label);
+    if (this.doc.path) {
+      this.say(major ? `saved — ${label ?? "major revision"}` : this.saved(this.doc.path));
+    }
   }
 
-  /** Write the Markdown file first, the revision row second. A failed write
-   *  must not advance the history (SPEC 6.1). */
-  async save(major = false, label?: string) {
+  /** ⌘S: save, or ask where if the draft has no file yet. */
+  async saveNow() {
+    if (this.untitled) await this.saveAs();
+    else await this.save(false);
+  }
+
+  /** ⌘⇧S, and the first save of an untitled draft: the native save dialog.
+   *  The document's history and findings move with it. False when the author
+   *  cancels or the save fails. */
+  async saveAs(): Promise<boolean> {
+    const doc = this.doc;
+    if (!doc || !this.editor) return false;
+    const path = await files.pickSave(doc.title, doc.path);
+    if (!path) {
+      this.say("not saved");
+      return false;
+    }
+    try {
+      const saved = await files.saveAs(doc.id, path, contentToMarkdown(this.editor));
+      if (this.doc?.id !== doc.id) return false;
+      this.doc = saved;
+    } catch (e) {
+      this.say(e instanceof Error ? e.message : String(e));
+      return false;
+    }
+    await this.revision(false);
+    await this.refreshRecent();
+    this.say(this.saved(path));
+    return true;
+  }
+
+  /** ⌘⌥S. An untitled draft needs a file first. */
+  async saveMajor(label: string) {
+    if (this.untitled && !(await this.saveAs())) return;
+    await this.save(true, label);
+  }
+
+  private async revision(major: boolean, label?: string) {
     if (!this.doc || !this.editor) return;
-    const md = contentToMarkdown(this.editor);
-    await files.write(this.doc.path, md);
     await store.saveRevision(
       this.doc.id,
       JSON.stringify(this.editor.getJSON()),
@@ -173,8 +262,20 @@ class App {
       label ?? null,
     );
     this.dirty = false;
-    await this.refreshDocs();
-    this.say(major ? `saved — ${label ?? "major revision"}` : "saved");
+  }
+
+  /** Ids of the .txt documents already told about Markdown escapes. */
+  private noted = new Set<number>();
+
+  /** The status line after a save. The first save of a .txt file says the
+   *  file is now written as Markdown (SPEC §6.3). */
+  private saved(path: string): string {
+    const id = this.doc?.id;
+    if (id !== undefined && path.toLowerCase().endsWith(".txt") && !this.noted.has(id)) {
+      this.noted.add(id);
+      return "saved — as Markdown, which can add escapes to a .txt file";
+    }
+    return "saved";
   }
 
   plainText(): string {
@@ -366,6 +467,24 @@ class App {
   closeDuel() {
     this.duel = null;
     this.editor?.commands.focus();
+  }
+
+  // ------------------------------------------------------------------ help
+
+  /** The draft under the sheet must not take the keys typed while the help
+   *  is open. A blur is not enough: the selection stays in the draft, and
+   *  text input still lands there. So the draft is read-only until the help
+   *  closes. No update is emitted, so nothing is marked unsaved. */
+  openHelp() {
+    this.editor?.setEditable(false, false);
+    (document.activeElement as HTMLElement | null)?.blur();
+    this.help = true;
+  }
+
+  closeHelp() {
+    this.help = false;
+    this.editor?.setEditable(true, false);
+    if (this.mode === "write") this.editor?.commands.focus();
   }
 
   // ----------------------------------------------------------------- chrome

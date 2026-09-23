@@ -11,14 +11,26 @@
 //! The frontend runs that command through the same code path the palette runs,
 //! so the menu and the keyboard cannot drift apart.
 
-use tauri::menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{
+    AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu, HELP_SUBMENU_ID,
+};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
+
+use crate::documents::Recent;
 
 /// The event the webview listens for. Its payload is a palette command id.
 const EVENT: &str = "menu-command";
 
 /// Handled in Rust: Rust owns the filesystem, so Rust opens the folder.
 const OPEN_HOME: &str = "open-home";
+
+/// File > Open Recent, kept so it can be rebuilt. `Menu::get` finds only
+/// top-level items, so the submenu is held here instead of looked up.
+struct RecentMenu<R: Runtime>(Submenu<R>);
+
+/// A recent item emits `open-doc:<id>`. It is not a palette command id: the
+/// frontend opens that document (SPEC §6.3).
+const OPEN_DOC: &str = "open-doc:";
 
 /// The builder calls this before it creates the window. Setting the menu later
 /// does not take: the window is created with the default menu and keeps it.
@@ -40,20 +52,27 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
+    // Filled by refresh_recent once the frontend opens a document.
+    let recent = Submenu::with_items(app, "Open Recent", true, &[])?;
+    app.manage(RecentMenu(recent.clone()));
+
     let file = Submenu::with_items(
         app,
         "File",
         true,
         &[
-            &MenuItem::with_id(app, "new", "New document", true, Some("CmdOrCtrl+N"))?,
-            &MenuItem::with_id(app, "open", "Open document", true, Some("CmdOrCtrl+O"))?,
+            &MenuItem::with_id(app, "new", "New", true, Some("CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "open", "Open…", true, Some("CmdOrCtrl+O"))?,
+            &recent,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?,
+            &MenuItem::with_id(app, "save-as", "Save As…", true, Some("CmdOrCtrl+Shift+S"))?,
             &MenuItem::with_id(
                 app,
                 "major",
                 "Save as major revision",
                 true,
-                Some("CmdOrCtrl+Shift+S"),
+                Some("CmdOrCtrl+Alt+S"),
             )?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, OPEN_HOME, "Open the writegood folder", true, None::<&str>)?,
@@ -139,7 +158,40 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
-    Menu::with_items(app, &[&app_menu, &file, &edit, &view, &review, &window])
+    // The help id makes macOS treat this as the Help menu. "?" is ⌘⇧/ on a US
+    // keyboard.
+    let help = Submenu::with_id_and_items(
+        app,
+        HELP_SUBMENU_ID,
+        "Help",
+        true,
+        &[&MenuItem::with_id(app, "help", "writegood help", true, Some("CmdOrCtrl+Shift+/"))?],
+    )?;
+
+    Menu::with_items(app, &[&app_menu, &file, &edit, &view, &review, &window, &help])
+}
+
+/// Rebuild File > Open Recent. A failure is logged and leaves the old list:
+/// the menu is a convenience, and the command bar has the same list.
+pub fn refresh_recent<R: Runtime>(app: &AppHandle<R>, docs: &[Recent]) {
+    let Some(state) = app.try_state::<RecentMenu<R>>() else { return };
+    let menu = &state.0;
+    let result = (|| -> tauri::Result<()> {
+        for item in menu.items()? {
+            menu.remove(&item)?;
+        }
+        if docs.is_empty() {
+            menu.append(&MenuItem::new(app, "No recent documents", false, None::<&str>)?)?;
+        }
+        for doc in docs {
+            let id = format!("{OPEN_DOC}{}", doc.id);
+            menu.append(&MenuItem::with_id(app, id, &doc.title, true, None::<&str>)?)?;
+        }
+        Ok(())
+    })();
+    if let Err(e) = result {
+        let _ = crate::log::write("warn", &format!("cannot rebuild Open Recent: {e}"));
+    }
 }
 
 pub fn on_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {

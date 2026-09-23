@@ -90,6 +90,11 @@ pub fn documents_dir() -> PathBuf {
     home_dir().join("documents")
 }
 
+/// Recovery files for untitled drafts (SPEC §6.3).
+pub fn untitled_dir() -> PathBuf {
+    home_dir().join("untitled")
+}
+
 pub fn passes_dir() -> PathBuf {
     home_dir().join("passes")
 }
@@ -589,6 +594,7 @@ pub fn ensure_scaffold() -> AppResult<()> {
 fn ensure_scaffold_in(home: &Path) -> AppResult<()> {
     std::fs::create_dir_all(home)?;
     std::fs::create_dir_all(home.join("documents"))?;
+    std::fs::create_dir_all(home.join("untitled"))?;
     let passes = home.join("passes");
     std::fs::create_dir_all(&passes)?;
 

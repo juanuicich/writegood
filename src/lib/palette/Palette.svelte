@@ -78,7 +78,8 @@
     app.paletteOpen = false;
     pending = null;
     query = "";
-    app.editor?.commands.focus();
+    // The draft under the help must not take the keys.
+    if (!app.help) app.editor?.commands.focus();
   }
 
   async function choose() {
@@ -134,10 +135,10 @@
     let stop: (() => void) | null = null;
     let done = false;
     // An open sheet takes the menu, as it takes the keyboard (SPEC §12.4).
-    // The duel listens for itself; nothing runs behind either sheet except
+    // The duel listens for itself; nothing runs behind any sheet except
     // the text size, which applies to the sheet too.
     void onMenuCommand((id) => {
-      if ((app.duel || app.history) && !SHEET_SAFE.has(id)) return;
+      if ((app.duel || app.history || app.help) && !SHEET_SAFE.has(id)) return;
       void runCommand(id);
     }).then((off) => {
       if (done) off();

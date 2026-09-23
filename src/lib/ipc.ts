@@ -60,19 +60,27 @@ export interface Pass {
   path: string;
 }
 
-export interface DocSummary {
-  path: string;
-  title: string;
-  modified: number;
-  words: number;
-}
-
 export interface DocumentRow {
   id: number;
-  path: string;
+  /** Null for an untitled draft, which has no file yet (SPEC §6.3). */
+  path: string | null;
   title: string;
   createdAt: string;
   updatedAt: string;
+  openedAt: string | null;
+}
+
+/** A document and its text, as the editor loads it. */
+export interface Opened {
+  doc: DocumentRow;
+  text: string;
+}
+
+/** One line of the recent list. */
+export interface Recent {
+  id: number;
+  path: string | null;
+  title: string;
 }
 
 export interface Revision {
@@ -208,20 +216,27 @@ export const secrets = {
     invoke<string | null>("key_resolve", { keyRef: keyRef ?? null }),
 };
 
+/** Documents on disk (SPEC §6.3). Rust picks every path through a native
+ *  dialog and writes only a document's own file or its recovery file. */
 export const files = {
-  list: () => invoke<DocSummary[]>("doc_list"),
-  read: (path: string) => invoke<string>("doc_read", { path }),
-  write: (path: string, text: string) => invoke<void>("doc_write", { path, text }),
-  create: (title: string) => invoke<string>("doc_create", { title }),
-  remove: (path: string) => invoke<void>("doc_delete", { path }),
-  rename: (path: string, title: string) => invoke<string>("doc_rename", { path, title }),
+  /** The native open dialog. Null when the author cancels. */
+  pickOpen: (from: string | null) => invoke<string | null>("doc_pick_open", { from }),
+  /** The native save dialog. The path it returns always has an extension. */
+  pickSave: (suggested: string, from: string | null) =>
+    invoke<string | null>("doc_pick_save", { suggested, from }),
+  open: (path: string) => invoke<Opened>("doc_open", { path }),
+  reopen: (id: number) => invoke<Opened>("doc_reopen", { id }),
+  create: () => invoke<Opened>("doc_new"),
+  save: (id: number, text: string) => invoke<DocumentRow>("doc_save", { id, text }),
+  saveAs: (id: number, path: string, text: string) =>
+    invoke<DocumentRow>("doc_save_as", { id, path, text }),
+  recent: () => invoke<Recent[]>("doc_recent"),
 };
 
 export const store = {
   register: (path: string, title: string) =>
     invoke<DocumentRow>("db_register", { path, title }),
   documents: () => invoke<DocumentRow[]>("db_documents"),
-  forgetMissing: (present: string[]) => invoke<number>("db_forget_missing", { present }),
 
   saveRevision: (
     docId: number,

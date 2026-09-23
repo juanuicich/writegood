@@ -6,8 +6,10 @@
   import Palette, { type Command } from "./lib/palette/Palette.svelte";
   import Duel from "./lib/duel/Duel.svelte";
   import History from "./lib/history/History.svelte";
+  import Help from "./lib/help/Help.svelte";
+  import { isHelpKey } from "./lib/help/keys";
   import { runPasses, summarise } from "./lib/passes/run";
-  import { cfg, log, shell, store } from "./lib/ipc";
+  import { cfg, log, onMenuCommand, shell, store } from "./lib/ipc";
   import { label } from "./lib/usage";
   import { BASE_SIZE, nextSize, otherTheme } from "./lib/appearance";
 
@@ -21,7 +23,7 @@
       await app.boot();
       void log.write(
         "info",
-        `boot: ${app.passes.length} pass(es), ${app.docs.length} document(s), ` +
+        `boot: ${app.passes.length} pass(es), ${app.recent.length} recent document(s), ` +
           `open ${app.doc?.title ?? "none"}`,
       );
     } catch (e) {
@@ -29,6 +31,13 @@
       app.say(String(e));
     }
     booted = true;
+
+    // File > Open Recent emits open-doc:<id>, which is not a palette command.
+    // Behind a sheet it does nothing, as other menu commands do.
+    void onMenuCommand((id) => {
+      if (!id.startsWith("open-doc:") || app.duel || app.history || app.help) return;
+      void app.reopen(Number(id.slice("open-doc:".length))).catch((e) => app.say(String(e)));
+    });
 
     // A development hook: run passes at launch, with no one at the keyboard.
     // It predates the WebDriver server (SPEC §16), which now drives the window
@@ -51,8 +60,17 @@
       app.openDuel();
     } else if (show === "palette") {
       app.paletteOpen = true;
+    } else if (show === "help") {
+      app.openHelp();
     }
   });
+
+  /** The folder a recent file sits in, as a hint beside its title. */
+  function folder(path: string | null): string {
+    if (!path) return "untitled";
+    const parts = path.split("/");
+    return parts.length > 1 ? parts[parts.length - 2] : "";
+  }
 
   /** The open file's spending, when the config asks for it (SPEC §9.4). */
   const spent = $derived(
@@ -110,24 +128,19 @@
   }
 
   const commands: Command[] = [
+    { id: "open", label: "open…", hint: "⌘O", run: () => app.openDialog() },
     {
-      id: "open",
-      label: "open",
-      hint: "⌘O",
+      id: "open-recent",
+      label: "open recent",
       choices: () =>
-        app.docs.map((d) => ({
-          value: d.path,
+        app.recent.map((d) => ({
+          value: String(d.id),
           label: d.title,
-          hint: `${d.words} words`,
+          hint: folder(d.path),
         })),
-      run: (path) => path && app.open(path),
+      run: (id) => id && app.reopen(Number(id)),
     },
-    {
-      id: "new",
-      label: "new document",
-      argument: "title",
-      run: (title) => app.create(title ?? "Untitled"),
-    },
+    { id: "new", label: "new document", hint: "⌘N", run: () => app.create() },
     { id: "run", label: "run all passes", hint: "⌘R", run: () => run() },
     {
       id: "run-one",
@@ -137,7 +150,8 @@
         app.passes.map((p) => ({ value: p.slug, label: p.name, hint: p.scope })),
       run: (slug) => run(slug),
     },
-    { id: "save", label: "save", hint: "⌘S", run: () => app.save(false) },
+    { id: "save", label: "save", hint: "⌘S", run: () => app.saveNow() },
+    { id: "save-as", label: "save as…", hint: "⌘⇧S", run: () => app.saveAs() },
     {
       id: "history",
       label: "revisions",
@@ -153,8 +167,9 @@
     {
       id: "major",
       label: "flag a major revision",
+      hint: "⌘⌥S",
       argument: "what changed",
-      run: (label) => app.save(true, label || "major revision"),
+      run: (label) => app.saveMajor(label || "major revision"),
     },
     {
       id: "provider",
@@ -219,6 +234,7 @@
       label: "toggle the margin",
       run: () => (app.sidebarForced = !app.sidebarForced),
     },
+    { id: "help", label: "help", hint: "⌘?", run: () => app.openHelp() },
     {
       id: "folder",
       label: "open the writegood folder",
@@ -264,7 +280,13 @@
     }
 
     // The sheets cover everything and handle their own keys.
-    if (app.duel || app.history) return;
+    if (app.duel || app.history || app.help) return;
+
+    if (isHelpKey(e)) {
+      e.preventDefault();
+      app.openHelp();
+      return;
+    }
 
     if (meta && e.key === "y") {
       e.preventDefault();
@@ -278,14 +300,23 @@
       return;
     }
 
-    if (meta && e.key === "o") {
+    // ⌘N, ⌘O and the three save keys run the same palette command as the
+    // menu item (SPEC §6.3). ⇧ can turn e.key upper case, and ⌥ turns S
+    // into ß on a Mac, so S is matched by its physical key.
+    if (meta && e.key === "n") {
       e.preventDefault();
-      app.paletteOpen = true;
+      void palette?.runCommand("new");
       return;
     }
-    if (meta && e.key === "s") {
+    if (meta && e.key === "o") {
       e.preventDefault();
-      void app.save(e.shiftKey, e.shiftKey ? "major revision" : undefined);
+      void palette?.runCommand("open");
+      return;
+    }
+    if (meta && e.code === "KeyS") {
+      e.preventDefault();
+      const id = e.altKey ? "major" : e.shiftKey ? "save-as" : "save";
+      void palette?.runCommand(id);
       return;
     }
     // ⌘R and ⌘⏎ both run the passes, with ⇧ to pick one. The menu shows the
@@ -366,12 +397,13 @@
     {#if app.progress}<span class="live">{running(app.progress)}</span>
     {:else if app.busy > 0}<span class="live">working</span>{/if}
     {#if app.status}{app.status}{/if}
-    {#if app.dirty}<span class="unsaved" title="unsaved">·</span>{/if}
+    {#if app.dirty || app.untitled}<span class="unsaved" title="unsaved">·</span>{/if}
   </span>
 </footer>
 
 <Duel />
 <History />
+<Help />
 
 {#if booted}<Palette {commands} bind:this={palette} />{/if}
 

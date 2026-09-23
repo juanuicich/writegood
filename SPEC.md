@@ -209,8 +209,8 @@ across.
 
 ### 6.1 Markdown is the source of truth
 
-A draft is a Markdown file on disk. `~/.writegood/documents/*.md` by default,
-or any path you open. The app reads and writes that file and nothing else owns
+A draft is a Markdown file on disk, in any folder (§6.3). An untitled draft
+lives in a recovery file until its first save. The app reads and writes that file and nothing else owns
 it. You can edit it in another editor, keep it in git, and delete the database
 without losing a word.
 
@@ -234,7 +234,7 @@ temporary file and a rename, and always end with a newline.
 SQLite, WAL, foreign keys on. Stored at `~/.writegood/writegood.db`.
 
 ```sql
-documents(id, path, title, created_at, updated_at)
+documents(id, path, title, created_at, updated_at, opened_at)
 
 revisions(id, doc_id→documents, parent_id→revisions,
           content_json, content_text, major, label, created_at)
@@ -251,8 +251,9 @@ duels(id, doc_id, finding_id→findings, a_text, b_text, a_is_original,
       input_tokens, output_tokens, cost_usd)
 ```
 
-`documents.path` is absolute and unique. The row is a pointer and a cache of
-the title; the file is the document.
+`documents.path` is absolute and unique, and null for an untitled draft. The
+row is a pointer and a cache of the title; the file is the document.
+`opened_at` orders the recent list (§6.3).
 
 `content_json` is the ProseMirror document, kept so a revision restores exactly.
 `content_text` is the flattened text that anchoring and passes work against.
@@ -271,6 +272,125 @@ The three usage columns on `runs` and `duels` are nullable (§9.4). A CLI call
 reports no tokens, so both counts are null. A call with no known price has
 tokens and a null cost. A database made before these columns existed gains
 them at startup; the rows it already holds stay null.
+
+### 6.3 Files in any folder
+
+A draft can be any Markdown or text file, in any folder. The system open and
+save dialogs choose the file. `~/.writegood/documents` stays as the folder the
+dialogs start in when no document is open.
+
+**Dialogs.** Rust shows the dialogs, through `tauri-plugin-dialog`, which is
+already a dependency. Rust owns the filesystem, so Rust picks the path as well
+as reading it. Two commands:
+
+- `doc_pick_open(from) -> Option<String>` shows the open dialog.
+- `doc_pick_save(suggested, from) -> Option<String>` shows the save dialog.
+
+`from` is the open document's path, so the dialog starts in its folder.
+
+These are the native macOS dialogs. The plugin calls `rfd`, which shows
+`NSOpenPanel` and `NSSavePanel`. The app draws no file picker of its own.
+
+Both return `None` when the author cancels. Both filter to `.md`, `.markdown`,
+`.mdown` and `.txt`. Both start in the open document's folder, or in
+`~/.writegood/documents`.
+
+The default extension is `.md`. The save dialog suggests a file name made from
+the first level-one heading, through `slugify`, or `untitled.md`. A name typed
+with no extension gets `.md`.
+
+**New.** `⌘N` opens an empty untitled draft. It has no file and asks nothing.
+The first `⌘S` shows the save dialog. Until then, autosave writes the draft to
+a recovery file, `~/.writegood/untitled/<doc id>.md`, so a crash or a quit
+loses nothing. The first save to a chosen path deletes the recovery file.
+Cancelling the save dialog leaves the draft untitled, and the recovery file
+stays.
+
+An untitled draft has a document row, so passes, findings, revisions and the
+duel work on it before it has a file.
+
+**Open.** `⌘O` shows the open dialog. A path the database already knows opens
+its existing row, with its history and findings. A new path gets a new row.
+
+**Save As.** `⌘⇧S` shows the save dialog and writes the draft to the new path.
+The document row moves to the new path, so history and findings follow the
+draft. The old file stays on disk, unchanged. Save As onto the path of another
+known document is refused with a message, because two rows cannot share a path.
+
+**Major revision.** It moves from `⌘⇧S` to `⌘⌥S`. It still asks what changed.
+On an untitled draft it shows the save dialog first.
+
+**Recent files.** The command bar's *open* list becomes *open recent*. It lists
+documents the author has opened in writegood, from any folder, newest first,
+up to 20. An untitled draft with a recovery file is on the list, so a draft
+left behind by `⌘N` or `⌘O` can be found again. A document whose file does not
+exist now is left out of the list. Its row is kept. The macOS menu has File >
+Open Recent, a submenu with the same list, rebuilt by Rust whenever a document
+opens or is saved to a new path. Its items emit `open-doc:<id>`. The frontend
+opens that document. It is not a palette command id.
+
+Before another document replaces the draft in the editor, any edit autosave
+has not written yet is saved.
+
+**Launch.** The app reopens the most recently opened document. For an untitled
+draft that is its recovery file. If that file is missing, or there is none, the
+app opens a new untitled draft. This replaces "open the newest file in the
+documents folder".
+
+**Database.**
+
+- `documents.path` becomes nullable. Null means untitled. SQLite allows many
+  nulls in a unique column, so `unique` stays.
+- `documents.opened_at` is new. It orders the recent list.
+- Rows are never deleted for a missing file. `forget_missing` is removed. A
+  file on an unmounted disk comes back with its history when the disk returns.
+  This matches the rule that the app deletes nothing (§6.2).
+- The migration rebuilds `documents`, because SQLite cannot drop `not null`
+  in place. Existing rows keep their ids, so their revisions and findings stay
+  attached.
+
+**Guard.** The webview never names a file to write. `doc_save(id, text)`
+writes to the row's path, or to its recovery file. `doc_save_as(id, path,
+text)` takes a path, which the save dialog returned, and refuses a path that
+another row holds before it writes. `doc_write` is gone.
+
+**A file moved outside the app** gets a new row when it is opened from its new
+path. Its old history stays with the old row. Detecting moves is out of scope.
+
+**Text files.** A `.txt` file is read as Markdown and written as Markdown.
+Characters that Markdown treats as syntax, such as `*` and `_`, can gain
+escapes on the first save. The first save of a `.txt` file shows a line in the
+status bar that says so.
+
+**Commands.** `doc_pick_open`, `doc_pick_save`, `doc_open(path)`,
+`doc_reopen(id)`, `doc_new`, `doc_save`, `doc_save_as` and `doc_recent`, in
+`documents.rs`. The open commands return the row and the text together.
+
+**Removed.** `doc_list`, `doc_read`, `doc_write`, `doc_create`, `doc_rename`,
+`doc_delete`, `db_forget_missing` and the title question on *new document*.
+
+**Commands and keys.**
+
+| Key | Palette command | Menu |
+|---|---|---|
+| `⌘N` | new document | File > New |
+| `⌘O` | open… | File > Open… |
+| — | open recent | File > Open Recent ▸ |
+| `⌘S` | save (the dialog if untitled) | File > Save |
+| `⌘⇧S` | save as… | File > Save As… |
+| `⌘⌥S` | flag a major revision | File > Save as major revision |
+
+**Status bar.** An untitled draft shows "untitled" where a saved draft shows its
+title. The unsaved mark stays on while the draft has no file, because the
+recovery file is not the author's file.
+
+**Browser fixtures and tests.** `dev/browser/mock-core.ts` answers the two pick
+commands with a fixture path. WebDriver cannot drive a native dialog (§16.1).
+A debug build therefore reads `WRITEGOOD_PICK`. It names a file, and both pick
+commands return that file's first line and show no dialog. An empty line is a
+cancel. The file is read on every pick, so a test can change the answer. The
+e2e harness writes it, and each test file opens its draft with `⌘O` through
+it, because a fresh home starts on an untitled draft.
 
 ---
 
@@ -741,13 +861,15 @@ A command that needs an argument asks for it in the same field rather than
 opening a dialog.
 
 On macOS the same commands also appear in the system menu bar, in `menu.rs`:
-writegood, File, Edit, View, Review, Window. A menu item emits the id of a palette
+writegood, File, Edit, View, Review, Window, Help. A menu item emits the id of a palette
 command, and the palette runs it, so the menu and the keyboard cannot drift
 apart. A command that needs an argument opens the palette on that command. The
 Edit submenu carries Undo, Redo, Cut, Copy, Paste and Select All: WKWebView
 takes those keystrokes from the menu, and without the items the editor cannot
-copy or paste. File > Open the writegood folder is handled in Rust, because
-Rust owns the filesystem. View carries Bigger text (`⌘+`), Smaller text
+copy or paste. File carries New, Open…, Open Recent, Save, Save As… and Save
+as major revision (§6.3). Open Recent is rebuilt by Rust and its items open a
+document, not a palette command. File > Open the writegood folder is handled
+in Rust, because Rust owns the filesystem. View carries Bigger text (`⌘+`), Smaller text
 (`⌘-`) and Actual size (`⌘0`), where macOS apps put them, and the two theme
 commands.
 
@@ -803,17 +925,19 @@ Always available:
 | Key | Action |
 |---|---|
 | `⌘K` | the command bar |
-| `⌘N` | new document (the bar asks for a title) |
-| `⌘O` | open a document (the same bar, pre-filtered) |
+| `⌘N` | new untitled document (§6.3) |
+| `⌘O` | open a file, through the native open dialog |
 | `⌘R` or `⌘⏎` | run the enabled passes |
 | `⌘⇧R` or `⌘⇧⏎` | run one pass (the bar asks which) |
-| `⌘S` | save |
-| `⌘⇧S` | save and flag a major revision (the bar asks what changed) |
+| `⌘S` | save; on an untitled draft, the native save dialog |
+| `⌘⇧S` | save as, through the native save dialog |
+| `⌘⌥S` | save and flag a major revision (the bar asks what changed) |
 | `⌘D` | duel: rewrite the current paragraph |
 | `⌘Y` | revisions |
 | `⌘+` / `⌘-` | bigger / smaller text, saved to the config |
 | `⌘0` | text back to the base size, saved to the config |
 | `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
+| `⌘?` | help |
 | `Esc` | review mode |
 
 In review mode:
@@ -851,6 +975,13 @@ The duel and the revisions sheet cover the window and take the keyboard while
 they are open: `Esc` closes, `⌘R` or `⌘⏎` asks the judge, `j` / `k` move between
 revisions, `Enter` puts a revision back.
 
+**Help.** `⌘?`, Help > writegood help, or *help* in the command bar opens a
+help page. The page is a Markdown document, `src/lib/help/help.md`, shown in a
+second, read-only editor so it reads like a draft. It covers the window like
+the sheets and takes the keyboard the same way. `Esc` or `⌘?` closes it. The
+draft stays mounted under it and is read-only while the help is open, so its
+text, selection, undo history, scroll and unsaved changes are all kept.
+
 ### 12.5 States that need designing
 
 Empty document. Pass running, no findings yet. Pass returned nothing — say so
@@ -868,8 +999,9 @@ Note the second-to-last: the empty result must not become a compliment.
 ├── config.toml           providers, rules, appearance
 ├── writegood.db          revisions, findings, runs, duels
 ├── prices.json           model prices from models.dev, refreshed weekly (§9.4)
-├── documents/            your drafts, Markdown, one per file
+├── documents/            where the dialogs start; drafts can live anywhere
 │   └── on-writing.md
+├── untitled/             recovery files for drafts not yet saved (§6.3)
 └── passes/               your prompts, Markdown, one per file
     ├── 01-nominalization.md
     └── ...

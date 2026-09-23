@@ -32,12 +32,6 @@ fn db_documents(db: State<db::Db>) -> AppResult<Vec<db::Document>> {
     db::list_documents(&conn)
 }
 
-#[tauri::command]
-fn db_forget_missing(db: State<db::Db>, present: Vec<String>) -> AppResult<usize> {
-    let conn = db.0.lock().unwrap();
-    db::forget_missing(&conn, &present)
-}
-
 // ------------------------------------------------------------ revisions
 
 #[tauri::command]
@@ -244,15 +238,16 @@ pub fn run() {
             runner::cli_run,
             llm::llm_chat,
             doc_usage,
-            documents::doc_list,
-            documents::doc_read,
-            documents::doc_write,
-            documents::doc_create,
-            documents::doc_delete,
-            documents::doc_rename,
+            documents::doc_pick_open,
+            documents::doc_pick_save,
+            documents::doc_open,
+            documents::doc_reopen,
+            documents::doc_new,
+            documents::doc_save,
+            documents::doc_save_as,
+            documents::doc_recent,
             db_register,
             db_documents,
-            db_forget_missing,
             rev_save,
             rev_list,
             rev_flag,

@@ -16,10 +16,11 @@ pragma foreign_keys = on;
 
 create table if not exists documents (
     id          integer primary key,
-    path        text    not null unique,
+    path        text    unique,
     title       text    not null,
     created_at  text    not null default (datetime('now')),
-    updated_at  text    not null default (datetime('now'))
+    updated_at  text    not null default (datetime('now')),
+    opened_at   text
 );
 
 create table if not exists revisions (
@@ -112,6 +113,16 @@ const ADDED: &[(&str, &str, &str)] = &[
 ];
 
 fn migrate(conn: &Connection) -> AppResult<()> {
+    let paths_required = conn
+        .prepare("pragma table_info(documents)")?
+        .query_map([], |row| Ok((row.get::<_, String>("name")?, row.get::<_, i64>("notnull")?)))?
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .iter()
+        .any(|(name, notnull)| name == "path" && *notnull != 0);
+    if paths_required {
+        rebuild_documents(conn)?;
+    }
+
     for (table, column, kind) in ADDED {
         let mut stmt = conn.prepare(&format!("pragma table_info({table})"))?;
         let present = stmt
@@ -124,6 +135,36 @@ fn migrate(conn: &Connection) -> AppResult<()> {
         }
     }
     Ok(())
+}
+
+/// Before files could live anywhere, every document had a path. An untitled
+/// draft has none (SPEC §6.3), and SQLite cannot drop `not null` in place, so
+/// the table is rebuilt. Ids are copied, so revisions and findings stay
+/// attached. Foreign keys are off while the old table is dropped, or the
+/// drop would cascade into every row that points at it.
+fn rebuild_documents(conn: &Connection) -> AppResult<()> {
+    conn.execute_batch("pragma foreign_keys = off")?;
+    let result = conn.execute_batch(
+        "begin;
+         create table documents_new (
+             id          integer primary key,
+             path        text    unique,
+             title       text    not null,
+             created_at  text    not null default (datetime('now')),
+             updated_at  text    not null default (datetime('now')),
+             opened_at   text
+         );
+         insert into documents_new (id, path, title, created_at, updated_at, opened_at)
+              select id, path, title, created_at, updated_at, updated_at from documents;
+         drop table documents;
+         alter table documents_new rename to documents;
+         commit;",
+    );
+    if result.is_err() {
+        let _ = conn.execute_batch("rollback");
+    }
+    conn.execute_batch("pragma foreign_keys = on")?;
+    Ok(result?)
 }
 
 /// A run is marked finished by the frontend. If the app stops first — a crash,
@@ -150,10 +191,14 @@ pub struct Document {
     pub id: i64,
     /// Absolute path of the Markdown file. The file is the document; this row
     /// only exists so findings and revisions have something to hang from.
-    pub path: String,
+    /// None for an untitled draft, which lives in a recovery file until it is
+    /// first saved (SPEC §6.3).
+    pub path: Option<String>,
     pub title: String,
     pub created_at: String,
     pub updated_at: String,
+    /// When the author last opened it. Orders the recent list.
+    pub opened_at: Option<String>,
 }
 
 fn document_from_row(row: &Row) -> rusqlite::Result<Document> {
@@ -163,6 +208,7 @@ fn document_from_row(row: &Row) -> rusqlite::Result<Document> {
         title: row.get("title")?,
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
+        opened_at: row.get("opened_at")?,
     })
 }
 
@@ -189,17 +235,48 @@ pub fn get_document_by_path(conn: &Connection, path: &str) -> AppResult<Document
         .ok_or(AppError::NotFound("document"))
 }
 
-/// Forget a file that is no longer on disk, along with its history.
-pub fn forget_missing(conn: &Connection, present: &[String]) -> AppResult<usize> {
-    let known = list_documents(conn)?;
-    let mut removed = 0;
-    for doc in known {
-        if !present.iter().any(|p| p == &doc.path) {
-            delete_document(conn, doc.id)?;
-            removed += 1;
+/// A draft with no file yet. It has a row from the start, so passes,
+/// findings and revisions work on it before it is saved.
+pub fn create_untitled(conn: &Connection, title: &str) -> AppResult<Document> {
+    conn.execute("insert into documents (path, title) values (null, ?1)", params![title])?;
+    get_document(conn, conn.last_insert_rowid())
+}
+
+/// Record that the author opened a document, for the recent list.
+pub fn touch_opened(conn: &Connection, id: i64) -> AppResult<()> {
+    conn.execute(
+        "update documents set opened_at = strftime('%Y-%m-%d %H:%M:%f', 'now') where id = ?1",
+        params![id],
+    )?;
+    Ok(())
+}
+
+/// Every document the author has opened, most recent first. Whether its file
+/// still exists is the caller's question: this module does no file IO.
+pub fn opened_documents(conn: &Connection) -> AppResult<Vec<Document>> {
+    let mut stmt = conn.prepare(
+        "select * from documents where opened_at is not null order by opened_at desc, id desc",
+    )?;
+    let rows = stmt.query_map([], document_from_row)?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Point a row at a new file: the first save of an untitled draft, or Save
+/// As. The history goes with it. A path that another row holds is refused,
+/// because two rows cannot share a file.
+pub fn move_document(conn: &Connection, id: i64, path: &str, title: &str) -> AppResult<Document> {
+    if let Ok(other) = get_document_by_path(conn, path) {
+        if other.id != id {
+            return Err(AppError::invalid(format!(
+                "{path} is already open as another document. Choose another name."
+            )));
         }
     }
-    Ok(removed)
+    conn.execute(
+        "update documents set path = ?2, title = ?3, updated_at = datetime('now') where id = ?1",
+        params![id, path, title],
+    )?;
+    get_document(conn, id)
 }
 
 pub fn get_document(conn: &Connection, id: i64) -> AppResult<Document> {
@@ -683,15 +760,81 @@ mod tests {
     }
 
     #[test]
-    fn files_deleted_from_disk_are_forgotten() {
+    fn untitled_drafts_have_rows_and_no_path() {
         let conn = mem();
-        upsert_document(&conn, "/tmp/kept.md", "kept").unwrap();
-        upsert_document(&conn, "/tmp/gone.md", "gone").unwrap();
-        let removed = forget_missing(&conn, &["/tmp/kept.md".to_string()]).unwrap();
-        assert_eq!(removed, 1);
-        let left = list_documents(&conn).unwrap();
-        assert_eq!(left.len(), 1);
-        assert_eq!(left[0].path, "/tmp/kept.md");
+        let a = create_untitled(&conn, "untitled").unwrap();
+        let b = create_untitled(&conn, "untitled").unwrap();
+        assert_ne!(a.id, b.id, "many untitled drafts can share a null path");
+        assert_eq!(a.path, None);
+        save_revision(&conn, a.id, "{}", "text", false, None).unwrap();
+    }
+
+    #[test]
+    fn a_moved_document_keeps_its_history() {
+        let conn = mem();
+        let doc = create_untitled(&conn, "untitled").unwrap();
+        save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let moved = move_document(&conn, doc.id, "/tmp/moved.md", "Moved").unwrap();
+        assert_eq!(moved.id, doc.id);
+        assert_eq!(moved.path.as_deref(), Some("/tmp/moved.md"));
+        assert_eq!(moved.title, "Moved");
+        assert_eq!(list_revisions(&conn, doc.id).unwrap().len(), 1);
+        // Moving onto its own path again is not a clash.
+        move_document(&conn, doc.id, "/tmp/moved.md", "Moved").unwrap();
+    }
+
+    #[test]
+    fn a_move_onto_another_documents_path_is_refused() {
+        let conn = mem();
+        upsert_document(&conn, "/tmp/taken.md", "Taken").unwrap();
+        let doc = create_untitled(&conn, "untitled").unwrap();
+        let err = move_document(&conn, doc.id, "/tmp/taken.md", "x").unwrap_err();
+        assert!(err.to_string().contains("already open"), "{err}");
+        assert_eq!(get_document(&conn, doc.id).unwrap().path, None);
+    }
+
+    #[test]
+    fn opened_documents_are_newest_first_and_never_deleted() {
+        let conn = mem();
+        let a = upsert_document(&conn, "/tmp/a.md", "a").unwrap();
+        let b = upsert_document(&conn, "/tmp/b.md", "b").unwrap();
+        upsert_document(&conn, "/tmp/never-opened.md", "c").unwrap();
+        touch_opened(&conn, b.id).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        touch_opened(&conn, a.id).unwrap();
+        let ids: Vec<i64> = opened_documents(&conn).unwrap().iter().map(|d| d.id).collect();
+        assert_eq!(ids, vec![a.id, b.id]);
+        assert_eq!(list_documents(&conn).unwrap().len(), 3);
+    }
+
+    #[test]
+    fn a_database_whose_paths_were_required_is_rebuilt_without_losing_rows() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("pragma foreign_keys = on").unwrap();
+        // The documents table as it was before untitled drafts.
+        conn.execute_batch(
+            "create table documents (id integer primary key, path text not null unique,
+                                     title text not null,
+                                     created_at text not null default (datetime('now')),
+                                     updated_at text not null default (datetime('now')));
+             insert into documents (id, path, title) values (7, '/tmp/old.md', 'Old');",
+        )
+        .unwrap();
+        conn.execute_batch(SCHEMA).unwrap();
+        conn.execute(
+            "insert into revisions (doc_id, content_json, content_text) values (7, '{}', 'kept')",
+            [],
+        )
+        .unwrap();
+
+        migrate(&conn).unwrap();
+        migrate(&conn).unwrap(); // a second start must not rebuild again
+
+        let doc = get_document(&conn, 7).unwrap();
+        assert_eq!(doc.path.as_deref(), Some("/tmp/old.md"));
+        assert!(doc.opened_at.is_some(), "old rows show in the recent list");
+        assert_eq!(list_revisions(&conn, 7).unwrap().len(), 1, "the drop did not cascade");
+        create_untitled(&conn, "untitled").unwrap();
     }
 
     #[test]
