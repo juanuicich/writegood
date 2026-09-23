@@ -17,7 +17,7 @@ the rewriting.
 
 The idea comes from Thomas Ptacek's [*How To Write With An
 LLM*](https://sockpuppet.org/blog/2026/09/17/how-to-write-with-an-llm/). The
-app enforces his two rules:
+app enforces the two rules from that article:
 
 - **No model words in your text.** There is no Accept button. A finding says
   where the problem is and what it is. It never gives you replacement text.
