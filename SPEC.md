@@ -706,6 +706,33 @@ greyed with no underline. Dismissed findings are hidden unless you turn them on.
 Overlapping findings are normal. Underlines stack; the sidebar orders by
 document position, then severity.
 
+**Clicking a highlight** lights every finding at that spot, in the text and in
+the margin. The first of them in document order takes the focus, so `x`, `d`
+and `r` act on it and `j` / `k` step on from it. The next step lights one
+finding again.
+
+A click in the text also scrolls the margin until the focused note's top is
+level with the highlight that was clicked. The draft does not move. Stacking
+can put a note far below its sentence. This brings it back beside the words
+the reader is looking at, and the notes above it scroll out past the top of
+the band. The next scroll of the draft brings the margin back level with it.
+Stepping with `j` / `k`, and clicking a note in the margin, only bring the note
+into view. Aligning a note under the mouse would move it away from the
+pointer.
+
+**Drawn ranges are tidied.** Models are loose about the edges of a quote: one
+includes the full stop, another stops before it, a third starts with the space
+or the comma before the first word. What is drawn is tidied. The stored quote
+is not changed. The rules, in `spans.ts`:
+
+1. A range never starts or ends with whitespace, and never starts with `,`,
+   `;`, `:` or `.`. Those characters are trimmed off.
+2. Among overlapping ranges, two ends that differ only by closing punctuation
+   (`.,;:!?` and closing quotes and brackets) move to the later one, so every
+   range that reaches a sentence's end takes its full stop. Two starts that
+   differ only by opening quotes and brackets move to the earlier one.
+3. A range that tidying would empty is drawn as the model placed it.
+
 ### 12.4 Keyboard
 
 The app is driven from the keyboard.
