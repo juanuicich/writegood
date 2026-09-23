@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src-tauri/icons/128x128@2x.png" width="128" height="128" alt="writegood icon">
+</p>
+
 # writegood
 
 A desktop app that finds problems in your prose and refuses to fix them.
