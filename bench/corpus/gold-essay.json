@@ -1,0 +1,20 @@
+[
+  {"category": "nominalization", "quote": "decision to sell was made", "severity": "medium", "note": "The verb 'decide' is buried in the noun 'decision', carried by the empty verb 'was made'."},
+  {"category": "nominalization", "quote": "carried out an evaluation", "severity": "medium", "note": "The verb 'evaluate' is buried in the noun 'evaluation', carried by the empty verb 'carried out'."},
+  {"category": "nominalization", "quote": "had come to the realization", "severity": "medium", "note": "The verb 'realize' is buried in the noun 'realization', carried by the weak verb 'had come to'."},
+  {"category": "passive-actor", "quote": "The decision to sell was made", "severity": "low", "note": "The clause does not say who decided; the reader must infer that the writer did."},
+  {"category": "passive-actor", "quote": "The combination was forgotten", "severity": "low", "note": "The clause hides who forgot the combination; the reader must infer that it was the writer's error."},
+  {"category": "sentence-openings", "quote": "By the time I reached the top of the hill that February,", "severity": "low", "note": "Twelve words come before the subject 'I'."},
+  {"category": "sentence-openings", "quote": "After eleven years of sitting in morning traffic behind a school bus,", "severity": "low", "note": "Twelve words come before the subject 'I'."},
+  {"category": "filler-words", "quote": "It should be noted that", "severity": "high", "note": "The stock phrase 'It should be noted that' delays the statement and adds nothing."},
+  {"category": "filler-words", "quote": "very", "severity": "low", "note": "'Very' adds emphasis only."},
+  {"category": "filler-words", "quote": "basically", "severity": "medium", "note": "'Basically' is an empty hedge on a plain statement."},
+  {"category": "repeated-phrasing", "quote": "picturesque", "severity": "medium", "note": "The second 'picturesque' repeats the adjective used earlier in the same sentence for the Linden Street houses."},
+  {"category": "repeated-phrasing", "quote": "plain and simple", "severity": "medium", "note": "'Plain and simple' is a doubled pair that says one thing twice."},
+  {"category": "paragraph-order", "quote": "the top of the hill that February", "severity": "high", "note": "The paragraph depends on the hill and the first winter, which the paragraph 'The first winter was very hard' introduces only later."},
+  {"category": "topic-flow", "quote": "Municipal snow contracts in our city", "severity": "high", "note": "The sentence opens on snow contracts, but the previous sentence was about arriving at the desk with wet socks."},
+  {"category": "unearned-metaphor", "quote": "an anchor that kept me moored", "severity": "high", "note": "Mixed figure: the anchor image cannot hold with the warm cocoon just before it, and neither says what the car did."},
+  {"category": "unearned-metaphor", "quote": "opened up like a book", "severity": "medium", "note": "Stock simile that stands in for what the writer noticed on foot."},
+  {"category": "length", "quote": "Everyone's situation is different, and what works for one person will not necessarily work for another.", "severity": "medium", "note": "Restatement of 'I am not trying to tell anyone else how to live.'"},
+  {"category": "length", "quote": "in my own circumstances, which may or may not resemble yours", "severity": "low", "note": "Stacked qualification: the limit 'I can only describe what happened to me' is stated again twice."}
+]

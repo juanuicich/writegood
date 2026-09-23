@@ -1,0 +1,152 @@
+[
+  {
+    "category": "nominalization",
+    "quote": "carried out an evaluation of",
+    "kind": "planted",
+    "why": "The action is buried in a noun; \"worked out\" or \"evaluated\" says it directly."
+  },
+  {
+    "category": "nominalization",
+    "quote": "had come to the realization that",
+    "kind": "planted",
+    "why": "\"Had realized\" says the same with the verb restored."
+  },
+  {
+    "category": "nominalization",
+    "quote": "My insurance renewal",
+    "kind": "decoy",
+    "why": "\"Renewal\" names a document that arrived, not an action the writer performed."
+  },
+  {
+    "category": "nominalization",
+    "quote": "a new transmission",
+    "kind": "decoy",
+    "why": "\"Transmission\" names a car part."
+  },
+  {
+    "category": "passive-actor",
+    "quote": "The decision to sell was made in April",
+    "kind": "planted",
+    "why": "The passive hides that the writer decided, in an essay about the writer's own choice."
+  },
+  {
+    "category": "passive-actor",
+    "quote": "The combination was forgotten twice",
+    "kind": "planted",
+    "why": "The writer forgot it; the passive removes the only possible actor."
+  },
+  {
+    "category": "passive-actor",
+    "quote": "My bike was stolen in June.",
+    "kind": "decoy",
+    "why": "The thief is unknown and irrelevant, so the passive is the right choice."
+  },
+  {
+    "category": "passive-actor",
+    "quote": "are cleared by city crews",
+    "kind": "decoy",
+    "why": "The actor is stated in the by-phrase."
+  },
+  {
+    "category": "sentence-openings",
+    "quote": "I left the house at six-forty. I reached the bottom of the hill by seven. I arrived",
+    "kind": "planted",
+    "why": "Three consecutive sentences open with \"I\" and the same subject-verb shape."
+  },
+  {
+    "category": "sentence-openings",
+    "quote": "After eleven years of sitting in morning traffic behind a school bus, I",
+    "kind": "planted",
+    "why": "Twelve words of introductory phrase come before the subject."
+  },
+  {
+    "category": "filler-words",
+    "quote": "It should be noted that",
+    "kind": "planted",
+    "why": "The phrase announces a statement instead of making it."
+  },
+  {
+    "category": "filler-words",
+    "quote": "was very hard",
+    "kind": "planted",
+    "why": "\"Very\" intensifies without adding information."
+  },
+  {
+    "category": "filler-words",
+    "quote": "I actually prefer it",
+    "kind": "planted",
+    "why": "\"Actually\" marks no contrast here and can go."
+  },
+  {
+    "category": "filler-words",
+    "quote": "basically forgotten",
+    "kind": "planted",
+    "why": "\"Basically\" hedges a plain statement."
+  },
+  {
+    "category": "filler-words",
+    "quote": "I can only describe",
+    "kind": "decoy",
+    "why": "\"Only\" limits the claim and carries meaning."
+  },
+  {
+    "category": "filler-words",
+    "quote": "I have never once been late",
+    "kind": "decoy",
+    "why": "\"Never once\" states the claim exactly; it is not emphasis for effect."
+  },
+  {
+    "category": "repeated-phrasing",
+    "quote": "picturesque row of Victorian houses on Linden Street, then the picturesque",
+    "kind": "planted",
+    "why": "An uncommon adjective appears twice in one sentence for no reason."
+  },
+  {
+    "category": "repeated-phrasing",
+    "quote": "plain and simple",
+    "kind": "planted",
+    "why": "A stock doubled pair where neither word adds to the other."
+  },
+  {
+    "category": "repeated-phrasing",
+    "quote": "followed the bus routes instead",
+    "kind": "decoy",
+    "why": "\"Bus routes\" repeats because it names the same thing as the previous sentence."
+  },
+  {
+    "category": "unearned-metaphor",
+    "quote": "a warm cocoon, an anchor that kept me moored",
+    "kind": "planted",
+    "why": "Two figures contradict each other and neither says what the car did."
+  },
+  {
+    "category": "unearned-metaphor",
+    "quote": "the city opened up like a book",
+    "kind": "planted",
+    "why": "Stock imagery stands in for saying what the writer noticed."
+  },
+  {
+    "category": "unearned-metaphor",
+    "quote": "is a bottleneck at rush hour",
+    "kind": "decoy",
+    "why": "A dead metaphor used literally for a narrow bridge that holds up traffic."
+  },
+  {
+    "category": "paragraph-order",
+    "quote": "By the time I reached the top of the hill that February",
+    "kind": "planted",
+    "why": "The paragraph refers to the hill and the first winter before the reader learns about either; it belongs after the winter paragraph."
+  },
+  {
+    "category": "topic-flow",
+    "quote": "Municipal snow contracts in our city specify",
+    "kind": "planted",
+    "why": "The sentence opens with new material unconnected to the wet commute the previous sentence described."
+  },
+  {
+    "category": "length",
+    "quote": "Everyone's situation is different, and what works for one person will not necessarily work for another.",
+    "kind": "planted",
+    "why": "The whole paragraph is throat-clearing and restatement that the essay does not need."
+  }
+]

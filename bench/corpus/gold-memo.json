@@ -1,0 +1,19 @@
+[
+  {"category": "nominalization", "quote": "makes a determination", "severity": "medium", "note": "The verb \"determine\" (decide) is buried in the noun \"determination\", carried by the empty verb \"makes\"."},
+  {"category": "nominalization", "quote": "conduct a review", "severity": "medium", "note": "The verb \"review\" is buried in the noun \"review\", carried by the empty verb \"conduct\"."},
+  {"category": "passive-actor", "quote": "It was decided", "severity": "high", "note": "The draft never says who decided in 2023 to route all changes through the board, the rule this memo proposes to change."},
+  {"category": "passive-actor", "quote": "Concerns have been raised", "severity": "medium", "note": "The draft never says who raised the concerns, which is the evidence for the claim."},
+  {"category": "sentence-openings", "quote": "The board", "severity": "medium", "note": "Three consecutive sentences open with \"The board\"."},
+  {"category": "sentence-openings", "quote": "Given the results of the pilot and what both teams told us in the May retrospective", "severity": "medium", "note": "Sixteen words come before the subject \"I\"."},
+  {"category": "filler-words", "quote": "quite", "severity": "low", "note": "\"Quite\" is an intensifier that adds no fact."},
+  {"category": "filler-words", "quote": "Clearly", "severity": "medium", "note": "\"Clearly\" claims an obviousness that the text has not yet shown."},
+  {"category": "filler-words", "quote": "It should be noted that", "severity": "high", "note": "The stock phrase \"It should be noted that\" delays the content and adds nothing."},
+  {"category": "filler-words", "quote": "really", "severity": "low", "note": "\"Really\" adds emphasis only."},
+  {"category": "repeated-phrasing", "quote": "cumbersome", "severity": "low", "note": "\"Cumbersome\" repeats from \"Its checklist is cumbersome\" two sentences earlier."},
+  {"category": "repeated-phrasing", "quote": "full and complete", "severity": "medium", "note": "The doubled pair \"full and complete\" says one thing twice."},
+  {"category": "unearned-metaphor", "quote": "a toll booth on the highway to production", "severity": "medium", "note": "A stock image stands in for the claim that the board delays releases, which the paragraph states only afterwards."},
+  {"category": "unearned-metaphor", "quote": "a straitjacket", "severity": "high", "note": "Mixed figure: a safety net that becomes a straitjacket, two images that cannot both hold, in place of a plain statement of what the sample review does."},
+  {"category": "paragraph-order", "quote": "Under the pilot, both teams", "severity": "high", "note": "The pilot and the two teams are introduced only in the paragraph that opens \"In March and April, the Payments and Search teams ran a pilot.\", which also repeats these results."},
+  {"category": "topic-flow", "quote": "Admission controllers in the cluster", "severity": "medium", "note": "The sentence opens on admission controllers, which nothing prepared; the previous sentence was about leads recording approvals, and the link comes only at the end with \"that link\"."},
+  {"category": "length", "quote": "As noted above, the board would still review every high-risk change, and nothing in this proposal would change that.", "severity": "high", "note": "Restatement: this sentence and the next repeat \"The board would continue to meet, but only for changes that touch billing, authentication or customer data.\""}
+]

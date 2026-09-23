@@ -1,0 +1,18 @@
+deepseek-flash thinking=off scope=native order=fifo limit=32
+  long.md          wall    8.3s  183 calls  p50 0.9s p90 1.3s  in 384956 (cache 254080) out 10055  $0.0264  findings 88  errors 1
+74 |   const j: any = await r.json();
+75 |   if (!r.ok) throw new Error(`${r.status} ${JSON.stringify(j).slice(0, 200)}`);
+76 |   return j;
+77 | }
+78 | 
+79 | const run = JSON.parse(readFileSync(inFile!, "utf8"));
+                            ^
+ENOENT: no such file or directory, open 'runs/R-long-fast.f.json'
+    path: "runs/R-long-fast.f.json",
+ syscall: "open",
+   errno: -2,
+    code: "ENOENT"
+
+      at <scratch>/verify.ts:79:24
+
+Bun v1.4.2 (macOS arm64)

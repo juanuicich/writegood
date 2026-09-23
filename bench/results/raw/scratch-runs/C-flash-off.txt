@@ -1,0 +1,7 @@
+deepseek-flash thinking=off scope=native order=fifo limit=8
+  draft-essay.md   wall   10.8s   57 calls  p50 1.0s p90 1.6s  in 80783 (cache 50816) out 6291  $0.0084  findings 59  errors 0
+  draft-memo.md    wall    9.6s   57 calls  p50 1.0s p90 1.7s  in 80411 (cache 49792) out 6046  $0.0084  findings 61  errors 0
+  draft-story.md   wall   10.1s   63 calls  p50 1.1s p90 1.7s  in 86837 (cache 50304) out 6701  $0.0097  findings 62  errors 0
+  on-writing.md    wall    9.0s   51 calls  p50 1.2s p90 1.8s  in 51062 (cache 24832) out 8025  $0.0088  findings 79  errors 0
+deepseek-flash thinking=off scope=native order=fifo limit=8
+  overall  P  28%  R  89%  F1  43%  tp 73 fp 188 fn 9  unanchored 3  decoy hits 3

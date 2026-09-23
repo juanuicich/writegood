@@ -1,0 +1,19 @@
+[
+  {"category": "nominalization", "quote": "given an undertaking", "severity": "high", "note": "The noun \"undertaking\" buries the verb \"undertake\", carried by \"given\" in a clause that also buries \"assess\"."},
+  {"category": "nominalization", "quote": "carry out an assessment", "severity": "high", "note": "The noun \"assessment\" buries the verb \"assess\", carried by \"carry out\" in the same clause as \"given an undertaking\"."},
+  {"category": "nominalization", "quote": "made the decision", "severity": "medium", "note": "The noun \"decision\" buries the verb \"decide\", carried by the empty verb \"made\"."},
+  {"category": "passive-actor", "quote": "Flood warnings for Quay Street were not issued", "severity": "high", "note": "The draft never says which body failed to issue the warnings in time."},
+  {"category": "passive-actor", "quote": "Sandbags had been promised", "severity": "high", "note": "The draft never says who promised the sandbags that did not arrive."},
+  {"category": "sentence-openings", "quote": "In the weeks after the water went down and the loss adjuster had come round to photograph each and every room", "severity": "medium", "note": "Twenty-one words come before the subject \"Ellen\"."},
+  {"category": "filler-words", "quote": "really", "severity": "low", "note": "\"Really\" is an intensifier that adds only emphasis."},
+  {"category": "filler-words", "quote": "obviously", "severity": "medium", "note": "\"Obviously\" adds a claim of obviousness and no fact."},
+  {"category": "filler-words", "quote": "very", "severity": "low", "note": "\"Very\" is an intensifier that adds only emphasis."},
+  {"category": "repeated-phrasing", "quote": "sodden", "severity": "medium", "note": "\"Sodden\" in \"sodden skirting boards\" repeats \"sodden flour\" from the sentence before."},
+  {"category": "repeated-phrasing", "quote": "each and every", "severity": "medium", "note": "\"Each and every\" is a doubled pair that says one thing twice."},
+  {"category": "unearned-metaphor", "quote": "the beating heart of Quay Street", "severity": "medium", "note": "A stock image, extended to a heart and body, stands in for saying what the closure did to the street."},
+  {"category": "unearned-metaphor", "quote": "lit a fire under the council", "severity": "high", "note": "A mixed figure: a fire image follows a wave image, and the draft never says what the support did."},
+  {"category": "unearned-metaphor", "quote": "a wake-up call", "severity": "medium", "note": "A stock image that leaves unsaid what the street learned or changed."},
+  {"category": "paragraph-order", "quote": "The insurance payment, when it came in August", "severity": "low", "note": "This aftermath paragraph sits inside the account of the morning and names a new floor before \"The damage was really extensive\" describes the lifted floor tiles."},
+  {"category": "topic-flow", "quote": "Gluten development", "severity": "high", "note": "The sentence opens on gluten development, which nothing prepares, after a sentence about Tom buying flour in Ashby."},
+  {"category": "length", "quote": "It is difficult to overstate how much the flood affected the people of the street, and it would be impossible to describe every way in which their lives were changed by it.", "severity": "medium", "note": "Restatement of \"The flood affected many people on Quay Street in many different ways.\""}
+]

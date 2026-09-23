@@ -1,0 +1,436 @@
+[
+  {
+    "id": 1,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "She ",
+    "note": "Four consecutive sentences open with the same word, \"She\"."
+  },
+  {
+    "id": 2,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "never once",
+    "note": "never once is an emphatic intensifier that adds no factual content."
+  },
+  {
+    "id": 3,
+    "draft": "draft-memo.md",
+    "category": "nominalization",
+    "quote": "is not a criticism",
+    "note": "The noun 'criticism' buries the action of 'criticize' behind the weak verb 'is'."
+  },
+  {
+    "id": 4,
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "It is difficult to overstate how much",
+    "note": "This stock phrase adds emphasis and delays the content."
+  },
+  {
+    "id": 5,
+    "draft": "draft-essay.md",
+    "category": "paragraph-order",
+    "quote": "The bridge on Fenwick Road is a bottleneck",
+    "note": "Fenwick Road is introduced at the end of the paragraph beginning \"The first winter was very hard,\" then dropped while the paragraph beginning \"Walking changed how I see the neighbourhood\" describes other streets, and resumed here. The two Fenwick Road details are separated by unrelated material."
+  },
+  {
+    "id": 6,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "The sidewalks along Fenwick Road",
+    "note": "'The sidewalks along Fenwick Road' is a new element; the preceding sentence is about the side streets and following the bus routes. Fenwick Road has not appeared in the paragraph up to this point."
+  },
+  {
+    "id": 7,
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "It is difficult to overstate",
+    "note": "Stock phrase that delays the content without adding meaning."
+  },
+  {
+    "id": 8,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "ovens",
+    "note": "The word 'ovens' repeats the noun from the previous paragraph ('covered the ovens but not the flour')."
+  },
+  {
+    "id": 9,
+    "draft": "on-writing.md",
+    "category": "repeated-phrasing",
+    "quote": "really quite",
+    "note": "The intensifiers 'really' and 'quite' both modify 'unproductive'."
+  },
+  {
+    "id": 10,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "that point should not be lost",
+    "note": "Stock phrase that asserts importance without content."
+  },
+  {
+    "id": 11,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "No resolution was arrived at",
+    "note": "The clause does not name who failed to arrive at a resolution. The actor responsible for the decision is missing."
+  },
+  {
+    "id": 12,
+    "draft": "draft-memo.md",
+    "category": "passive-actor",
+    "quote": "It should be noted",
+    "note": "The clause hides who is doing the noting. The draft never names the actor making this claim."
+  },
+  {
+    "id": 13,
+    "draft": "draft-essay.md",
+    "category": "length",
+    "quote": "People ask me why, and I have never had a good answer, so this is my attempt at one.",
+    "note": "Throat-clearing: restates the why-question and announces the piece before any content. Removing it costs no fact, step or argument."
+  },
+  {
+    "id": 14,
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "A wave of support",
+    "note": "Stock image: the wave metaphor stands in for the support without showing who provided it or what form it took."
+  },
+  {
+    "id": 15,
+    "draft": "draft-essay.md",
+    "category": "length",
+    "quote": "I pass a picturesque row of Victorian houses on Linden Street, then the picturesque old mill that someone has turned into flats.",
+    "note": "Repeated example: the second landmark does the same illustrative work, in the same structure, as the first."
+  },
+  {
+    "id": 16,
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "author",
+    "note": "The word \"author\" repeats within the same sentence; the first occurrence is in \"the author and the board\"."
+  },
+  {
+    "id": 17,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "The cold",
+    "note": "The sentence opens on 'The cold', which the paragraph has not introduced; the preceding sentence is about the climb up the hill in February. The reader can place the cold from the setting, but the opening element is new."
+  },
+  {
+    "id": 18,
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "harder to put a price on",
+    "note": "Stock image: the idiom stands in for whatever the losing actually consisted of, and the draft never supplies it. The reader gets the gesture toward valuation but no object of it."
+  },
+  {
+    "id": 19,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "flour",
+    "note": "The word 'flour' repeats the noun from the previous paragraph ('covered the ovens but not the flour')."
+  },
+  {
+    "id": 20,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "The hall kitchen is very small, and only one oven works.",
+    "note": "The sentence opens on the hall kitchen, which the previous sentence about selling loaves from a trestle table outside the hall reaches only at its end."
+  },
+  {
+    "id": 21,
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "She has answered it by moving the flour upstairs.",
+    "note": "The opening pronoun has no clear referent, since the previous sentence's subject is the street and the one before that is Ellen. The link to the sentence before is not established."
+  },
+  {
+    "id": 22,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "come to the realization that",
+    "note": "Stock phrase that delays the content, since the clause simply states what was realized."
+  },
+  {
+    "id": 23,
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "At a quarter past four on the ninth of March,",
+    "note": "The main subject (Ellen Morrow) is preceded by 11 words before it appears."
+  },
+  {
+    "id": 24,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "Two months is a short period, and the pilot gives us limited evidence on this.",
+    "note": "Stacked qualification: 'Two months is a short period' and 'the pilot gives us limited evidence' state the same limit on the pilot's evidence twice."
+  },
+  {
+    "id": 25,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My insurance renewal",
+    "note": "'My insurance renewal' is a new element at the opening; the preceding sentence is about the mechanic's quote for a transmission. The only link back sits at the sentence's end, in 'the same week'."
+  },
+  {
+    "id": 26,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "a resolution would be arrived at",
+    "note": "The clause does not name who would arrive at the resolution. The actor is missing."
+  },
+  {
+    "id": 27,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "x determination would be made",
+    "note": "The draft never says who would make the determination; the committee is named only as the decider."
+  },
+  {
+    "id": 28,
+    "draft": "on-writing.md",
+    "category": "filler-words",
+    "quote": "made the observation that",
+    "note": "\"made the observation that\" is a stock reporting phrase that delays the content."
+  },
+  {
+    "id": 29,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I reached the bottom of the hill",
+    "note": "This sentence, the one beginning \"I left the house at six-forty\" and the one beginning \"I arrived at my desk\" all use the same 'I + past-tense verb + time' template."
+  },
+  {
+    "id": 30,
+    "draft": "draft-essay.md",
+    "category": "passive-actor",
+    "quote": "bus routes are cleared",
+    "note": "The clause does not say who clears the bus routes; the next sentence names city crews only for sidewalks."
+  },
+  {
+    "id": 31,
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "Concerns have been raised",
+    "note": "The sentence opens on unspecified \"Concerns\", a new element. The sentence before it was about the board's checklist and weekly schedule."
+  },
+  {
+    "id": 32,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "the same week",
+    "note": "\"week\" appears twice within two sentences: \"a week after my mechanic quoted me\" and \"arrived the same week\"."
+  },
+  {
+    "id": 33,
+    "draft": "on-writing.md",
+    "category": "nominalization",
+    "quote": "is a feeling",
+    "note": "The noun 'feeling' buries the verb 'feel'."
+  },
+  {
+    "id": 34,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "A monthly bus pass",
+    "note": "'A monthly bus pass' opens on a new element; the preceding sentence totals the car's yearly costs. The comparison the sentence depends on is left unstated."
+  },
+  {
+    "id": 35,
+    "draft": "draft-essay.md",
+    "category": "nominalization",
+    "quote": "is my attempt",
+    "note": "The noun 'attempt' carries the action while the linking verb 'is' does no work; the verb 'attempt' is buried in the noun."
+  },
+  {
+    "id": 36,
+    "draft": "on-writing.md",
+    "category": "filler-words",
+    "quote": "Very",
+    "note": "Very adds emphasis."
+  },
+  {
+    "id": 37,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "My bike",
+    "note": "'My bike' is a new element at the opening; the preceding sentence contrasts crossing the bridge on foot with crossing it by car. The theft has no stated connection to that bottleneck."
+  },
+  {
+    "id": 38,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "plain and simple",
+    "note": "plain and simple is a three-word stock phrase that adds emphasis without meaning."
+  },
+  {
+    "id": 39,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "actually",
+    "note": "actually adds empty emphasis to the preference."
+  },
+  {
+    "id": 40,
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "it would be impossible to describe",
+    "note": "This stock phrase adds emphasis and delays the content."
+  },
+  {
+    "id": 41,
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "I want to be clear that",
+    "note": "Stock phrase that adds emphasis without content."
+  },
+  {
+    "id": 42,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I reached the bottom of the hill by seven. I arrived at my desk with wet socks and a temper.",
+    "note": "Three consecutive sentences are built on the same template of a first-person past-tense verb followed by a time or endpoint."
+  },
+  {
+    "id": 43,
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "A monthly bus pass costs sixty.",
+    "note": "The sentence opens on a new element, the bus pass, which the previous sentence about the car's yearly costs did not introduce. The reader can place it in the cost comparison, but it is new at the opening."
+  },
+  {
+    "id": 44,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "nothing had been accomplished",
+    "note": "The draft does not say who or what accomplished nothing; the clause is passive with no by phrase."
+  },
+  {
+    "id": 45,
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "reviewed",
+    "note": "reviewed repeats from the previous paragraph and from sentence 2. This later occurrence is the repeated wording."
+  },
+  {
+    "id": 46,
+    "draft": "draft-memo.md",
+    "category": "unearned-metaphor",
+    "quote": "A safety net",
+    "note": "Stock image: the phrase stands in for the argument that the sample review will catch mistakes, but the draft does not explain what makes the review a safeguard."
+  },
+  {
+    "id": 47,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "own",
+    "note": "own adds emphasis to possession without adding meaning."
+  },
+  {
+    "id": 48,
+    "draft": "draft-story.md",
+    "category": "paragraph-order",
+    "quote": "The flood affected many people",
+    "note": "Repeats the point already made in 'It was obviously a shock to the whole street', restating the same claim about the flood's effect on the street and its people without adding to it."
+  },
+  {
+    "id": 49,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "it would be impossible to describe",
+    "note": "The second clause repeats the 'It is difficult to overstate' template; the first occurrence is earlier in the same sentence."
+  },
+  {
+    "id": 50,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "whole",
+    "note": "The word 'whole' repeats from 'the whole street' in the previous sentence."
+  },
+  {
+    "id": 51,
+    "draft": "draft-memo.md",
+    "category": "passive-actor",
+    "quote": "that point should not be lost",
+    "note": "The actor who should not lose the point is missing. The draft never names who is responsible for retaining it."
+  },
+  {
+    "id": 52,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "Insurance",
+    "note": "Insurance repeats the earlier 'insurance' in 'My insurance renewal' in the second sentence."
+  },
+  {
+    "id": 53,
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "cleared",
+    "note": "The word \"cleared\" appears a second time here; the first is in \"bus routes are cleared first, by six in the morning\" two sentences earlier."
+  },
+  {
+    "id": 54,
+    "draft": "draft-memo.md",
+    "category": "nominalization",
+    "quote": "is it an attempt",
+    "note": "The noun 'attempt' buries the verb 'attempt' behind the weak verb 'is'."
+  },
+  {
+    "id": 55,
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "The results were quite encouraging.",
+    "note": "Restatement: it repeats the pilot outcome already given in 'both teams cut their median wait from six days to under one', adding no fact, step or argument."
+  },
+  {
+    "id": 56,
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "a decision would be made",
+    "note": "The draft never says who would make the decision regarding the proposal. The committee is named only as the body that decided to make it."
+  },
+  {
+    "id": 57,
+    "draft": "draft-memo.md",
+    "category": "sentence-openings",
+    "quote": "In March and April, the Payments and Search teams",
+    "note": "The words before the subject \"the Payments and Search teams\" total 13."
+  },
+  {
+    "id": 58,
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "carried out an evaluation of",
+    "note": "Stock phrase that delays the content and adds no meaning beyond the act itself."
+  },
+  {
+    "id": 59,
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "Oversight",
+    "note": "\"Oversight\" repeats the \"remove oversight\" of the second sentence, three sentences earlier."
+  },
+  {
+    "id": 60,
+    "draft": "on-writing.md",
+    "category": "topic-flow",
+    "quote": "Unfortunately, the meeting",
+    "note": "The sentence opens on 'the meeting', an element nothing earlier in the paragraph has named; the previous sentence was about members not having read the proposal."
+  },
+  {
+    "id": 61,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "The flood wall was built",
+    "note": "The passive 'The [noun] was' template of 'The street was closed' repeats in 'The flood wall was built'."
+  },
+  {
+    "id": 62,
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "affected",
+    "note": "The word 'affected' repeats; the first occurrence is in the first sentence."
+  }
+]

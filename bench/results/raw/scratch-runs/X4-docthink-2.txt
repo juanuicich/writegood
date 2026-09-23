@@ -1,0 +1,5 @@
+deepseek-flash thinking=high scope=native order=fifo limit=8
+  draft-essay.md   wall   63.7s    2 calls  p50 63.7s p90 63.7s  in 2682 (cache 0) out 24493  $0.0151  findings 4  errors 0
+  draft-memo.md    wall   71.7s    2 calls  p50 71.7s p90 71.7s  in 2662 (cache 0) out 29675  $0.0182  findings 5  errors 0
+  draft-story.md   wall  117.6s    2 calls  p50 117.6s p90 117.6s  in 2620 (cache 0) out 42344  $0.0258  findings 6  errors 0
+  on-writing.md    wall   52.1s    2 calls  p50 52.1s p90 52.1s  in 1924 (cache 0) out 18608  $0.0115  findings 4  errors 0

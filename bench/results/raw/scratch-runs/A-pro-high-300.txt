@@ -1,0 +1,7 @@
+deepseek-v4-pro thinking=high scope=native order=fifo limit=8
+  draft-essay.md   wall  541.5s   57 calls  p50 14.8s p90 153.1s  in 82637 (cache 57344) out 145880  $0.1381  findings 20  errors 2
+  draft-memo.md    wall  584.5s   57 calls  p50 24.4s p90 153.2s  in 82222 (cache 57856) out 151533  $0.1426  findings 23  errors 2
+  draft-story.md   wall  533.9s   63 calls  p50 9.5s p90 168.2s  in 90306 (cache 59648) out 169472  $0.1610  findings 28  errors 1
+  on-writing.md    wall  684.3s   51 calls  p50 32.8s p90 236.1s  in 54056 (cache 33664) out 243897  $0.2212  findings 34  errors 1
+deepseek-v4-pro thinking=high scope=native order=fifo limit=8
+  overall  P  65%  R  83%  F1  73%  tp 68 fp 37 fn 14  unanchored 0  decoy hits 1

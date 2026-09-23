@@ -1,0 +1,341 @@
+/** Shared parts of the benchmark: paths, keys, rule sets, drafts, and the
+ *  two providers.
+ *
+ *  The prompts, the preamble, the parser, the filters and the verifier come
+ *  from the app (src/lib/passes). The benchmark changes the provider, the
+ *  model and the rules, and nothing else. */
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, join, resolve } from "node:path";
+import type { Pass } from "../../src/lib/ipc";
+
+export const BENCH = resolve(import.meta.dir, "..");
+export const REPO = resolve(BENCH, "..");
+export const CORPUS = join(BENCH, "corpus");
+export const RULES = join(BENCH, "rules");
+export const RESULTS = join(BENCH, "results");
+
+/** The four drafts with reference findings. */
+export const SCORED = ["draft-essay.md", "draft-memo.md", "draft-story.md", "on-writing.md"];
+
+export function flag(name: string, fallback?: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : fallback;
+}
+
+// ---------------------------------------------------------------- keys
+
+/** A key from the repo's .env, then from ~/.writegood/.env. The value is
+ *  never printed. */
+export function key(name: string): string {
+  for (const file of [join(REPO, ".env"), join(homedir(), ".writegood", ".env")]) {
+    if (!existsSync(file)) continue;
+    const m = readFileSync(file, "utf8").match(new RegExp(`^\\s*${name}\\s*=\\s*(.*)$`, "m"));
+    if (m) return m[1]!.trim().replace(/^["']|["']$/g, "");
+  }
+  throw new Error(`${name} is not set in .env or ~/.writegood/.env`);
+}
+
+// ---------------------------------------------------------------- drafts
+
+export function draftPath(name: string): string {
+  const p = join(CORPUS, basename(name));
+  if (existsSync(p)) return p;
+  if (existsSync(name)) return name;
+  throw new Error(`no draft ${name} in ${CORPUS}`);
+}
+
+export const stem = (d: string) => basename(d).replace(/^draft-/, "").replace(/\.md$/, "");
+export const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
+
+// ---------------------------------------------------------------- rules
+
+export type Thinking = "off" | "low" | "medium" | "high" | "max" | "default";
+
+/** A pass as the app reads it, from one rule file. */
+export function loadRules(name: string): Pass[] {
+  const dir = join(RULES, name);
+  if (!existsSync(dir)) {
+    const known = readdirSync(RULES).join(", ");
+    throw new Error(`no rule set "${name}" in ${RULES}; known: ${known}`);
+  }
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .flatMap((file): Pass[] => {
+      const text = readFileSync(join(dir, file), "utf8");
+      const parts = text.split(/^\+\+\+$/m);
+      const meta = parts[1]!;
+      const field = (k: string) =>
+        meta.match(new RegExp(`^\\s*${k}\\s*=\\s*"?([^"\\n]+?)"?\\s*$`, "m"))?.[1];
+      if (field("enabled") === "false") return [];
+      const category = field("category") ?? file;
+      const timeout = field("timeout_secs");
+      return [{
+        slug: category,
+        name: field("name") ?? file,
+        category,
+        scope: (field("scope") ?? "paragraph") as Pass["scope"],
+        provider: null,
+        enabled: true,
+        prompt: parts.slice(2).join("+++").trim(),
+        path: join(dir, file),
+        thinking: (field("thinking") as Pass["thinking"]) ?? null,
+        timeoutSecs: timeout ? Number(timeout) : null,
+      }];
+    });
+}
+
+// ---------------------------------------------------------------- providers
+
+export interface Usage {
+  input: number;
+  cacheRead: number;
+  output: number;
+  reasoning: number;
+  cost: number;
+  /** "reported" when the provider returned the cost, "rates" when it is
+   *  computed from a price table. */
+  costSource: "reported" | "rates";
+  /** The upstream provider that served the call, when the API says. */
+  servedBy?: string;
+}
+
+export interface Provider {
+  name: "deepseek" | "openrouter";
+  model: string;
+  /** OpenRouter only: the one upstream provider allowed to serve the call. */
+  pinned?: string;
+  chat(system: string, prompt: string, thinking: Thinking, ceilingSecs: number): Promise<{ text: string; usage: Usage }>;
+}
+
+/** DeepSeek prices per million tokens, as in the app's price table
+ *  (models.dev, read by src-tauri/src/prices.rs). */
+const DEEPSEEK_RATES: Record<string, { input: number; cache: number; output: number }> = {
+  "deepseek-flash": { input: 0.15, cache: 0.003, output: 0.6 },
+  "deepseek-v4-pro": { input: 0.435, cache: 0.003625, output: 0.87 },
+};
+
+/** The first-party OpenRouter provider for a model's vendor. */
+const FIRST_PARTY: Record<string, string> = {
+  deepseek: "deepseek",
+  openai: "openai",
+  anthropic: "anthropic",
+  google: "google-ai-studio",
+  mistralai: "mistral",
+  "x-ai": "xai",
+  qwen: "alibaba",
+  moonshotai: "moonshotai",
+  "z-ai": "z-ai",
+  minimax: "minimax",
+  cohere: "cohere",
+};
+
+export function firstParty(model: string): string {
+  const vendor = model.split("/")[0]!;
+  const p = FIRST_PARTY[vendor];
+  if (!p) throw new Error(`no known first-party provider for "${vendor}"; pass --or-provider`);
+  return p;
+}
+
+async function post(url: string, auth: string, body: unknown, ceilingSecs: number): Promise<any> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ceilingSecs * 1000);
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${auth}` },
+      body: JSON.stringify(body),
+      signal: ctl.signal,
+    });
+    const text = await r.text();
+    let j: any;
+    try {
+      j = JSON.parse(text);
+    } catch {
+      throw new Error(`${r.status} ${text.slice(0, 200)}`);
+    }
+    if (!r.ok || j.error) throw new Error(`${r.status} ${JSON.stringify(j.error ?? j).slice(0, 300)}`);
+    return j;
+  } catch (e) {
+    if (ctl.signal.aborted) throw new Error(`did not answer within ${ceilingSecs}s`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function deepseek(model: string): Provider {
+  const auth = key("DEEPSEEK_API_KEY");
+  const rates = DEEPSEEK_RATES[model];
+  if (!rates) throw new Error(`no DeepSeek rates for ${model}; add them to DEEPSEEK_RATES in lib.ts`);
+  return {
+    name: "deepseek",
+    model,
+    async chat(system, prompt, thinking, ceilingSecs) {
+      const body: Record<string, unknown> = {
+        model,
+        messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+      };
+      // DeepSeek's own switch. "low" does not shorten Flash's thinking.
+      if (thinking === "off") body.thinking = { type: "disabled" };
+      else if (thinking !== "default") {
+        body.thinking = { type: "enabled" };
+        body.reasoning_effort = thinking;
+      }
+      const j = await post("https://api.deepseek.com/v1/chat/completions", auth, body, ceilingSecs);
+      const u = j.usage ?? {};
+      const input = u.prompt_tokens ?? 0;
+      const cacheRead = u.prompt_cache_hit_tokens ?? u.prompt_tokens_details?.cached_tokens ?? 0;
+      const output = u.completion_tokens ?? 0;
+      return {
+        text: j.choices?.[0]?.message?.content ?? "",
+        usage: {
+          input, cacheRead, output,
+          reasoning: u.completion_tokens_details?.reasoning_tokens ?? 0,
+          cost: ((input - cacheRead) * rates.input + cacheRead * rates.cache + output * rates.output) / 1e6,
+          costSource: "rates",
+          servedBy: "deepseek",
+        },
+      };
+    },
+  };
+}
+
+export function openrouter(model: string, pinned: string): Provider {
+  const auth = key("OPENROUTER_API_KEY");
+  return {
+    name: "openrouter",
+    model,
+    pinned,
+    async chat(system, prompt, thinking, ceilingSecs) {
+      const body: Record<string, unknown> = {
+        model,
+        messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+        // One upstream provider, no fallback: a result names what served it.
+        provider: { only: [pinned], allow_fallbacks: false },
+        // Usage is always returned now; the flag is harmless and asks for cost.
+        usage: { include: true },
+      };
+      if (thinking === "off") body.reasoning = { enabled: false };
+      else if (thinking !== "default") body.reasoning = { effort: thinking };
+      const j = await post("https://openrouter.ai/api/v1/chat/completions", auth, body, ceilingSecs);
+      const u = j.usage ?? {};
+      return {
+        text: j.choices?.[0]?.message?.content ?? "",
+        usage: {
+          input: u.prompt_tokens ?? 0,
+          cacheRead: u.prompt_tokens_details?.cached_tokens ?? 0,
+          output: u.completion_tokens ?? 0,
+          reasoning: u.completion_tokens_details?.reasoning_tokens ?? 0,
+          cost: Number(u.cost ?? 0),
+          costSource: "reported",
+          servedBy: j.provider ?? undefined,
+        },
+      };
+    },
+  };
+}
+
+// ---------------------------------------------------------------- result files
+
+export interface CallRecord {
+  draft: string;
+  pass: string;
+  /** "pass" for a pass call, "verify" for a verifier vote. */
+  stage: "pass" | "verify";
+  /** Paragraph index, or null for a document-scope call or a verifier. */
+  chunk: number | null;
+  thinking: Thinking;
+  start: number;
+  secs: number;
+  input: number;
+  cacheRead: number;
+  output: number;
+  reasoning: number;
+  cost: number;
+  costSource?: "reported" | "rates";
+  servedBy?: string;
+  /** Findings read from the reply, before filters and verifier. */
+  candidates?: number;
+  error?: string;
+  unreadable?: string;
+}
+
+export interface Finding {
+  draft: string;
+  pass: string;
+  quote: string;
+  severity: string;
+  note: string;
+}
+
+export interface DraftRecord {
+  draft: string;
+  words: number;
+  paragraphs: number;
+  /** Seconds from the first call to the last answer, verifiers included. */
+  wall: number;
+  /** Seconds until every pass that does not think has stored its findings. */
+  firstFindings: number | null;
+  calls: number;
+  input: number;
+  cacheRead: number;
+  output: number;
+  reasoning: number;
+  cost: number;
+  verifyCost: number;
+  latency: { p50: number; p90: number; max: number };
+  errors: number;
+  unreadable: number;
+  candidates: number;
+  kept: number;
+}
+
+export interface Tally {
+  tp: number;
+  fp: number;
+  fn: number;
+  unanchored: number;
+  decoy: number;
+  precision: number;
+  recall: number;
+  f1: number;
+}
+
+export interface Result {
+  schema: 1;
+  label: string;
+  date: string;
+  source: string;
+  config: {
+    provider: string;
+    /** OpenRouter: the upstream provider pinned for every call. */
+    orProvider: string | null;
+    model: string;
+    thinking: Thinking;
+    /** Passes run with their own thinking level (pipeline hybrid). */
+    thinkingPasses: Record<string, Thinking>;
+    pipeline: "plain" | "fast" | "hybrid";
+    rules: string;
+    scope: "native" | "document";
+    limit: number;
+    votes: number | null;
+    need: number | null;
+    ceilingSecs: number;
+    drafts: string[];
+    note?: string;
+  };
+  rules: string;
+  drafts: DraftRecord[];
+  scores: { overall: Tally; byPass: Record<string, Tally>; byDraft: Record<string, Tally> } | null;
+  findings: Finding[];
+  calls: CallRecord[];
+  errors: string[];
+}
+
+export function quantiles(xs: number[]) {
+  const s = [...xs].sort((a, b) => a - b);
+  const q = (p: number) => (s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))]! : 0);
+  return { p50: q(0.5), p90: q(0.9), max: s.at(-1) ?? 0 };
+}

@@ -1,0 +1,164 @@
+[
+  {
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "carried out an evaluation of",
+    "note": "Stock phrase that delays the content and adds no meaning beyond the act itself."
+  },
+  {
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "come to the realization that",
+    "note": "Stock phrase that delays the content, since the clause simply states what was realized."
+  },
+  {
+    "draft": "draft-essay.md",
+    "category": "filler-words",
+    "quote": "plain and simple",
+    "note": "plain and simple is a stock phrase that adds emphasis without meaning."
+  },
+  {
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "the same week",
+    "note": "\"week\" appears twice within two sentences: \"a week after my mechanic quoted me\" and \"arrived the same week\"."
+  },
+  {
+    "draft": "draft-essay.md",
+    "category": "repeated-phrasing",
+    "quote": "I reached the bottom of the hill by seven. I arrived at my desk with wet socks and a temper.",
+    "note": "Three consecutive sentences are built on the same template of a first-person past-tense verb followed by a time or endpoint."
+  },
+  {
+    "draft": "draft-essay.md",
+    "category": "topic-flow",
+    "quote": "A monthly bus pass costs sixty.",
+    "note": "The sentence opens on a new element, the bus pass, which the previous sentence about the car's yearly costs did not introduce. The reader can place it in the cost comparison, but it is new at the opening."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "passive-actor",
+    "quote": "It should be noted",
+    "note": "The draft never says who should note this. The surrounding sentences name no actor for this remark."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "sentence-openings",
+    "quote": "In March and April, the Payments and Search teams",
+    "note": "The words before the subject \"the Payments and Search teams\" total 13."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "I want to be clear that",
+    "note": "This is an empty stock phrase announcing candor rather than stating anything."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "filler-words",
+    "quote": "that point should not be lost",
+    "note": "This is a stock phrase stressing importance the surrounding text has not established as a fact."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "repeated-phrasing",
+    "quote": "Oversight",
+    "note": "Repeats \"oversight\", used two sentences earlier in \"an attempt to remove oversight from our release process\"."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "topic-flow",
+    "quote": "Concerns have been raised",
+    "note": "The sentence opens on unspecified \"Concerns\", a new element. The sentence before it was about the board's checklist and weekly schedule."
+  },
+  {
+    "draft": "draft-memo.md",
+    "category": "length",
+    "quote": "The results were quite encouraging.",
+    "note": "Restatement of the pilot outcome already given as the reduced wait and absence of rollbacks."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "At a quarter past four on the ninth of March,",
+    "note": "The main subject (Ellen Morrow) is preceded by 11 words before it appears."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "sentence-openings",
+    "quote": "She ",
+    "note": "Four consecutive sentences open with the same word, \"She\"."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "It is difficult to overstate",
+    "note": "Stock phrase that delays the content without adding meaning."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "filler-words",
+    "quote": "it would be impossible to describe",
+    "note": "Stock phrase that delays the content without adding meaning."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "repeated-phrasing",
+    "quote": "affected",
+    "note": "\"affected\" repeats within three sentences; the first occurrence is in the opening sentence of this paragraph."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "The hall kitchen is very small, and only one oven works.",
+    "note": "The sentence opens on the hall kitchen, which the previous sentence about selling loaves from a trestle table outside the hall reaches only at its end."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "topic-flow",
+    "quote": "She has answered it by moving the flour upstairs.",
+    "note": "The opening pronoun has no clear referent, since the previous sentence's subject is the street and the one before that is Ellen. The link to the sentence before is not established."
+  },
+  {
+    "draft": "draft-story.md",
+    "category": "unearned-metaphor",
+    "quote": "harder to put a price on",
+    "note": "Stock image standing in for the loss it gestures at; the draft never says what the unpriced things are, leaving the figure to carry the whole claim."
+  },
+  {
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "x determination would be made",
+    "note": "The passive withholds who would make the determination; the sentence names only who decided, not who acts on the proposal."
+  },
+  {
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "a resolution would be arrived at",
+    "note": "The draft never says who expected the resolution or who was to arrive at it."
+  },
+  {
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "No resolution was arrived at",
+    "note": "The draft does not name who failed to arrive at the resolution."
+  },
+  {
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "nothing had been accomplished",
+    "note": "The draft does not say who or what accomplished nothing; the clause is passive with no by phrase."
+  },
+  {
+    "draft": "on-writing.md",
+    "category": "passive-actor",
+    "quote": "a decision would be made",
+    "note": "The draft never says who would make the decision regarding the proposal. The committee is named only as the body that decided to make it."
+  },
+  {
+    "draft": "on-writing.md",
+    "category": "filler-words",
+    "quote": "made the observation that",
+    "note": "This four-word stock phrase delays the content in place of the plain reporting verb."
+  }
+]

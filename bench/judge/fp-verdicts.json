@@ -1,0 +1,374 @@
+[
+ {
+  "id": 1,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Openings share only the pronoun 'She'; second words differ."
+ },
+ {
+  "id": 2,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "'once' is an emphatic intensifier after 'never'."
+ },
+ {
+  "id": 3,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Noun 'criticism' with weak 'is'; verb 'criticize' exists."
+ },
+ {
+  "id": 4,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Stock emphasis phrase that delays the content."
+ },
+ {
+  "id": 5,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Fenwick Road is a place, not a topic; walking paragraph is related."
+ },
+ {
+  "id": 6,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Opens on new Fenwick Road; link to bus routes is implicit."
+ },
+ {
+  "id": 7,
+  "verdict": "duplicate",
+  "note_leaks": false,
+  "reason": "Same stock phrase at same place as item 4."
+ },
+ {
+  "id": 8,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Plain name of the same object; repeating it is correct."
+ },
+ {
+  "id": 9,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Stacked intensifiers are filler, not repeated wording."
+ },
+ {
+  "id": 10,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Clause only asserts importance; removal loses no fact."
+ },
+ {
+  "id": 11,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Actor is obviously the committee from context."
+ },
+ {
+  "id": 12,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Author is the actor; no decision, error or cost involved."
+ },
+ {
+  "id": 13,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Restates the why-question and announces the piece."
+ },
+ {
+  "id": 14,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Cliche stands in for who supported and how."
+ },
+ {
+  "id": 15,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Two items in one description; real issue is repeated 'picturesque'."
+ },
+ {
+  "id": 16,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'author' is a role term; the repeat keeps reference clear."
+ },
+ {
+  "id": 17,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Any reader expects cold in February; 'still there' links back."
+ },
+ {
+  "id": 18,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Dead idiom used near-literally; not a live figure."
+ },
+ {
+  "id": 19,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Plain name of the same object; repeating it is correct."
+ },
+ {
+  "id": 20,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Previous sentence ends on 'hall'; this opens on it. Good flow."
+ },
+ {
+  "id": 21,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'She' is clearly Ellen; 'it' links to the wake-up call."
+ },
+ {
+  "id": 22,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Removal loses the fact of realizing; it is a buried verb."
+ },
+ {
+  "id": 23,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Exactly ten words before the subject; rule needs more than ten."
+ },
+ {
+  "id": 24,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Short period and limited evidence state one limit twice."
+ },
+ {
+  "id": 25,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Opens on new element; link comes only at the end."
+ },
+ {
+  "id": 26,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Actor is obviously the committee from context."
+ },
+ {
+  "id": 27,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "The committee is the obvious actor; it decided to decide."
+ },
+ {
+  "id": 28,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Buried verb 'made the observation'; removal loses the chair's act."
+ },
+ {
+  "id": 29,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Three consecutive sentences on the same 'I + verb + place' template."
+ },
+ {
+  "id": 30,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Actor implied by snow contracts; no responsibility at stake."
+ },
+ {
+  "id": 31,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Opens on unprepared 'Concerns'; link to delays comes late."
+ },
+ {
+  "id": 32,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'week' is common, and 'the same week' links deliberately."
+ },
+ {
+  "id": 33,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Noun refers back to 'the feeling' already stated."
+ },
+ {
+  "id": 34,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Opens on unprepared bus pass; comparison left implicit."
+ },
+ {
+  "id": 35,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Noun 'attempt' with weak 'is'; verb 'attempt' exists."
+ },
+ {
+  "id": 36,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "'Very' is a single intensifier on 'few'."
+ },
+ {
+  "id": 37,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "'My bike' has no link to the bridge sentence."
+ },
+ {
+  "id": 38,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Doubled pair; the rule routes those to repeated-phrasing."
+ },
+ {
+  "id": 39,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'actually' marks contrast with expectation after the theft."
+ },
+ {
+  "id": 40,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Stock emphasis phrase of six words that delays content."
+ },
+ {
+  "id": 41,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Stock emphasis phrase that delays the content."
+ },
+ {
+  "id": 42,
+  "verdict": "duplicate",
+  "note_leaks": false,
+  "reason": "Same template problem at same place as item 29."
+ },
+ {
+  "id": 43,
+  "verdict": "duplicate",
+  "note_leaks": false,
+  "reason": "Same bus pass opening as item 34."
+ },
+ {
+  "id": 44,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Actor is the obvious committee; no responsibility hidden."
+ },
+ {
+  "id": 45,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'review' is a core term of the memo; location unclear."
+ },
+ {
+  "id": 46,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Draft explains the sample review; the real issue is the mixed figure."
+ },
+ {
+  "id": 47,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'own' marks contrast with others' circumstances; not filler."
+ },
+ {
+  "id": 48,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Paragraph repeats the street-wide impact point and adds little."
+ },
+ {
+  "id": 49,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Second clause repeats the 'it is + adjective + to' template."
+ },
+ {
+  "id": 50,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'whole' is a common word."
+ },
+ {
+  "id": 51,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "No responsible actor matters; clause is filler, not a hidden actor."
+ },
+ {
+  "id": 52,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'Insurance' names a cost item; repeating it is correct."
+ },
+ {
+  "id": 53,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Same technical sense of 'cleared'; the repeat links sentences."
+ },
+ {
+  "id": 54,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Noun 'attempt' with weak 'is'; verb 'attempt' exists."
+ },
+ {
+  "id": 55,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "Evaluation adds no fact to the stated pilot results."
+ },
+ {
+  "id": 56,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "The committee is the obvious actor."
+ },
+ {
+  "id": 57,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Only four words precede the subject; note miscounts."
+ },
+ {
+  "id": 58,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Buried verb, not filler; removal loses the action."
+ },
+ {
+  "id": 59,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "'Oversight' is the concept under discussion; repeat is deliberate contrast."
+ },
+ {
+  "id": 60,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Any reader of a committee draft knows there is a meeting."
+ },
+ {
+  "id": 61,
+  "verdict": "invalid",
+  "note_leaks": false,
+  "reason": "Shared passive voice is not repeated wording."
+ },
+ {
+  "id": 62,
+  "verdict": "valid",
+  "note_leaks": false,
+  "reason": "'affected' twice within three sentences."
+ }
+]

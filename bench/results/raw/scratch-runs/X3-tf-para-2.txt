@@ -1,0 +1,23 @@
+deepseek-flash thinking=off scope=native order=fifo limit=32
+  draft-essay.md   wall    4.6s   65 calls  p50 1.3s p90 1.9s  in 92409 (cache 26112) out 6167  $0.0137  findings 60  errors 0
+  draft-memo.md    wall    4.1s   65 calls  p50 1.3s p90 1.7s  in 91919 (cache 36992) out 5574  $0.0117  findings 57  errors 0
+  draft-story.md   wall    5.3s   72 calls  p50 1.3s p90 1.8s  in 99318 (cache 32896) out 7729  $0.0147  findings 78  errors 0
+  on-writing.md    wall    4.3s   58 calls  p50 1.4s p90 2.0s  in 58402 (cache 8192) out 7258  $0.0119  findings 81  errors 0
+276 → 238 findings
+deepseek-flash thinking=off scope=native order=fifo limit=32 +in-paragraph +dedupe +verify(deepseek-flash off balanced 2/3)
+  draft-essay.md   wall 6.2s (verify 1.5s)  cost $0.0175 (verify $0.0038)
+  draft-memo.md    wall 5.4s (verify 1.3s)  cost $0.0151 (verify $0.0034)
+  draft-story.md   wall 6.6s (verify 1.3s)  cost $0.0183 (verify $0.0036)
+  on-writing.md    wall 6.2s (verify 1.8s)  cost $0.0160 (verify $0.0041)
+  kept 80 of 238, 0 failed checks
+deepseek-flash thinking=off scope=native order=fifo limit=32 +in-paragraph +dedupe +verify(deepseek-flash off balanced 2/3)
+  overall  P  69%  R  67%  F1  68%  tp 55 fp 25 fn 27  unanchored 0  decoy hits 0
+  filler-words       P  70%  R  78%  F1  74%  tp 14 fp 6 fn 4  unanch 0  decoy 0
+  length             P  60%  R  50%  F1  55%  tp 3 fp 2 fn 3  unanch 0  decoy 0
+  nominalization     P 100%  R  86%  F1  92%  tp 12 fp 0 fn 2  unanch 0  decoy 0
+  paragraph-order    P   0%  R   0%  F1   0%  tp 0 fp 0 fn 6  unanch 0  decoy 0
+  passive-actor      P  67%  R  60%  F1  63%  tp 6 fp 3 fn 4  unanch 0  decoy 0
+  repeated-phrasing  P  78%  R  64%  F1  70%  tp 7 fp 2 fn 4  unanch 0  decoy 0
+  sentence-openings  P  60%  R  60%  F1  60%  tp 3 fp 2 fn 2  unanch 0  decoy 0
+  topic-flow         P  40%  R  80%  F1  53%  tp 4 fp 6 fn 1  unanch 0  decoy 0
+  unearned-metaphor  P  60%  R  86%  F1  71%  tp 6 fp 4 fn 1  unanch 0  decoy 0

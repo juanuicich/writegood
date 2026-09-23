@@ -1,0 +1,1654 @@
+{
+ "schema": 1,
+ "label": "G-pro-off-doc",
+ "date": "2026-09-23",
+ "source": "converted from results/raw/scratch-runs/G-pro-off-doc.json.gz (scratch label: deepseek-v4-pro thinking=off scope=document order=fifo limit=8)",
+ "config": {
+  "provider": "deepseek",
+  "orProvider": null,
+  "model": "deepseek-v4-pro",
+  "thinking": "off",
+  "thinkingPasses": {},
+  "pipeline": "plain",
+  "rules": "2026-09-23-rewrite-docflow",
+  "scope": "document",
+  "limit": 8,
+  "votes": null,
+  "need": null,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ]
+ },
+ "rules": "2026-09-23-rewrite-docflow",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 6.6,
+   "firstFindings": 6.6,
+   "calls": 9,
+   "input": 11969,
+   "cacheRead": 0,
+   "output": 1234,
+   "reasoning": 0,
+   "cost": 0.006280094999999999,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 2.748,
+    "p90": 6.598,
+    "max": 6.598
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 12,
+   "kept": 12
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 11.988,
+   "firstFindings": 11.988,
+   "calls": 9,
+   "input": 11897,
+   "cacheRead": 0,
+   "output": 2791,
+   "reasoning": 0,
+   "cost": 0.007603365,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 5.081,
+    "p90": 9.698,
+    "max": 9.698
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 30,
+   "kept": 29
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 21.315,
+   "firstFindings": 21.315,
+   "calls": 9,
+   "input": 11708,
+   "cacheRead": 0,
+   "output": 3348,
+   "reasoning": 0,
+   "cost": 0.008005739999999999,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 5.969,
+    "p90": 21.314,
+    "max": 21.314
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 32,
+   "kept": 32
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 13.98,
+   "firstFindings": 13.98,
+   "calls": 9,
+   "input": 8576,
+   "cacheRead": 0,
+   "output": 3178,
+   "reasoning": 0,
+   "cost": 0.00649542,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 2.87,
+    "p90": 13.98,
+    "max": 13.98
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 37,
+   "kept": 37
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 32,
+   "fp": 78,
+   "fn": 50,
+   "unanchored": 4,
+   "decoy": 0,
+   "precision": 0.2909090909090909,
+   "recall": 0.3902439024390244,
+   "f1": 0.3333333333333333
+  },
+  "byPass": {
+   "filler-words": {
+    "tp": 4,
+    "fp": 1,
+    "fn": 14,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.8,
+    "recall": 0.2222222222222222,
+    "f1": 0.3478260869565218
+   },
+   "length": {
+    "tp": 1,
+    "fp": 5,
+    "fn": 5,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.16666666666666666,
+    "recall": 0.16666666666666666,
+    "f1": 0.16666666666666666
+   },
+   "nominalization": {
+    "tp": 5,
+    "fp": 8,
+    "fn": 9,
+    "unanchored": 2,
+    "decoy": 0,
+    "precision": 0.38461538461538464,
+    "recall": 0.35714285714285715,
+    "f1": 0.3703703703703704
+   },
+   "paragraph-order": {
+    "tp": 1,
+    "fp": 9,
+    "fn": 5,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.1,
+    "recall": 0.16666666666666666,
+    "f1": 0.125
+   },
+   "passive-actor": {
+    "tp": 8,
+    "fp": 17,
+    "fn": 2,
+    "unanchored": 2,
+    "decoy": 0,
+    "precision": 0.32,
+    "recall": 0.8,
+    "f1": 0.45714285714285713
+   },
+   "repeated-phrasing": {
+    "tp": 2,
+    "fp": 4,
+    "fn": 9,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.3333333333333333,
+    "recall": 0.18181818181818182,
+    "f1": 0.23529411764705885
+   },
+   "sentence-openings": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 4,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 0.2,
+    "f1": 0.28571428571428575
+   },
+   "topic-flow": {
+    "tp": 3,
+    "fp": 30,
+    "fn": 2,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.09090909090909091,
+    "recall": 0.6,
+    "f1": 0.15789473684210525
+   },
+   "unearned-metaphor": {
+    "tp": 7,
+    "fp": 3,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.7,
+    "recall": 1,
+    "f1": 0.8235294117647058
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 4,
+    "fp": 8,
+    "fn": 14,
+    "unanchored": 1,
+    "decoy": 0,
+    "precision": 0.3333333333333333,
+    "recall": 0.2222222222222222,
+    "f1": 0.26666666666666666
+   },
+   "draft-memo.md": {
+    "tp": 11,
+    "fp": 18,
+    "fn": 6,
+    "unanchored": 2,
+    "decoy": 0,
+    "precision": 0.3793103448275862,
+    "recall": 0.6470588235294118,
+    "f1": 0.4782608695652174
+   },
+   "draft-story.md": {
+    "tp": 8,
+    "fp": 24,
+    "fn": 9,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.25,
+    "recall": 0.47058823529411764,
+    "f1": 0.32653061224489793
+   },
+   "on-writing.md": {
+    "tp": 9,
+    "fp": 28,
+    "fn": 21,
+    "unanchored": 1,
+    "decoy": 0,
+    "precision": 0.24324324324324326,
+    "recall": 0.3,
+    "f1": 0.26865671641791045
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "passive-actor",
+   "quote": "It should be noted",
+   "severity": "medium",
+   "note": "The draft never says who should note this. The clause hides the author behind an impersonal construction in a passage about the author's own view."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "passive-actor",
+   "quote": "has been turned into flats",
+   "severity": "low",
+   "note": "The actor who turned the mill into flats is not named, but the preceding clause gives 'someone' as the actor, so the reader can work it out."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "passive-actor",
+   "quote": "The combination was forgotten",
+   "severity": "low",
+   "note": "The nearby context implies the author forgot the combination, but the actor is not stated directly."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "sentence-openings",
+   "quote": "For eleven years I drove the same nine miles to the office.",
+   "severity": "low",
+   "note": "Eleven words before the subject 'I' in the first sentence."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "Walking changed how I see the neighbourhood.",
+   "severity": "low",
+   "note": "This paragraph returns to the effect of walking on the writer's experience after the preceding paragraph shifted from the first winter's difficulty to a practical solution about bus routes and cleared sidewalks. The topic of what walking reveals had not been developed earlier, so this is a beginning of a return to experience rather than a repetition, but it separates related experiential material from the preceding description of the route."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "quote": "For most of that summer I walked, and I actually prefer it.",
+   "severity": "medium",
+   "note": "This sentence repeats the preference already implied by the preceding sentence that the writer bought a new bike but mostly walked, and it restates the preference without adding new information."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "topic-flow",
+   "quote": "Municipal snow contracts in our city specify",
+   "severity": "medium",
+   "note": "The sentence opens on municipal snow contracts, a new element, while the previous sentence is about the narrator arriving with wet socks and a temper. The link to winter walking conditions is only implied."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "topic-flow",
+   "quote": "My bike was stolen in June.",
+   "severity": "medium",
+   "note": "The sentence opens on the bike, a new element; the previous sentence is about crossing the bridge on foot faster than by car."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "topic-flow",
+   "quote": "The walk is slower and the car was faster",
+   "severity": "low",
+   "note": "The sentence opens on the walk and the car as subjects, moving from the narrator's forgotten alternative in the previous sentence to a general comparison."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "unearned-metaphor",
+   "quote": "The car had been a warm cocoon",
+   "severity": "high",
+   "note": "Mixed figure: “a warm cocoon” and “an anchor” are incompatible images developed in the same sentence."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "unearned-metaphor",
+   "quote": "an anchor that kept me moored to my own small concerns",
+   "severity": "high",
+   "note": "Mixed figure: “moored” follows “cocoon” and cannot hold alongside it."
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "unearned-metaphor",
+   "quote": "On foot the city opened up like a book",
+   "severity": "low",
+   "note": "Empty figure: the comparison adds no mechanism or picture beyond the literal claim that the city became more visible."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "nominalization",
+   "quote": "made a determination",
+   "severity": "medium",
+   "note": "The noun \"determination\" buries the verb \"determine.\""
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "passive-actor",
+   "quote": "It was decided",
+   "severity": "high",
+   "note": "The draft does not say who made this decision."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "passive-actor",
+   "quote": "Concerns have been raised",
+   "severity": "medium",
+   "note": "The draft does not say who raised these concerns."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "passive-actor",
+   "quote": "It should be noted",
+   "severity": "medium",
+   "note": "The draft does not say who is noting this."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "passive-actor",
+   "quote": "it is recommended",
+   "severity": "high",
+   "note": "The draft does not say who recommends this."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "sentence-openings",
+   "quote": "The board",
+   "severity": "medium",
+   "note": "Run of three consecutive sentences opening with 'The board'."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "filler-words",
+   "quote": "quite",
+   "severity": "low",
+   "note": "An intensifier that adds emphasis without changing the fact."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "filler-words",
+   "quote": "Clearly",
+   "severity": "medium",
+   "note": "A claim of obviousness the text has not established."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "filler-words",
+   "quote": "It should be noted that",
+   "severity": "high",
+   "note": "A stock phrase that delays the content."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "filler-words",
+   "quote": "really",
+   "severity": "low",
+   "note": "An intensifier that adds emphasis without changing the fact."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "repeated-phrasing",
+   "quote": "The board would continue to meet",
+   "severity": "low",
+   "note": "\"The board\" repeats from the first sentence of the paragraph, where \"the board\" is the subject whose approval is being removed, and the repetition adds no new work across the paragraph."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "repeated-phrasing",
+   "quote": "The board",
+   "severity": "low",
+   "note": "The phrase \"The board\" repeats across the paragraph break into the next paragraph, where it appears twice more, but this occurrence is the only one captured because the others lie outside this paragraph."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot, both teams cut their median wait",
+   "severity": "high",
+   "note": "Refers to a pilot not yet introduced. The pilot is first described in the paragraph beginning \"In March and April, the Payments and Search teams\"."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "The results were quite encouraging.",
+   "severity": "medium",
+   "note": "Repeats the claim just made in the same paragraph that the pilot cut wait times and had no rollbacks."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "It should be noted that the board reviewed eleven changes",
+   "severity": "medium",
+   "note": "Introduces a board-review comparison while the pilot paragraph is elsewhere resumed by the following paragraph's risk discussion; the board-review point is related to the earlier board paragraphs."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "The board then posts",
+   "severity": "low",
+   "note": "The sentence opens on \"The board\", which is already established in the paragraph, but the link is weak because the previous sentence ends on \"the meeting\"."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "It was decided",
+   "severity": "medium",
+   "note": "The sentence opens on \"It\", referring to a new decision, while the previous sentence is about a change waiting six days."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "The handoff",
+   "severity": "medium",
+   "note": "This sentence opens on \"The handoff\", a new element not prepared by the previous sentence about concerns and delays."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "The board's queue",
+   "severity": "low",
+   "note": "The sentence opens on \"The board's queue\", a new element, while the previous sentence is about the handoff between the author and the board."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "The main risk",
+   "severity": "low",
+   "note": "This is the first sentence after a paragraph break, but within the new paragraph it opens on \"The main risk\", which is not prepared by the previous sentence about the number of board-reviewed changes."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "Approvals are logged",
+   "severity": "medium",
+   "note": "The sentence opens on \"Approvals\", a new subject, while the previous sentence is about the pilot's limited evidence."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "quote": "A safety net",
+   "severity": "medium",
+   "note": "The sentence opens on \"A safety net\", a new element not prepared by the previous sentence about the board's review of approvals."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "unearned-metaphor",
+   "quote": "a toll booth on the highway to production",
+   "severity": "medium",
+   "note": "Stock image. The figure stands in for the argument that the board slows releases."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "unearned-metaphor",
+   "quote": "without becoming a straitjacket that ties every team to the same Thursday",
+   "severity": "high",
+   "note": "Mixed figure. The draft is still using a safety net as the image when it switches to a straitjacket."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "length",
+   "quote": "It should be noted that the board reviewed eleven changes in those two months, compared with more than three hundred in the same period last year.",
+   "severity": "medium",
+   "note": "Restatement. The pilot already established that the board's involvement dropped, and this sentence repeats the same point without adding a step or argument."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "length",
+   "quote": "A safety net should catch mistakes without becoming a straitjacket that ties every team to the same Thursday.",
+   "severity": "medium",
+   "note": "Restatement. The imagery repeats the earlier point that \"a weekly schedule made sense only when releases were rare.\""
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "length",
+   "quote": "The handoff between the author and the board is cumbersome too, since the author rarely attends.",
+   "severity": "medium",
+   "note": "Restatement. It repeats the point that \"the board has become a toll booth on the highway to production\" and that \"its checklist is cumbersome.\""
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "length",
+   "quote": "I would really welcome comments before the managers' meeting on the fourteenth.",
+   "severity": "medium",
+   "note": "Throat-clearing. The sentence announces solicitation of comments rather than adding a fact, step, or argument."
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "length",
+   "quote": "Oversight would remain in place for the changes where it matters most, and that point should not be lost.",
+   "severity": "low",
+   "note": "Stacked qualification. The limit that oversight would remain is stated twice in adjacent sentences."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "nominalization",
+   "quote": "has given an undertaking to carry out an assessment",
+   "severity": "medium",
+   "note": "\"undertaking\" buries the verb \"undertake\", and \"assessment\" buries the verb \"assess\"; both are carried by \"has given to carry out\"."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "nominalization",
+   "quote": "A wave of support followed",
+   "severity": "low",
+   "note": "\"support\" buries the verb \"support\", but the sentence retains an actor and remains clear."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "nominalization",
+   "quote": "made the decision to keep baking",
+   "severity": "medium",
+   "note": "\"decision\" buries the verb \"decide\", carried by \"made\"."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "nominalization",
+   "quote": "It is difficult to overstate how much the flood affected",
+   "severity": "low",
+   "note": "\"flood affected\" is not a buried verb construction; the action is expressed directly by the verb \"affected\"."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "passive-actor",
+   "quote": "Sandbags had been promised",
+   "severity": "medium",
+   "note": "The draft never says who promised the sandbags."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "passive-actor",
+   "quote": "none had arrived",
+   "severity": "low",
+   "note": "The actor is probably the same unnamed promiser, but the reader must infer this."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "passive-actor",
+   "quote": "has been raised once",
+   "severity": "low",
+   "note": "The draft does not say who raised the flood wall, though the responsible body may be inferable."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "passive-actor",
+   "quote": "has given an undertaking",
+   "severity": "low",
+   "note": "The council is named as actor, so this is not a hidden actor."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "repeated-phrasing",
+   "quote": "each and every",
+   "severity": "medium",
+   "note": "Doubled pair that says one thing twice."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "repeated-phrasing",
+   "quote": "The flood affected many people on Quay Street in many different ways. Some lost stock and some lost income, and some lost things",
+   "severity": "high",
+   "note": "Template repeated across three or more consecutive clauses: 'some lost... and some lost...' The repetition adds no parallel structure or contrast."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "repeated-phrasing",
+   "quote": "It is difficult to overstate how much the flood affected the people of the street, and it would be impossible to describe every way in which their lives were changed by it.",
+   "severity": "medium",
+   "note": "Restates the preceding sentence's point using the same template of impossibility: 'difficult to overstate' and 'impossible to describe'."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The damage was really extensive.",
+   "severity": "low",
+   "note": "This paragraph describes the physical damage after the narrative has already moved through insurance, warnings, and the flood wall. The damage description belongs with the earlier account of the flood's immediate effects, where it would explain the loss rather than interrupt the chronology."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "It was obviously a shock to the whole street.",
+   "severity": "medium",
+   "note": "This paragraph introduces a reaction to the flood after the draft has already detailed insurance, warnings, and rebuild work. The reaction is not grounded in the earlier paragraphs, which focus on Ellen's actions and the council's delays."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "The flood affected many people on Quay Street in many different ways.",
+   "severity": "medium",
+   "note": "This paragraph repeats the point made in the paragraph beginning 'It was obviously a shock to the whole street' and adds no new information."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "quote": "For the street, the flood was a wake-up call.",
+   "severity": "low",
+   "note": "This closing paragraph returns to the street-wide impact first raised in the paragraph beginning 'It was obviously a shock to the whole street', after unrelated paragraphs about the community hall and reopening."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "The damage was really extensive.",
+   "severity": "low",
+   "note": "This sentence opens a new paragraph with 'The damage', but the previous paragraph ended on the council's assessment undertaking, not on damage. The reader can place it, but the paragraph opens on a new element."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "It was obviously a shock to the whole street.",
+   "severity": "low",
+   "note": "'It' refers to the flood, but the previous paragraph ended on Tom removing skirting boards. The pronoun does not clearly connect to the preceding sentence."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "A wave of support followed that lit a fire under the council.",
+   "severity": "medium",
+   "note": "The sentence before ends on the bakery as the beating heart of the street. This sentence opens on 'A wave of support', which is a new element not previously introduced."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "Tom drove to the cash-and-carry in Ashby for flour.",
+   "severity": "low",
+   "note": "The previous sentence is about Ellen deciding to keep baking from the community hall kitchen. This sentence opens with 'Tom', a different person not mentioned in the immediate prior sentence."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "Gluten development depends on water temperature more than most home bakers realise.",
+   "severity": "high",
+   "note": "The previous sentence is about Tom driving for flour. This sentence opens with 'Gluten development', an unrelated technical subject never introduced."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "By the end of March she was selling forty loaves a morning from a trestle table outside the hall.",
+   "severity": "medium",
+   "note": "The previous sentence is about gluten development and water temperature. This sentence returns to 'she' (Ellen) selling loaves, but the link back is not established until the end of the sentence."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "The hall kitchen is very small, and only one oven works.",
+   "severity": "low",
+   "note": "The previous sentence ends with 'outside the hall'. This sentence opens with 'The hall kitchen', which is related but not the explicit subject of the prior sentence."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "The flood affected many people on Quay Street in many different ways.",
+   "severity": "low",
+   "note": "This is the first sentence of a new paragraph, but it opens on 'The flood', which was not the subject of the previous paragraph's ending about the hall kitchen."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "Some lost stock and some lost income, and some lost things that are harder to put a price on.",
+   "severity": "medium",
+   "note": "The previous sentence states the flood affected many people. This sentence opens with 'Some', referring to those people, but the connection is only implicit through the preceding general statement."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "It is difficult to overstate how much the flood affected the people of the street, and it would be impossible to describe every way in which their lives were changed by it.",
+   "severity": "low",
+   "note": "'It' refers back to the flood, which is present in the previous sentences, but the opening is a general statement rather than a direct continuation from 'Some lost stock'."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "Morrow's reopened on the first of October, with new tiles and ovens raised forty centimetres off the floor.",
+   "severity": "low",
+   "note": "This new paragraph opens with 'Morrow's', which has not been mentioned since several paragraphs earlier. The previous paragraph ended on the effects on 'the people of the street'."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "Ellen has never missed a Christmas order in twenty-six years and does not intend to start now.",
+   "severity": "low",
+   "note": "The previous sentence is about the reopening of Morrow's. This sentence opens with 'Ellen', a person not mentioned in the immediate prior sentence."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "For the street, the flood was a wake-up call.",
+   "severity": "medium",
+   "note": "'For the street' is a new element. The previous sentence is about Ellen's Christmas orders. The connection between the two is not established."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "quote": "She has answered it by moving the flour upstairs.",
+   "severity": "low",
+   "note": "'She' refers to Ellen, who was the subject two sentences earlier, but the immediate previous sentence is about 'the street' and 'the flood'. The pronoun connection is not adjacent."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "unearned-metaphor",
+   "quote": "The bakery is the beating heart of Quay Street",
+   "severity": "medium",
+   "note": "Stock image. The figure does the work of claiming the bakery is central and vital without evidence the draft offers."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "unearned-metaphor",
+   "quote": "A wave of support followed that lit a fire under the council.",
+   "severity": "medium",
+   "note": "Stock image. The two images of swelling water and fire are both conventional and supplied instead of describing what the support did."
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "unearned-metaphor",
+   "quote": "the flood was a wake-up call",
+   "severity": "low",
+   "note": "Stock image. The cliché stands in for a specific change the draft does not identify."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "a determination would be made",
+   "severity": "medium",
+   "note": "The noun \"determination\" buries the verb \"determine.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "a resolution would be arrived at",
+   "severity": "medium",
+   "note": "The noun \"resolution\" buries the verb \"resolve.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "No resolution was arrived at",
+   "severity": "medium",
+   "note": "The noun \"resolution\" buries the verb \"resolve.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "made the observation",
+   "severity": "medium",
+   "note": "The noun \"observation\" buries the verb \"observe.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "a decision would be made",
+   "severity": "medium",
+   "note": "The noun \"decision\" buries the verb \"decide.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "a resolution would be arrived at",
+   "severity": "medium",
+   "note": "The noun \"resolution\" buries the verb \"resolve.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "No resolution was arrived at",
+   "severity": "medium",
+   "note": "The noun \"resolution\" buries the verb \"resolve.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "quote": "made the observation",
+   "severity": "medium",
+   "note": "The noun \"observation\" buries the verb \"observe.\""
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "It was decided by the committee",
+   "severity": "low",
+   "note": "The actor is stated in the by-phrase, so the reader knows who decided."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "x determination would be made",
+   "severity": "medium",
+   "note": "The actor is not named here or in the surrounding text; the draft never says who would make the determination."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "the meeting was conducted",
+   "severity": "low",
+   "note": "The reader can infer that someone chaired or ran the meeting, but the draft does not name that person."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "a resolution would be arrived at",
+   "severity": "medium",
+   "note": "The draft never says who was expected to arrive at a resolution."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "No resolution was arrived at",
+   "severity": "medium",
+   "note": "The draft never says who failed to arrive at a resolution."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "the matter was tabled",
+   "severity": "low",
+   "note": "The reader can infer that the chair or committee tabled the matter, but the actor is not stated in this clause."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "nothing had been accomplished",
+   "severity": "low",
+   "note": "The clause obscures who accomplished nothing; the surrounding text does not name a responsible actor."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "It was decided by the committee",
+   "severity": "low",
+   "note": "The actor is stated in the by-phrase, so the reader knows who decided."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "a decision would be made",
+   "severity": "low",
+   "note": "The committee is named in the preceding by-phrase as the decider, so the actor is available with effort."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "the meeting was conducted",
+   "severity": "low",
+   "note": "The person who conducted the meeting is not named in the clause or nearby sentences."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "a resolution would be arrived at",
+   "severity": "medium",
+   "note": "The draft never says who was expected to arrive at a resolution."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "No resolution was arrived at",
+   "severity": "medium",
+   "note": "The draft never says who failed to arrive at a resolution."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "the matter was tabled",
+   "severity": "low",
+   "note": "The actor is not stated in this clause; the reader must infer that the chair or committee tabled the matter."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "quote": "nothing had been accomplished",
+   "severity": "low",
+   "note": "The clause obscures who accomplished nothing; the surrounding text does not name a responsible actor."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "filler-words",
+   "quote": "thxt x",
+   "severity": "low",
+   "note": "These are mistyped words, not a stock filler phrase, so they cannot be evaluated here."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "repeated-phrasing",
+   "quote": "was arrived at",
+   "severity": "medium",
+   "note": "The distinctive phrase 'was arrived at' appears twice within two sentences."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "The Determination of the Committee",
+   "severity": "medium",
+   "note": "This heading repeats the title and appears immediately before a near-duplicate of the first three paragraphs."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "It was decided by the committee",
+   "severity": "low",
+   "note": "The paragraph opens on \"It was decided by the committee,\" which is a new element rather than something established in the prior sentence, though the reader can place it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "Very few of the members",
+   "severity": "high",
+   "note": "\"Very few of the members\" opens on the members, while the previous sentence was about the committee's decision regarding the proposal; the connection is unclear."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "Unfortunately, the meeting",
+   "severity": "low",
+   "note": "The sentence opens on \"the meeting,\" which was not previously introduced in the paragraph, though the reader can place it."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "There was an expectation",
+   "severity": "high",
+   "note": "\"There was an expectation\" opens on an unspecified expectation, while the previous paragraph was about how unproductive the meeting was; the relationship is unclear."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "No resolution",
+   "severity": "low",
+   "note": "\"No resolution\" refers to the expectation of a resolution in the previous sentence, but the sentence opens on a negative form of that idea."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "The chair",
+   "severity": "medium",
+   "note": "\"The chair\" is a new element not prepared by the previous sentence about the absence of a resolution; the link to the sentence before is delayed."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "Some of us",
+   "severity": "medium",
+   "note": "\"Some of us\" introduces people leaving the room, while the previous paragraph ended with the matter being tabled; the connection is not established initially."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "It is a feeling",
+   "severity": "low",
+   "note": "\"It is a feeling\" refers to the feeling mentioned in the previous sentence, but the sentence opens on the pronoun rather than a clearer link."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "quote": "It is a feeling",
+   "severity": "high",
+   "note": "\"It is a feeling\" repeats the previous sentence's subject, but the sentence does not connect to what was said about familiarity; the relationship to the preceding sentence is unclear."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "unearned-metaphor",
+   "quote": "a resolution would be arrived at",
+   "severity": "low",
+   "note": "This passive phrasing gives the reader no picture or mechanism beyond the plain literal claim."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "unearned-metaphor",
+   "quote": "the matter was tabled",
+   "severity": "low",
+   "note": "This is a stock procedural image that adds nothing to the plain literal claim."
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "length",
+   "quote": "It was decided by the committee that a decision would be made regarding the proposal.",
+   "severity": "medium",
+   "note": "Throat-clearing: announces that a decision would be made, without adding fact, step, or argument."
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "nominalization",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 1.612,
+   "input": 1337,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.000585945,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.001,
+   "secs": 5.338,
+   "input": 1354,
+   "cacheRead": 0,
+   "output": 274,
+   "reasoning": 0,
+   "cost": 0.00082737,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "sentence-openings",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.001,
+   "secs": 2.748,
+   "input": 1312,
+   "cacheRead": 0,
+   "output": 93,
+   "reasoning": 0,
+   "cost": 0.00065163,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "filler-words",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.002,
+   "secs": 1.631,
+   "input": 1353,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.000592905,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "repeated-phrasing",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.002,
+   "secs": 1.61,
+   "input": 1335,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.000585075,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.002,
+   "secs": 6.598,
+   "input": 1305,
+   "cacheRead": 0,
+   "output": 257,
+   "reasoning": 0,
+   "cost": 0.000791265,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "topic-flow",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.002,
+   "secs": 6.036,
+   "input": 1337,
+   "cacheRead": 0,
+   "output": 302,
+   "reasoning": 0,
+   "cost": 0.000844335,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "unearned-metaphor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.002,
+   "secs": 5.247,
+   "input": 1313,
+   "cacheRead": 0,
+   "output": 288,
+   "reasoning": 0,
+   "cost": 0.0008217149999999999,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-essay.md",
+   "pass": "length",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 1.612,
+   "secs": 1.925,
+   "input": 1323,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.000579855,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "nominalization",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 2.426,
+   "input": 1329,
+   "cacheRead": 0,
+   "output": 78,
+   "reasoning": 0,
+   "cost": 0.000645975,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 5.081,
+   "input": 1346,
+   "cacheRead": 0,
+   "output": 306,
+   "reasoning": 0,
+   "cost": 0.00085173,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 4
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "sentence-openings",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 2.383,
+   "input": 1304,
+   "cacheRead": 0,
+   "output": 77,
+   "reasoning": 0,
+   "cost": 0.0006342300000000001,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "filler-words",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 4.404,
+   "input": 1345,
+   "cacheRead": 0,
+   "output": 279,
+   "reasoning": 0,
+   "cost": 0.000827805,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 4
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "repeated-phrasing",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 5.228,
+   "input": 1327,
+   "cacheRead": 0,
+   "output": 212,
+   "reasoning": 0,
+   "cost": 0.0007616849999999999,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 6.446,
+   "input": 1297,
+   "cacheRead": 0,
+   "output": 304,
+   "reasoning": 0,
+   "cost": 0.0008286750000000001,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "topic-flow",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 9.698,
+   "input": 1329,
+   "cacheRead": 0,
+   "output": 644,
+   "reasoning": 0,
+   "cost": 0.001138395,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 7
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "unearned-metaphor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 3.761,
+   "input": 1305,
+   "cacheRead": 0,
+   "output": 181,
+   "reasoning": 0,
+   "cost": 0.000725145,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "length",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 2.383,
+   "secs": 9.605,
+   "input": 1315,
+   "cacheRead": 0,
+   "output": 710,
+   "reasoning": 0,
+   "cost": 0.001189725,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 6
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "nominalization",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 6.634,
+   "input": 1308,
+   "cacheRead": 0,
+   "output": 376,
+   "reasoning": 0,
+   "cost": 0.0008961,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 4
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 5.969,
+   "input": 1325,
+   "cacheRead": 0,
+   "output": 324,
+   "reasoning": 0,
+   "cost": 0.000858255,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 4
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "sentence-openings",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 1.709,
+   "input": 1283,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.000562455,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "filler-words",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 1.638,
+   "input": 1324,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.00058029,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "repeated-phrasing",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 5.993,
+   "input": 1306,
+   "cacheRead": 0,
+   "output": 346,
+   "reasoning": 0,
+   "cost": 0.00086913,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 8.949,
+   "input": 1276,
+   "cacheRead": 0,
+   "output": 440,
+   "reasoning": 0,
+   "cost": 0.0009378599999999999,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 4
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "topic-flow",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.001,
+   "secs": 21.314,
+   "input": 1308,
+   "cacheRead": 0,
+   "output": 1560,
+   "reasoning": 0,
+   "cost": 0.00192618,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 14
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "unearned-metaphor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0.001,
+   "secs": 5.968,
+   "input": 1284,
+   "cacheRead": 0,
+   "output": 287,
+   "reasoning": 0,
+   "cost": 0.0008082300000000001,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 3
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "length",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 1.638,
+   "secs": 1.515,
+   "input": 1294,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.00056724,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "nominalization",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 7.118,
+   "input": 960,
+   "cacheRead": 0,
+   "output": 637,
+   "reasoning": 0,
+   "cost": 0.0009717899999999999,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 8
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "passive-actor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 13.98,
+   "input": 977,
+   "cacheRead": 0,
+   "output": 1158,
+   "reasoning": 0,
+   "cost": 0.001432455,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 14
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "sentence-openings",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 1.521,
+   "input": 935,
+   "cacheRead": 0,
+   "output": 5,
+   "reasoning": 0,
+   "cost": 0.00041107500000000006,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "filler-words",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 2.526,
+   "input": 976,
+   "cacheRead": 0,
+   "output": 83,
+   "reasoning": 0,
+   "cost": 0.00049677,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "repeated-phrasing",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 2.691,
+   "input": 958,
+   "cacheRead": 0,
+   "output": 92,
+   "reasoning": 0,
+   "cost": 0.00049677,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 2.87,
+   "input": 928,
+   "cacheRead": 0,
+   "output": 82,
+   "reasoning": 0,
+   "cost": 0.00047502,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "topic-flow",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 12.874,
+   "input": 960,
+   "cacheRead": 0,
+   "output": 859,
+   "reasoning": 0,
+   "cost": 0.00116493,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 9
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "unearned-metaphor",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 0,
+   "secs": 3.88,
+   "input": 936,
+   "cacheRead": 0,
+   "output": 165,
+   "reasoning": 0,
+   "cost": 0.00055071,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 2
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "length",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "off",
+   "start": 1.521,
+   "secs": 2.685,
+   "input": 946,
+   "cacheRead": 0,
+   "output": 97,
+   "reasoning": 0,
+   "cost": 0.0004959,
+   "costSource": "rates",
+   "servedBy": "deepseek",
+   "candidates": 1
+  }
+ ],
+ "errors": []
+}
