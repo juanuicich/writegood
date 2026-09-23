@@ -49,7 +49,9 @@ environment variable or a `.env` file. Then press `⌘R` to run the passes.
 `⌘K` opens everything else.
 
 It works with Anthropic, OpenAI, Google and anything OpenAI-compatible. It can
-also run passes through the `claude` or `codex` CLIs.
+also run passes through the `claude` or `codex` CLIs. The filler-words pass can
+run on Jev, TypeSafe's decision model, which answers questions about the text
+and writes none.
 
 With DeepSeek Flash and thinking off, the starter passes review a 500-word
 draft in about four seconds, except paragraph order, which thinks and takes

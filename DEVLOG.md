@@ -649,3 +649,50 @@ measures how sure Jev is, not how bad the problem is.
 
 **ASSUMPTION — the clearer sentence-openings wording goes into the starter.**
 It was measured on Jev only. The starter also serves the language model.
+
+## 2026-09-23 — passes on Jev, built
+
+Method `sentence` runs in the app. `src/lib/passes/jev.ts` segments with
+`Intl.Segmenter`, lists spans, builds the questions from the rule text and
+reads the answers. `src-tauri/src/jev.rs` makes the request. Filler words is
+the first pass written for Jev: its starter has a `[jev]` table and names no
+provider. Sentence openings stays on the language model, because method
+`across` scored 72.7% against DeepSeek's 78.8% with the same rule, so
+`across` is not built. The starter takes the clearer sentence-openings
+wording.
+
+A live check ran filler words on `bench/corpus/draft-essay.md` through the
+app's code, with `dev/probe.ts`: 17 requests, 52,644 input tokens, $0.0022,
+9.9 seconds. It found the three reference items, "It should be noted that",
+"very" and "basically", each quoted exactly. It also flagged "plain and
+simple" at medium.
+
+**DECISION — a provider can set `price` in `config.toml`.** models.dev does
+not list TypeSafe. The catalog wins when it has a price. Any provider can
+set one.
+
+**DECISION — `base_url` for a jev provider is the API base.** The request
+goes to `{base_url}/systemone`, as `base_url` is the base for an
+openai-compatible provider.
+
+**DECISION — `jev_ask` takes the provider's name.** The name finds the
+price, as it does for `llm_chat`.
+
+**DECISION — a body that is not JSON comes back as unreadable, not as an
+error.** Rust returns `answers` null and an `unreadable` message, so the
+frontend can fail only that paragraph (SPEC §8.4). A body with an `error`
+field fails the call.
+
+**DECISION — a jev provider without `timeout_secs` waits 60 seconds.** Every
+other kind still waits 180. `config.rs` fills this in after parsing,
+because a serde default cannot see the kind.
+
+**DECISION — a save keeps an inline table inline.** `price = { ... }` stays
+on its line when the app writes a setting, such as the theme.
+
+**ASSUMPTION — a sentence of more than 255 words keeps its first 255 single
+words as options.** The spec gave no rule for it. No draft has such a
+sentence.
+
+**UNVERIFIED — Jev in a release build.** The e2e test and the probe use a
+debug build.

@@ -91,4 +91,6 @@ Everything lives in `~/.writegood`.
 
 A pass is a Markdown file with TOML frontmatter. Edit the files, then run *reload passes and config* from the command bar.
 
+A pass with a `[jev]` table can run on Jev, TypeSafe's decision model. Add `provider = "jev"` to the pass and a `jev` provider to `config.toml`. Jev writes no text. Each quote is words from your draft, and each note is the `note` in the pass's `[jev]` table. The starter filler-words pass has such a table. The *provider* command sends a pass to Jev only when the pass has one.
+
 `⌘?` opens this page.

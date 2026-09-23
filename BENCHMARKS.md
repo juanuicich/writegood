@@ -92,7 +92,8 @@ The limits:
 ## The setup I use
 
 DeepSeek Flash on DeepSeek's own API, thinking off, with the verifier, for the
-eight fast passes. Gemini 3.8 Flash at low effort for paragraph order.
+eight fast passes. Gemini 3.8 Flash at low effort for paragraph order. With a
+TypeSafe key, filler words runs on Jev instead ("Filler words on Jev", below).
 
 | | F1 | First findings | Per draft | Cost per draft |
 |---|---|---|---|---|
@@ -153,6 +154,46 @@ A pass's `provider` sends that pass to a different provider. The provider
 override in the header bar wins over it, and sends every pass to one
 provider. The starter passes ship with paragraph order on the default
 provider at thinking `high`, so this change is yours to make.
+
+### Filler words on Jev
+
+Filler words scores higher on Jev than on DeepSeek: 83.7% and 85.7%
+against 74.3% and 68.4%, for about $0.002 a draft (the Jev section below).
+To use it, add a `jev` provider to `config.toml`:
+
+```toml
+[providers.jev]
+kind          = "jev"
+model         = "jev-1.13.0"
+key_ref       = "env:TYPESAFE_API_KEY"
+max_in_flight = 8
+price         = { input = 0.042, output = 0 }
+```
+
+Then add `provider = "jev"` to the frontmatter of
+`~/.writegood/passes/04-filler-words.md`, above its `[jev]` table:
+
+```toml
++++
+name = "Filler words"
+category = "filler-words"
+scope = "paragraph"
+provider = "jev"
+enabled = true
+
+[jev]
+method = "sentence"
+keep = 0.5
+note = "A word or phrase that adds emphasis or hedging and no meaning."
++++
+```
+
+A home made before the Jev build has no `[jev]` table in this file. Add the
+table as shown. `model` names a version, so a new release of Jev does not
+change the answers without notice. `price` is there because models.dev does
+not list TypeSafe; the app uses it only when the catalog has no price. The
+provider override in the header bar sends a pass to Jev only when the pass
+has a `[jev]` table.
 
 ## Using a plan you already pay for
 
@@ -365,10 +406,12 @@ Recommendation. Use Jev for filler words with Method 2. Its mean is 13
 points above DeepSeek's, and it runs a chapter in 7.4 seconds for about a cent.
 Keep sentence openings on DeepSeek. Method `across` scored 72.7% twice with
 the clearer rule, against a DeepSeek mean of 78.8% with the same rule. Keep
-nominalization and missing actor on the LLM too. Put the clearer
-sentence-openings wording into the starter rule. It removed the pronoun-only
+nominalization and missing actor on the LLM too. The starter rule for
+sentence openings now has the clearer wording. It removed the pronoun-only
 runs on both models and did not lower DeepSeek's score.
-Jev is not in the app yet. SPEC §8.4 and §9.5 specify it.
+
+The app runs Method 2 as method `sentence` (SPEC §8.4). Method `across` is
+not built. "Filler words on Jev", above, shows the setup.
 
 The first Jev attempt found candidates with hand-written word lists. It broke
 the rule that a pass's rule text is its whole definition, so its code is
