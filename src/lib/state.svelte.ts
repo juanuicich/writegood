@@ -74,7 +74,9 @@ class App {
   /** The help page covers the draft. The draft stays mounted underneath it,
    *  so its text, selection, undo history and scroll survive. */
   help = $state(false);
-  sidebarForced = $state(false);
+  /** The author's choice for the margin: shown, hidden, or null to show it
+   *  when there are findings (SPEC §12.1). */
+  margin = $state<boolean | null>(null);
 
   /** The find bar, when open. `seq` is bumped on every open, so the bar
    *  selects its field again (SPEC §12.6). */
@@ -120,7 +122,7 @@ class App {
    *  only reveal it after a click on the note (SPEC §12.3). */
   focus = $state<{ seq: number; by: "text" | "step" | "note" }>({ seq: 0, by: "note" });
 
-  showSidebar = $derived(this.sidebarForced || this.visible.length > 0);
+  showSidebar = $derived(this.margin ?? this.visible.length > 0);
 
   // ------------------------------------------------------------- lifecycle
 
@@ -304,21 +306,54 @@ class App {
 
   // -------------------------------------------------------------- findings
 
-  async loadFindings() {
-    if (!this.doc) return;
-    const rows = await store.findings(this.doc.id);
-    this.findings = rows.map((f) => ({ ...f, from: null, to: null, exact: false }));
-    await this.reanchor();
+  /** Loads and re-anchoring run one at a time. A pass run loads after every
+   *  model call, and the editor re-anchors after typing, so without the queue
+   *  an older result could land after a newer one. */
+  private findingsQueue: Promise<void> = Promise.resolve();
+
+  private queueFindings(job: () => Promise<void>): Promise<void> {
+    const next = this.findingsQueue.then(job);
+    this.findingsQueue = next.catch(() => {});
+    return next;
   }
 
-  /** Place every finding against the current text. Rust does the matching;
-   *  we only map its code point offsets onto ProseMirror positions. */
-  async reanchor() {
-    if (!this.editor || this.findings.length === 0) return;
+  /** Read the findings from the database and place them. The list changes in
+   *  one assignment, so the margin never sees them unplaced. */
+  loadFindings(): Promise<void> {
+    return this.queueFindings(async () => {
+      if (!this.doc) return;
+      const docId = this.doc.id;
+      const rows = await store.findings(docId);
+      if (this.doc?.id !== docId) return;
+      const list: Placed[] = rows.map((f) => ({ ...f, from: null, to: null, exact: false }));
+      this.setFindings(this.editor ? await this.placed(list) : list);
+    });
+  }
+
+  /** Place every finding against the current text. */
+  reanchor(): Promise<void> {
+    return this.queueFindings(async () => {
+      if (!this.editor || this.findings.length === 0) return;
+      this.setFindings(await this.placed(this.findings));
+    });
+  }
+
+  /** Replace the list and keep the focus on the same finding. New findings
+   *  can arrive above it while a run goes on (SPEC §8.3). A focused finding
+   *  that is gone leaves nothing focused. */
+  private setFindings(list: Placed[]) {
+    const id = this.current?.id;
+    this.findings = list;
+    this.cursor = id === undefined ? -1 : this.visible.findIndex((f) => f.id === id);
+  }
+
+  /** Rust does the matching; we only map its code point offsets onto
+   *  ProseMirror positions. A status changed while Rust worked is kept. */
+  private async placed(list: Placed[]): Promise<Placed[]> {
     const idx = this.index();
     const resolved = await anchorApi.resolve(
       idx.text,
-      this.findings.map((f) => ({
+      list.map((f) => ({
         id: f.id,
         quote: f.quote,
         prefix: f.prefix,
@@ -328,21 +363,23 @@ class App {
     const byId = new Map(resolved.map((a) => [a.id, a]));
     // Tidy the drawn edges across every placed range at once, since the rule
     // for overlapping ends needs to see them together (SPEC §12.3).
-    const placed = this.findings.map((f) => {
+    const placed = list.map((f) => {
       const a = byId.get(f.id);
       return a && a.from !== null && a.to !== null ? { from: a.from, to: a.to } : null;
     });
     const drawn = tidy(idx.text, placed);
-    this.findings = this.findings.map((f, i) => {
+    const marked = new Map(this.findings.map((f) => [f.id, f.status]));
+    return list.map((f, i) => {
       const a = byId.get(f.id);
       const r = drawn[i];
+      const status = marked.get(f.id) ?? f.status;
       if (!a || !r) {
-        return { ...f, from: null, to: null, exact: false, status: stale(f.status) };
+        return { ...f, from: null, to: null, exact: false, status: stale(status) };
       }
       const pm = codePointRangeToPM(idx, r.from, r.to);
       return pm
-        ? { ...f, from: pm.from, to: pm.to, exact: a.exact, status: unstale(f.status) }
-        : { ...f, from: null, to: null, exact: false, status: stale(f.status) };
+        ? { ...f, from: pm.from, to: pm.to, exact: a.exact, status: unstale(status) }
+        : { ...f, from: null, to: null, exact: false, status: stale(status) };
     });
   }
 
@@ -527,11 +564,23 @@ class App {
     this.help = true;
   }
 
-  /** Review mode: the single-letter keys act on the focus, so it is lit. */
+  /** Review mode: the single-letter keys act on the focus, so it is lit.
+   *  Review mode works in the margin, so a hidden margin comes back. */
   enterReview() {
     this.closeFind(false);
     this.mode = "review";
     this.quiet = false;
+    this.showMargin();
+  }
+
+  /** ⌃⌘S: hide the margin if it shows, show it if it is hidden (SPEC §12.1). */
+  toggleMargin() {
+    this.margin = !this.showSidebar;
+  }
+
+  /** Undo a hidden margin. The margin then shows when there are findings. */
+  showMargin() {
+    if (this.margin === false) this.margin = null;
   }
 
   /** Back to writing, with the margin quiet. */

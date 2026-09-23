@@ -248,7 +248,7 @@ runs(id, doc_id, revision_id, pass_slug, pass_name,
      input_tokens, output_tokens, cost_usd)
 
 findings(id, run_id→runs, doc_id, category, severity, note,
-         quote, prefix, suffix, status, created_at)
+         quote, prefix, suffix, status, created_at, superseded_at)
 
 duels(id, doc_id, finding_id→findings, a_text, b_text, a_is_original,
       judge_provider, judge_model, verdict, original_won, reason, created_at,
@@ -268,6 +268,12 @@ new row and freezes the previous one. `label` is your note on why it is major.
 
 `findings.status` is one of `open`, `addressed`, `dismissed`, `stale`. Nothing
 is ever deleted by the app; `stale` is set by anchoring, not by you.
+
+`findings.superseded_at` is set when a newer run of the same pass replaces the
+finding (§8.3), or when *clear findings* clears it. The app does not list or
+show a superseded finding. The row keeps its status, so a later look at the
+database still shows what you addressed and what you dismissed. A database
+made before this column existed gains it at startup, with every row null.
 
 `duels.original_won` is derived at write time from `verdict` and
 `a_is_original`, so the A/B shuffle never has to be unpicked later.
@@ -460,6 +466,8 @@ category = "nominalization"
 scope = "paragraph"     # or "document"
 provider = "anthropic"  # optional; falls back to the default provider
 enabled = true
+thinking = "high"       # optional; overrides the provider's thinking (§9.1)
+timeout_secs = 150      # optional; overrides the provider's ceiling
 +++
 
 Find sentences where the action has been turned into a noun instead of being
@@ -474,6 +482,10 @@ the whole draft supplied as context. `scope = "document"` sends the draft once.
 Paragraph scope is better for local problems and gives faster first results.
 Document scope is needed for anything about order, flow or repetition.
 
+`thinking` and `timeout_secs` override the provider's values for this pass
+alone. A pass that needs reasoning over the whole draft, such as paragraph
+order, can think while the others do not (§8.3).
+
 ### 8.2 Starter set
 
 Ship a starter set, clearly marked as a starting point to be replaced. Derived
@@ -485,14 +497,66 @@ worth stealing from:
 `paragraph-order`, `topic-flow`, `unearned-metaphor`, `length` (which 750 words
 are doing no work).
 
+The starters live in `src-tauri/passes/` and are written into a new home.
+Each one states a test to apply, what not to flag, the exact span to quote,
+what each severity means, and what the note may say. A fast model over-flags,
+so the "do not flag" lists carry most of the weight. `topic-flow` checks links
+inside each paragraph, so it runs at paragraph scope. `paragraph-order` is the
+one starter with `thinking = "high"`: without reasoning over the whole draft,
+it missed most misplaced paragraphs (§8.3).
+
 ### 8.3 Running
 
-The runner fans out across enabled passes with a small worker pool. A pass that
-fails marks its run `error`, keeps whatever arrived before the failure, and
-leaves the other passes alone.
+The runner queues every call of every enabled pass at once: one call for a
+document-scope pass, one per paragraph for a paragraph-scope pass. One limit
+bounds the calls in flight across the whole run, at 32. A pass takes about
+as long as its slowest call, not the sum of its calls. Passes that think are
+queued first, because their calls are the slowest.
 
-Findings arrive one pass at a time rather than one finding at a time. Both
-backends end at the same place — a block of text that should contain a JSON
+**Two stages for a pass that does not think.** A model with thinking off
+answers in one or two seconds, finds nearly every real problem, and reports
+about two false ones for each real one. So a pass with thinking off runs in
+two stages:
+
+1. **Candidates.** The pass's calls run as usual. Two filters in code then
+   drop what cannot be right. A paragraph-scope call keeps only the findings
+   whose quote lies in the paragraph it examined. Within a pass, a finding
+   whose quote repeats an earlier one is dropped, unless the quote occurs more
+   than once in the draft.
+2. **Verification.** Three calls, with thinking off, each get the draft, the
+   pass's rule and the numbered candidates, and answer keep or drop for each
+   one. A candidate stays when two of the three keep it. The verifier answers
+   only with candidate numbers and keep flags, so no model wording can reach
+   the draft by this path (§2). If no verifier answers, every candidate stays.
+
+A pass with thinking on skips both stages. It has already checked its own
+work, and it stores each call's findings as the call returns.
+
+The design was measured on four drafts against 82 reference findings written
+by a stronger model. With thinking off for eight passes, verification, and
+thinking on for paragraph order alone, F1 was 71–72%, the same as thinking on
+for every pass (67–71%). The first findings came after about six seconds
+instead of two to three minutes, and a run cost about a sixth as much.
+
+A pass that fails marks its run `error`, keeps whatever arrived before the
+failure, and leaves the other passes alone. After its first failed call it
+starts no more calls. Its calls already in flight finish, and their findings
+are kept, because they are paid for.
+
+**Prompt order.** Each prompt is the system preamble, then the draft, then the
+pass prompt, then the paragraph to examine. Every call in a run therefore
+starts with the same tokens. DeepSeek caches a repeated prefix without being
+asked, and charges about a tenth of the input price for the cached part. The
+cache holds a prefix only after a call that sent it has finished, so the
+first calls of a run all miss it. The pass prompt comes after the draft, as Anthropic's
+long-context guidance advises for a long document and a short task. Anthropic
+caches only a prefix marked with `cache_control`, which the app does not set.
+
+Findings arrive a pass or a call at a time rather than one finding at a time.
+A verified pass stores its findings once, when verification ends. A pass with
+thinking on stores each call's findings as the call returns: a document-scope
+pass makes one call, and a paragraph-scope pass makes one per paragraph. The
+margin shows stored findings at once. No pass waits for another. Both backends end at the same place — a block of text that should contain a JSON
 array — and `parse.ts` reads it. Per-element structured-output streaming does
 not survive provider switching: an endpoint without structured-output support
 returns a bare array where the caller expects a wrapper, and the result is
@@ -500,9 +564,12 @@ silently zero findings. One code path with one failure mode is worth more here
 than per-element streaming.
 
 An item that fails the schema is dropped, so one malformed entry does not
-discard the nine good ones beside it. If *every* item fails and there was at
-least one, the pass throws instead: a provider that has changed its field names
-must not read as a clean nothing-found. A genuinely empty array stays silent,
+discard the nine good ones beside it. If *every* item across a whole pass
+fails and there was at least one, the pass fails instead: a provider that has
+changed its field names must not read as a clean nothing-found. The check
+covers the pass, not each reply. A paragraph pass makes one call per
+paragraph, and with dozens of calls one reply whose only item is bad is
+likely; it must not fail the pass. A genuinely empty array stays silent,
 because finding nothing is a normal result.
 
 A reply that cannot be read says which of four things went wrong, because each
@@ -528,6 +595,25 @@ it so it cannot be edited away.
 
 Every run records which revision it ran against. Findings from an older revision
 stay visible, marked with the revision they came from.
+
+**A rerun replaces.** Each pass replaces its own findings. When a run of a pass
+stores its first findings, Rust marks as superseded every finding from an
+earlier run of the same pass on the same document (§6.2). The mark and the
+insert are one transaction. So:
+
+- Running all passes replaces the findings of every pass in the run.
+- Running one pass replaces the findings of that pass only.
+- Findings from a pass that is not in the run stay. A disabled pass keeps its
+  findings.
+- A pass that succeeds with no findings still replaces the old ones. The
+  runner stores an empty list for it, and the status bar says "no findings".
+- A pass that fails before it stores anything replaces nothing. A failed run
+  does not empty the margin.
+- A run never supersedes the findings of a later run of the same pass, so two
+  overlapping runs cannot hide each other's results.
+
+Addressed and dismissed findings are superseded too, and keep their status.
+If a rerun finds the words you dismissed again, the new finding is open.
 
 ---
 
@@ -599,7 +685,29 @@ family installed locally, or the `ui-serif` / `ui-sans-serif` / `ui-monospace`
 keywords.
 
 `kind` selects the backend. Anything with an API key goes through `genai` in
-`llm.rs` (§9.2); `cli` shells out. A pass names a provider or inherits `default_provider`. The header
+`llm.rs` (§9.2); `cli` shells out.
+
+`thinking` sets how much a reasoning model thinks before it answers: `off`,
+`low`, `high` or `max`. Left out, the provider's own default applies. A pass
+can override it (§8.1). `off` turns thinking off: an `openai-compatible`
+provider gets DeepSeek's `thinking: {"type": "disabled"}` field, `openai` and
+`google` get the reasoning effort `none`, and `anthropic` gets no thinking,
+which is its default. The other values go to the provider as its reasoning
+effort; an `openai-compatible` provider also gets `thinking: {"type":
+"enabled"}`. A `cli` provider ignores the setting.
+
+```toml
+[providers.deepseek]
+kind     = "openai-compatible"
+base_url = "https://api.deepseek.com/v1"
+model    = "deepseek-flash"
+key_ref  = "env:DEEPSEEK_API_KEY"
+thinking = "off"
+```
+
+With thinking at `high`, DeepSeek Flash spends 10,000 to 15,000 tokens and
+40 to 60 seconds on one paragraph. `low` saves almost none of that. `off`
+answers the same call in one or two seconds with a few hundred tokens. A pass names a provider or inherits `default_provider`. The header
 bar also has a provider override for the current session, which wins over both.
 
 ### 9.2 Network backend
@@ -723,6 +831,10 @@ const Finding = z.object({
 ```
 
 There is no field for suggested wording and no field for praise.
+
+The note appended to every pass prompt names the three severity values and
+says that no other value is allowed. Without it, DeepSeek wrote `moderate` and
+`minor`, the schema rejected them, and a whole call's findings were lost.
 
 ### 10.2 System preamble
 
@@ -849,7 +961,10 @@ finding also takes `#425B9A`.
 Three panes, but only one of them is ever furniture. Centre: the editor.
 Right: the sidebar, notes aligned to the vertical position of the text they
 refer to, Genius-style; it appears when there are findings and is otherwise not
-there. Left: the document list, hidden by default and summoned from the
+there. `⌃⌘S` hides or shows it, the macOS key for a sidebar. Hiding the
+margin leaves the underlines in the text. Two things show a hidden margin
+again: entering review mode, because review mode works in the margin, and a
+run storing its first findings. Left: the document list, hidden by default and summoned from the
 palette.
 
 The centre pane is the whole app. It should be pleasant to write in for an
@@ -875,9 +990,9 @@ copy or paste. It also carries a Find submenu: Find…, Find and Replace…,
 Find Next and Find Previous (§12.6). File carries New, Open…, Open Recent, Save, Save As… and Save
 as major revision (§6.3). Open Recent is rebuilt by Rust and its items open a
 document, not a palette command. File > Open the writegood folder is handled
-in Rust, because Rust owns the filesystem. View carries Bigger text (`⌘+`), Smaller text
-(`⌘-`) and Actual size (`⌘0`), where macOS apps put them, and the two theme
-commands.
+in Rust, because Rust owns the filesystem. View carries Show or hide the margin (`⌃⌘S`),
+Bigger text (`⌘+`), Smaller text (`⌘-`) and Actual size (`⌘0`), where macOS
+apps put them, and the two theme commands.
 
 No menu item writes model words into the document. There is nothing to write
 (§2).
@@ -964,6 +1079,7 @@ Always available:
 | `⌘⌥S` | save and flag a major revision (the bar asks what changed) |
 | `⌘D` | duel: rewrite the current paragraph |
 | `⌘Y` | revisions |
+| `⌃⌘S` | hide or show the margin (§12.1) |
 | `⌘+` / `⌘-` | bigger / smaller text, saved to the config |
 | `⌘0` | text back to the base size, saved to the config |
 | `⌥↓` / `⌥↑` | next / previous finding, without leaving the text |
@@ -1228,6 +1344,9 @@ The first set of tests covers:
   focus. The focused note is in view. `x` marks a finding addressed.
 - **Cost.** After a run, the status bar shows the cost that the fake model's
   token counts and rates give.
+- **Rerun.** A second run replaces the first run's notes, so the margin holds
+  one note per finding. `⌃⌘S` hides the margin and leaves the underlines.
+  `⌃⌘S` shows it again, and so does entering review mode.
 - **Duel.** `⌘D` opens the duel. A typed rewrite goes to the judge on `⌘R`,
   and the result names the version the judge picked, whichever side the
   shuffle put it on.

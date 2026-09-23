@@ -36,7 +36,11 @@ Type. The app saves as you go. `⌘S` saves now.
 
 `⌘R` or `⌘⏎` runs every enabled pass. `⌘⇧R` runs one pass, and asks which.
 
-Findings appear as underlines in the text and as notes in the margin. A heavier underline is a more serious finding. Click an underline to light its notes.
+Findings appear as underlines in the text and as notes in the margin. They appear as each reply arrives, before the run ends. A heavier underline is a more serious finding. Click an underline to light its notes.
+
+A pass replaces the findings from its last run. When you run all passes, the old findings of every pass go. When you run one pass, only the old findings of that pass go. A pass that fails keeps its old findings.
+
+`⌃⌘S` hides or shows the margin. The underlines stay. Review mode and a new finding show the margin again.
 
 `⌥↓` and `⌥↑` step to the next and previous finding without leaving the text.
 

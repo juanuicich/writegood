@@ -89,6 +89,8 @@ ${MARKER}. Report the problems the test expects.
 export interface Call {
   system: string;
   prompt: string;
+  /** The request's `thinking` field, when the app sent one (SPEC §9.1). */
+  thinking?: unknown;
 }
 
 export interface FakeModel {
@@ -120,6 +122,16 @@ function findingsFor(prompt: string): string {
   return "```json\n" + JSON.stringify(found, null, 2) + "\n```";
 }
 
+/** The verifier's system prompt starts this way (src/lib/passes/verify.ts). */
+const VERIFIER = "You are a senior copyeditor checking another editor's findings.";
+
+/** The fake verifier keeps every candidate but the one about "unproductive",
+ *  so a test can see that the vote decides what reaches the margin. */
+function verdictsFor(prompt: string): string {
+  const quotes = [...prompt.matchAll(/^(\d+)\. quote: (.*)$/gm)];
+  return JSON.stringify(quotes.map((m) => ({ id: Number(m[1]), keep: !m[2]!.includes("unproductive") })));
+}
+
 /** The judge prefers the shorter passage. A test's rewrite is shorter than
  *  the paragraph it replaces, so the rewrite should win on whichever side the
  *  shuffle put it. */
@@ -142,16 +154,24 @@ export function fakeModel(): FakeModel {
       if (req.method !== "POST" || !url.pathname.endsWith("/chat/completions")) {
         return new Response("not found", { status: 404 });
       }
-      const body = (await req.json()) as { model: string; messages: { role: string; content: unknown }[] };
+      const body = (await req.json()) as {
+        model: string;
+        messages: { role: string; content: unknown }[];
+        thinking?: unknown;
+      };
       const text = (role: string) =>
         body.messages
           .filter((m) => m.role === role)
           .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
           .join("\n");
-      const call = { system: text("system"), prompt: text("user") };
+      const call = { system: text("system"), prompt: text("user"), thinking: body.thinking };
       calls.push(call);
 
-      const content = call.prompt.startsWith("Passage A:") ? verdictFor(call.prompt) : findingsFor(call.prompt);
+      const content = call.prompt.startsWith("Passage A:")
+        ? verdictFor(call.prompt)
+        : call.system.startsWith(VERIFIER)
+          ? verdictsFor(call.prompt)
+          : findingsFor(call.prompt);
       return Response.json({
         id: `fake-${calls.length}`,
         object: "chat.completion",
@@ -170,7 +190,7 @@ export function fakeModel(): FakeModel {
 /** A fresh WRITEGOOD_HOME: a config pointing at the fake model, the draft, the
  *  test pass, and a price catalog dated now so the app does not fetch one.
  *  The app adds the starter passes itself; the fake answers them with []. */
-export function makeHome(modelUrl: string): string {
+export function makeHome(modelUrl: string, options: LaunchOptions = {}): string {
   const home = mkdtempSync(join(tmpdir(), "writegood-e2e-"));
   mkdirSync(join(home, "documents"));
   mkdirSync(join(home, "passes"));
@@ -202,7 +222,7 @@ model    = "fake-model"
 key_ref  = "env:WRITEGOOD_E2E_KEY"
 catalog  = "e2e"
 timeout_secs = 30
-
+${options.thinking ? `thinking = "${options.thinking}"\n` : ""}
 [providers.judge]
 kind     = "openai-compatible"
 base_url = "${modelUrl}"
@@ -252,12 +272,17 @@ async function waitFor(what: string, check: () => Promise<boolean>, ms: number) 
 
 /** Launch the app with a fresh home and a fake model, and wait until the
  *  draft is in the editor. */
-export async function launch(): Promise<App> {
+export interface LaunchOptions {
+  /** The fake provider's thinking setting. Off runs passes in two stages. */
+  thinking?: "off" | "low" | "high" | "max";
+}
+
+export async function launch(options: LaunchOptions = {}): Promise<App> {
   if (!existsSync(BINARY)) {
     throw new Error(`no test build at ${BINARY}. Run bun run e2e, which builds it first.`);
   }
   const model = fakeModel();
-  const home = makeHome(model.url);
+  const home = makeHome(model.url, options);
   const port = freePort();
 
   // Only what the app needs from this shell. Keys and other settings stay out.

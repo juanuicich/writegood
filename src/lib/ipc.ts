@@ -31,7 +31,12 @@ export interface Provider {
   timeoutSecs: number;
   /** The vendor id in the price catalog, when it differs from the name. */
   catalog?: string | null;
+  /** How much a reasoning model thinks. Absent keeps the provider's default
+   *  (SPEC §9.1). */
+  thinking?: Thinking | null;
 }
+
+export type Thinking = "off" | "low" | "high" | "max";
 
 export interface Config {
   defaultProvider: string;
@@ -58,6 +63,10 @@ export interface Pass {
   enabled: boolean;
   prompt: string;
   path: string;
+  /** Overrides the provider's thinking for this pass (SPEC §8.1). */
+  thinking?: Thinking | null;
+  /** Overrides the provider's ceiling for this pass. */
+  timeoutSecs?: number | null;
 }
 
 export interface DocumentRow {

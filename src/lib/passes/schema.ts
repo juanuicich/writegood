@@ -78,6 +78,7 @@ export function outputNote(): string {
     "- quote: the exact words from the draft, copied character for character",
     `- prefix and suffix: the ${CONTEXT_LEN} characters either side of the quote, verbatim`,
     "- category, severity, and a note naming the problem",
+    "- severity is low, medium or high. No other value is allowed.",
     "",
     "The quote must appear in the draft exactly as you write it. If you cannot",
     "copy it exactly, leave the problem out.",

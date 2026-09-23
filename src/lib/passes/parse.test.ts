@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { NewFinding, Pass } from '../ipc'
-import { arrayShape, buildPrompt, extractArray, paragraphs, parseFindings } from './parse'
+import { arrayShape, buildPrompt, extractArray, paragraphs, parseFindings, readFindings } from './parse'
 
 /** One well-formed finding, as a model would write it. */
 const good = {
@@ -281,6 +281,27 @@ describe('arrayShape', () => {
 	})
 })
 
+describe('readFindings', () => {
+	test('keeps the items that fit and counts the ones that do not', () => {
+		const out = readFindings(reply(good, { ...good, severity: 'moderate' }, { ...good, quote: 'x' }))
+		expect(out.found.length).toBe(1)
+		expect(out.rejected).toBe(2)
+		expect(out.why).toContain('severity')
+	})
+
+	test('does not throw when the only item fails', () => {
+		// One bad reply among dozens must not fail a pass; the runner decides
+		// over the whole pass (SPEC §8.3).
+		const out = readFindings(reply({ ...good, severity: 'moderate' }))
+		expect(out.found).toEqual([])
+		expect(out.rejected).toBe(1)
+	})
+
+	test('still throws for a reply with no array', () => {
+		expect(() => readFindings('I found nothing worth noting.')).toThrow('no JSON array')
+	})
+})
+
 describe('buildPrompt', () => {
 	const draft = 'The first paragraph.\n\nThe second paragraph.'
 
@@ -308,6 +329,12 @@ describe('buildPrompt', () => {
 		expect(buildPrompt(pass, draft, null)).toContain('an array of findings')
 	})
 
+	test('names the three severity values', () => {
+		// Without this line DeepSeek wrote "moderate" and "minor", and the
+		// schema rejected every finding in the reply.
+		expect(buildPrompt(pass, draft, null)).toContain('severity is low, medium or high. No other value is allowed.')
+	})
+
 	test('contains the word json, which json_object endpoints require', () => {
 		// DeepSeek and other OpenAI-compatible endpoints reject a structured
 		// output request whose prompt never says "json".
@@ -316,7 +343,23 @@ describe('buildPrompt', () => {
 	})
 
 	test('trims the pass prompt', () => {
-		expect(buildPrompt(pass, draft, null).startsWith('Find stock phrases.\n')).toBe(true)
+		expect(buildPrompt(pass, draft, null)).toContain('--- the task ---\nFind stock phrases.\n')
+	})
+
+	test('starts with the draft, so every call in a run shares a cacheable prefix', () => {
+		const other = { ...pass, prompt: 'Find passive voice.' }
+		const prompts = [
+			buildPrompt(pass, draft, null),
+			buildPrompt(pass, draft, 'The first paragraph.'),
+			buildPrompt(other, draft, 'The second paragraph.'),
+		]
+		const prefix = `--- the draft ---\n${draft}\n\n--- the task ---\n`
+		for (const p of prompts) expect(p.startsWith(prefix)).toBe(true)
+	})
+
+	test('puts the paragraph after the pass prompt', () => {
+		const out = buildPrompt(pass, draft, 'The second paragraph.')
+		expect(out.indexOf('Find stock phrases.')).toBeLessThan(out.indexOf('--- examine only this paragraph ---'))
 	})
 })
 

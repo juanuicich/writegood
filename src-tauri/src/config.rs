@@ -234,6 +234,10 @@ pub struct Provider {
     /// the provider's table name (SPEC §9.4).
     #[serde(default)]
     pub catalog: Option<String>,
+    /// How much a reasoning model thinks: off, low, high or max. None keeps
+    /// the provider's own default (SPEC §9.1).
+    #[serde(default)]
+    pub thinking: Option<String>,
 }
 
 fn default_timeout() -> u64 {
@@ -252,6 +256,7 @@ impl Default for Provider {
             json_path: None,
             timeout_secs: default_timeout(),
             catalog: None,
+            thinking: None,
         }
     }
 }
@@ -307,6 +312,8 @@ mod wire {
         pub timeout_secs: u64,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub catalog: Option<&'a str>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub thinking: Option<&'a str>,
     }
 
     pub fn borrow(cfg: &Config) -> WConfig<'_> {
@@ -353,6 +360,7 @@ mod wire {
             json_path: p.json_path.as_deref(),
             timeout_secs: p.timeout_secs,
             catalog: p.catalog.as_deref(),
+            thinking: p.thinking.as_deref(),
         }
     }
 }
@@ -398,6 +406,7 @@ key_ref = "keychain:writegood/anthropic"
 # base_url = "https://api.deepseek.com/v1"
 # model    = "deepseek-flash"
 # key_ref  = "env:DEEPSEEK_API_KEY"
+# thinking = "off"            # fast and cheap; passes that need it turn it on
 
 # [providers.local]
 # kind     = "openai-compatible"
@@ -412,174 +421,18 @@ key_ref = "keychain:writegood/anthropic"
 # timeout_secs = 180
 "#;
 
-/// The starter pass library from SPEC.md §8.2, as (file name, contents).
+/// The starter pass library from SPEC.md §8.2, as (file name, contents). The
+/// files live in `src-tauri/passes/` so they read as the Markdown they are.
 const STARTERS: &[(&str, &str)] = &[
-    (
-        "01-nominalization.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Buried verbs"
-category = "nominalization"
-scope = "paragraph"
-enabled = true
-+++
-
-Find sentences where the action has been turned into a noun instead of being
-carried by the verb. "Made a determination" for "determined". "Conducted an
-investigation" for "investigated". "Is in agreement with" for "agrees".
-
-Quote the phrase verbatim and name the verb that is buried inside the noun.
-Do not write a corrected version of the sentence.
-"#,
-    ),
-    (
-        "02-passive-actor.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Missing actor"
-category = "passive-actor"
-scope = "paragraph"
-enabled = true
-+++
-
-Find sentences whose grammatical subject is not the character doing the action.
-Passive voice matters only when it hides who acted: "mistakes were made", "the
-decision was taken". Passive voice with a stated actor, or used to keep the
-topic steady across sentences, is not a problem.
-
-Quote the clause verbatim and say which actor is missing or displaced.
-Do not rewrite the clause.
-"#,
-    ),
-    (
-        "03-sentence-openings.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Sentence openings"
-category = "sentence-openings"
-scope = "paragraph"
-enabled = true
-+++
-
-Look at how each sentence in this paragraph begins. Report two things: runs of
-consecutive sentences that open with the same word or the same construction,
-and long introductory phrases that delay the subject past about ten words.
-
-Quote the opening words verbatim for each sentence you report.
-Do not propose a different opening.
-"#,
-    ),
-    (
-        "04-filler-words.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Filler words"
-category = "filler-words"
-scope = "paragraph"
-enabled = true
-+++
-
-Find words that add emphasis instead of meaning: very, really, actually,
-basically, quite, truly, unfortunately, clearly, obviously, of course, it
-should be noted that, it is important to remember.
-
-Quote each one verbatim with enough of its sentence to locate it, and say what
-the sentence asserts without it. Do not supply a shorter sentence.
-"#,
-    ),
-    (
-        "05-repeated-phrasing.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Repeated phrasing"
-category = "repeated-phrasing"
-scope = "paragraph"
-enabled = true
-+++
-
-Find wording repeated close together where the repetition does no work:
-the same uncommon noun, verb or adjective used twice within a few sentences,
-a doubled pair that says one thing twice ("full and complete", "each and
-every"), and clauses built on the same template.
-
-Quote both occurrences verbatim. Do not offer a synonym or a merged sentence.
-"#,
-    ),
-    (
-        "06-paragraph-order.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Paragraph order"
-category = "paragraph-order"
-scope = "document"
-enabled = true
-+++
-
-Read the draft as a sequence of paragraphs. Report paragraphs that arrive
-before the reader has what they need to understand them, paragraphs that repeat
-ground an earlier one already covered, and paragraphs that would carry the same
-argument in a different position.
-
-Quote the first sentence of each paragraph you report, verbatim, and say what
-the ordering problem is. Do not propose an outline or a new order.
-"#,
-    ),
-    (
-        "07-topic-flow.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Topic flow"
-category = "topic-flow"
-scope = "document"
-enabled = true
-+++
-
-Check whether each sentence opens with information the previous sentence
-already established, and closes with what is new. Report sentences that open
-with new, unfamiliar material, and stretches where the subject changes from
-sentence to sentence with nothing connecting them.
-
-Quote the opening of each sentence verbatim and name the break in the chain.
-Do not rewrite the sentence or its neighbours.
-"#,
-    ),
-    (
-        "08-unearned-metaphor.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Unearned metaphor"
-category = "unearned-metaphor"
-scope = "paragraph"
-enabled = true
-+++
-
-Find figurative language the draft has not earned: a metaphor that carries no
-information the literal statement lacks, a metaphor that contradicts another one
-nearby, and stock imagery used as a substitute for the argument.
-
-Quote the figure verbatim and say what it claims that the plain statement does
-not. Do not supply a better image or a literal restatement.
-"#,
-    ),
-    (
-        "09-length.md",
-        r#"+++
-# A starting point. Replace this prompt with your own wording.
-name = "Length"
-category = "length"
-scope = "document"
-enabled = true
-+++
-
-Assume this draft must lose a quarter of its words. Find the passages doing the
-least work: material restating a point already made, qualification stacked on
-qualification, examples that repeat the previous example's structure, and
-throat-clearing before the sentence that carries the content.
-
-Quote the opening of each passage verbatim and say why it is doing no work.
-Do not produce a condensed version.
-"#,
-    ),
+    ("01-nominalization.md", include_str!("../passes/01-nominalization.md")),
+    ("02-passive-actor.md", include_str!("../passes/02-passive-actor.md")),
+    ("03-sentence-openings.md", include_str!("../passes/03-sentence-openings.md")),
+    ("04-filler-words.md", include_str!("../passes/04-filler-words.md")),
+    ("05-repeated-phrasing.md", include_str!("../passes/05-repeated-phrasing.md")),
+    ("06-paragraph-order.md", include_str!("../passes/06-paragraph-order.md")),
+    ("07-topic-flow.md", include_str!("../passes/07-topic-flow.md")),
+    ("08-unearned-metaphor.md", include_str!("../passes/08-unearned-metaphor.md")),
+    ("09-length.md", include_str!("../passes/09-length.md")),
 ];
 
 /// Create the directory layout and write the default files. Safe to call on
@@ -691,6 +544,10 @@ pub struct Pass {
     pub enabled: bool,
     pub prompt: String,
     pub path: String,
+    /// Overrides the provider's thinking for this pass (SPEC §8.1).
+    pub thinking: Option<String>,
+    /// Overrides the provider's ceiling for this pass.
+    pub timeout_secs: Option<u64>,
 }
 
 /// The frontmatter as it appears in the file. TOML is snake_case throughout,
@@ -704,6 +561,8 @@ struct Frontmatter {
     provider: Option<String>,
     #[serde(default = "yes")]
     enabled: bool,
+    thinking: Option<String>,
+    timeout_secs: Option<u64>,
 }
 
 fn default_scope() -> String {
@@ -797,6 +656,8 @@ fn parse_pass(path: &Path, text: &str) -> AppResult<Pass> {
         enabled: fm.enabled,
         prompt,
         path: path.to_string_lossy().into_owned(),
+        thinking: fm.thinking,
+        timeout_secs: fm.timeout_secs,
     })
 }
 
@@ -1152,6 +1013,18 @@ key_ref = \"keychain:writegood/anthropic\"\n";
     }
 
     #[test]
+    fn a_pass_can_override_thinking_and_the_ceiling() {
+        let text = "+++\nname = \"Order\"\nscope = \"document\"\nthinking = \"high\"\ntimeout_secs = 150\n+++\nbody\n";
+        let pass = parse_pass(Path::new("/tmp/06-paragraph-order.md"), text).unwrap();
+        assert_eq!(pass.thinking.as_deref(), Some("high"));
+        assert_eq!(pass.timeout_secs, Some(150));
+
+        let plain = parse_pass(Path::new("/tmp/01-x.md"), "+++\nname = \"X\"\n+++\nbody\n").unwrap();
+        assert_eq!(plain.thinking, None);
+        assert_eq!(plain.timeout_secs, None);
+    }
+
+    #[test]
     fn frontmatter_defaults_fill_in() {
         let text = "+++\nname = \"Only a name\"\n+++\nbody\n";
         let pass = parse_pass(Path::new("/tmp/07-topic-flow.md"), text).unwrap();
@@ -1248,13 +1121,15 @@ key_ref = \"keychain:writegood/anthropic\"\n";
             // Rule One and Rule Two, enforced in the shipped prompts.
             let lower = p.prompt.to_lowercase();
             assert!(
-                lower.contains("verbatim"),
+                lower.contains("character for character"),
                 "{} does not ask for verbatim quotes",
                 p.slug
             );
+            assert!(lower.contains("never"), "{} does not forbid rewriting", p.slug);
+            assert!(lower.contains("praise"), "{} does not forbid praise", p.slug);
             assert!(
-                lower.contains("do not"),
-                "{} does not forbid rewriting",
+                lower.contains("no other value is allowed"),
+                "{} does not fix the severity values",
                 p.slug
             );
         }
@@ -1263,7 +1138,14 @@ key_ref = \"keychain:writegood/anthropic\"\n";
             .filter(|p| p.scope == "document")
             .map(|p| p.slug.as_str())
             .collect();
-        assert_eq!(doc_scoped, vec!["paragraph-order", "topic-flow", "length"]);
+        assert_eq!(doc_scoped, vec!["paragraph-order", "length"]);
+        // Order is the one starter that needs reasoning (SPEC §8.3).
+        let thinking: Vec<&str> = passes
+            .iter()
+            .filter(|p| p.thinking.is_some())
+            .map(|p| p.slug.as_str())
+            .collect();
+        assert_eq!(thinking, vec!["paragraph-order"]);
     }
 
     #[test]

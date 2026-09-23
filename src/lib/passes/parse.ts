@@ -16,8 +16,12 @@ export function paragraphs(text: string): string[] {
     .filter((p) => p.length > 0);
 }
 
+/** The draft comes first. Every call in a run then starts with the same
+ *  tokens, the preamble and the draft, and a provider's prompt cache serves
+ *  that prefix to every pass and every paragraph (SPEC §8.3). What differs
+ *  between calls, the pass prompt and the paragraph, comes after it. */
 export function buildPrompt(pass: Pass, draft: string, chunk: string | null): string {
-  const parts = [pass.prompt.trim(), outputNote(), "", "--- the draft ---", draft];
+  const parts = ["--- the draft ---", draft, "", "--- the task ---", pass.prompt.trim(), outputNote()];
   if (chunk !== null) {
     parts.push(
       "",
@@ -191,17 +195,23 @@ function firstIssue(error: ZodError): string {
   return path.length > 0 ? `${path}: ${issue.message}` : issue.message;
 }
 
+/** A reply's findings, with a count of the items the schema rejected and the
+ *  first reason. */
+export interface Read {
+  found: NewFinding[];
+  rejected: number;
+  why: string | null;
+}
+
 /**
- * Read findings out of a model reply.
+ * Read findings out of a model reply, keeping the items that fit the schema.
  *
- * Items that do not satisfy the schema are dropped rather than failing the
- * pass: one malformed entry should not discard the nine good ones beside it.
- * But if nothing at all survives and there was something to drop, the reply is
- * wrong rather than empty, so we throw. A provider that renames a field would
- * otherwise look like a clean nothing-found. An array with no items in it is a
- * normal result and stays silent.
+ * A reply with no readable array throws, with the reason (`failure`). An item
+ * that fails the schema is counted and dropped: one malformed entry should
+ * not discard the nine good ones beside it. Whether dropped items mean a
+ * broken provider is decided over a whole pass, by the runner (SPEC §8.3).
  */
-export function parseFindings(text: string, who = "the model"): NewFinding[] {
+export function readFindings(text: string, who = "the model"): Read {
   const json = extractArray(text);
   if (json === null) throw new Error(failure(who, text));
 
@@ -215,17 +225,33 @@ export function parseFindings(text: string, who = "the model"): NewFinding[] {
     throw new Error(`${who} returned ${typeof parsed}, not an array`);
   }
 
-  const out: NewFinding[] = [];
+  const found: NewFinding[] = [];
+  let rejected = 0;
   let why: string | null = null;
   for (const raw of parsed) {
     const el = FindingElement.safeParse(raw);
-    if (el.success) out.push(toFinding(el.data));
-    else if (why === null) why = firstIssue(el.error);
+    if (el.success) found.push(toFinding(el.data));
+    else {
+      rejected += 1;
+      why ??= firstIssue(el.error);
+    }
   }
-  if (out.length === 0 && parsed.length > 0) {
-    throw new Error(
-      `${who} returned ${parsed.length} findings, none of which fit the schema: ${why}`,
-    );
-  }
-  return out;
+  return { found, rejected, why };
+}
+
+/** The message for findings that arrived but none of which fit the schema. A
+ *  provider that renames a field must not read as a clean nothing-found. */
+export function unfit(who: string, rejected: number, why: string | null): string {
+  return `${who} returned ${rejected} findings, none of which fit the schema: ${why}`;
+}
+
+/**
+ * Read one reply on its own, as the probe does. If nothing survives and there
+ * was something to drop, the reply is wrong rather than empty, so this
+ * throws. An array with no items in it is a normal result and stays silent.
+ */
+export function parseFindings(text: string, who = "the model"): NewFinding[] {
+  const { found, rejected, why } = readFindings(text, who);
+  if (found.length === 0 && rejected > 0) throw new Error(unfit(who, rejected, why));
+  return found;
 }

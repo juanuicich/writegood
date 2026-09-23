@@ -64,7 +64,8 @@ create table if not exists findings (
     prefix     text    not null default '',
     suffix     text    not null default '',
     status     text    not null default 'open',
-    created_at text    not null default (datetime('now'))
+    created_at text    not null default (datetime('now')),
+    superseded_at text
 );
 create index if not exists findings_doc on findings(doc_id, status);
 
@@ -110,6 +111,7 @@ const ADDED: &[(&str, &str, &str)] = &[
     ("duels", "input_tokens", "integer"),
     ("duels", "output_tokens", "integer"),
     ("duels", "cost_usd", "real"),
+    ("findings", "superseded_at", "text"),
 ];
 
 fn migrate(conn: &Connection) -> AppResult<()> {
@@ -574,6 +576,9 @@ fn finding_from_row(row: &Row) -> rusqlite::Result<Finding> {
     })
 }
 
+/// Store a run's findings, and supersede every finding from an earlier run of
+/// the same pass on the same document (SPEC §8.3). An empty `items` still
+/// supersedes: a pass that found nothing replaces what it found before.
 pub fn add_findings(
     conn: &mut Connection,
     run_id: i64,
@@ -581,6 +586,14 @@ pub fn add_findings(
     items: &[NewFinding],
 ) -> AppResult<Vec<Finding>> {
     let tx = conn.transaction()?;
+    tx.execute(
+        "update findings set superseded_at = datetime('now')
+         where doc_id = ?1 and superseded_at is null
+           and run_id in (select id from runs
+                          where doc_id = ?1 and id < ?2
+                            and pass_slug = (select pass_slug from runs where id = ?2))",
+        params![doc_id, run_id],
+    )?;
     let mut ids = Vec::with_capacity(items.len());
     {
         let mut stmt = tx.prepare(
@@ -613,7 +626,8 @@ pub fn add_findings(
 
 pub fn list_findings(conn: &Connection, doc_id: i64) -> AppResult<Vec<Finding>> {
     let mut stmt = conn.prepare(
-        "select * from findings where doc_id = ?1 order by severity = 'high' desc, id asc",
+        "select * from findings where doc_id = ?1 and superseded_at is null
+         order by severity = 'high' desc, id asc",
     )?;
     let rows = stmt.query_map(params![doc_id], finding_from_row)?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -624,8 +638,13 @@ pub fn set_finding_status(conn: &Connection, id: i64, status: &str) -> AppResult
     Ok(())
 }
 
+/// Clear the margin. The rows stay, superseded, as a rerun leaves them.
 pub fn clear_findings(conn: &Connection, doc_id: i64) -> AppResult<()> {
-    conn.execute("delete from findings where doc_id = ?1", params![doc_id])?;
+    conn.execute(
+        "update findings set superseded_at = datetime('now')
+         where doc_id = ?1 and superseded_at is null",
+        params![doc_id],
+    )?;
     Ok(())
 }
 
@@ -885,6 +904,63 @@ mod tests {
     }
 
     #[test]
+    fn a_rerun_supersedes_the_same_pass_only() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let first = start_run(&conn, doc.id, rev.id, "passive", "Passive", "fake", None).unwrap();
+        let other = start_run(&conn, doc.id, rev.id, "hedges", "Hedges", "fake", None).unwrap();
+        let old = add_findings(&mut conn, first.id, doc.id, &[new_finding("a"), new_finding("b")]).unwrap();
+        add_findings(&mut conn, other.id, doc.id, &[new_finding("c")]).unwrap();
+        set_finding_status(&conn, old[0].id, "dismissed").unwrap();
+
+        let second = start_run(&conn, doc.id, rev.id, "passive", "Passive", "fake", None).unwrap();
+        add_findings(&mut conn, second.id, doc.id, &[new_finding("d")]).unwrap();
+        // A later call of the same run adds to it rather than replacing it.
+        add_findings(&mut conn, second.id, doc.id, &[new_finding("e")]).unwrap();
+
+        let mut quotes: Vec<_> = list_findings(&conn, doc.id).unwrap().into_iter().map(|f| f.quote).collect();
+        quotes.sort();
+        assert_eq!(quotes, ["c", "d", "e"]);
+
+        // The superseded rows stay, with their status.
+        let status: String = conn
+            .query_row("select status from findings where id = ?1", params![old[0].id], |r| r.get(0))
+            .unwrap();
+        assert_eq!(status, "dismissed");
+    }
+
+    #[test]
+    fn an_empty_rerun_supersedes_but_an_older_run_does_not() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let older = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        let newer = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, newer.id, doc.id, &[new_finding("new")]).unwrap();
+        // The older run finishes last. It must not hide the newer run's work.
+        add_findings(&mut conn, older.id, doc.id, &[new_finding("old")]).unwrap();
+        assert_eq!(list_findings(&conn, doc.id).unwrap().len(), 2);
+
+        let latest = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, latest.id, doc.id, &[]).unwrap();
+        assert!(list_findings(&conn, doc.id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn clearing_hides_findings_without_deleting_them() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let run = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, run.id, doc.id, &[new_finding("x")]).unwrap();
+        clear_findings(&conn, doc.id).unwrap();
+        assert!(list_findings(&conn, doc.id).unwrap().is_empty());
+        let rows: i64 = conn.query_row("select count(*) from findings", [], |r| r.get(0)).unwrap();
+        assert_eq!(rows, 1);
+    }
+
+    #[test]
     fn deleting_a_document_takes_its_findings_with_it() {
         let mut conn = mem();
         let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
@@ -1007,9 +1083,9 @@ mod tests {
     }
 
     #[test]
-    fn a_database_made_before_the_usage_columns_gains_them() {
+    fn a_database_made_before_the_added_columns_gains_them() {
         let conn = Connection::open_in_memory().unwrap();
-        // The runs and duels tables as the first release made them.
+        // The runs, duels and findings tables as the first release made them.
         conn.execute_batch(
             "create table documents (id integer primary key, path text not null unique,
                                      title text not null,
@@ -1027,9 +1103,18 @@ mod tests {
                                  judge_model text, verdict text, original_won integer,
                                  reason text,
                                  created_at text not null default (datetime('now')));
+             create table findings (id integer primary key, run_id integer not null,
+                                    doc_id integer not null, category text not null,
+                                    severity text not null default 'medium', note text not null,
+                                    quote text not null, prefix text not null default '',
+                                    suffix text not null default '',
+                                    status text not null default 'open',
+                                    created_at text not null default (datetime('now')));
              insert into documents (path, title) values ('/tmp/old.md', 'Old');
              insert into runs (doc_id, revision_id, pass_slug, pass_name, provider, status)
-                    values (1, 1, 'p', 'P', 'anthropic', 'done');",
+                    values (1, 1, 'p', 'P', 'anthropic', 'done');
+             insert into findings (run_id, doc_id, category, note, quote)
+                    values (1, 1, 'c', 'n', 'q');",
         )
         .unwrap();
 
@@ -1040,5 +1125,6 @@ mod tests {
         assert_eq!(old.usage.input_tokens, None, "old rows read as not recorded");
         assert_eq!(old.usage.cost_usd, None);
         assert_eq!(doc_usage(&conn, 1).unwrap(), DocUsage::default());
+        assert_eq!(list_findings(&conn, 1).unwrap().len(), 1, "old findings are not superseded");
     }
 }

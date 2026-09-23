@@ -13,7 +13,7 @@
 //! which is priced here against the catalog in `prices.rs` (SPEC §9.4).
 
 use genai::adapter::AdapterKind;
-use genai::chat::{ChatMessage, ChatOptions, ChatRequest};
+use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ReasoningEffort};
 use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget};
 
@@ -59,6 +59,41 @@ pub fn adapter_for(kind: &str) -> AppResult<AdapterKind> {
     }
 }
 
+/// The request options for a provider's `thinking` setting (SPEC §9.1).
+///
+/// `off` needs a different field per vendor. DeepSeek, the openai-compatible
+/// provider this was built for, takes `thinking: {"type": "disabled"}`; OpenAI
+/// and Gemini take a reasoning effort of `none`; Anthropic does not think
+/// unless asked. The other values are a reasoning effort everywhere, and an
+/// openai-compatible provider also gets DeepSeek's switch turned on.
+pub fn thinking_options(kind: &str, thinking: Option<&str>) -> AppResult<ChatOptions> {
+    // A reasoning model wraps its answer in its thinking. We want the answer.
+    let options = ChatOptions::default().with_normalize_reasoning_content(true);
+    let Some(level) = thinking else { return Ok(options) };
+    let effort = match level {
+        "off" => None,
+        "low" => Some(ReasoningEffort::Low),
+        "high" => Some(ReasoningEffort::High),
+        "max" => Some(ReasoningEffort::Max),
+        other => {
+            return Err(AppError::invalid(format!(
+                "thinking = \"{other}\" is not one of off, low, high or max"
+            )))
+        }
+    };
+    Ok(match (kind, effort) {
+        ("openai-compatible", None) => {
+            options.with_extra_body(serde_json::json!({ "thinking": { "type": "disabled" } }))
+        }
+        ("openai-compatible", Some(effort)) => options
+            .with_reasoning_effort(effort)
+            .with_extra_body(serde_json::json!({ "thinking": { "type": "enabled" } })),
+        ("anthropic", None) => options,
+        (_, None) => options.with_reasoning_effort(ReasoningEffort::None),
+        (_, Some(effort)) => options.with_reasoning_effort(effort),
+    })
+}
+
 /// Ask a provider one question. `name` is the provider's table name in
 /// `config.toml`, used to find its price.
 pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -> AppResult<Reply> {
@@ -76,6 +111,8 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
              ~/.writegood/.env",
         )
     })?;
+
+    let options = thinking_options(&provider.kind, provider.thinking.as_deref())?;
 
     let base_url = provider.base_url.clone();
     if provider.kind == "openai-compatible" && base_url.is_none() {
@@ -103,8 +140,6 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
 
     let client = Client::builder().with_service_target_resolver(target).build();
 
-    // A reasoning model wraps its answer in its thinking. We want the answer.
-    let options = ChatOptions::default().with_normalize_reasoning_content(true);
     let request = ChatRequest::default()
         .with_system(system)
         .append_message(ChatMessage::user(prompt));
@@ -197,6 +232,45 @@ mod tests {
         p.key_ref = Some("env:PATH".into()); // set, so the check reaches base_url
         let err = chat("test", &p, "s", "p").await.unwrap_err().to_string();
         assert!(err.contains("base_url"), "{err}");
+    }
+
+    #[test]
+    fn thinking_off_turns_deepseek_thinking_off() {
+        let o = thinking_options("openai-compatible", Some("off")).unwrap();
+        assert_eq!(o.extra_body, Some(serde_json::json!({ "thinking": { "type": "disabled" } })));
+        assert!(o.reasoning_effort.is_none());
+    }
+
+    #[test]
+    fn thinking_on_sets_the_effort_and_deepseek_switch() {
+        let o = thinking_options("openai-compatible", Some("high")).unwrap();
+        assert!(matches!(o.reasoning_effort, Some(ReasoningEffort::High)));
+        assert_eq!(o.extra_body, Some(serde_json::json!({ "thinking": { "type": "enabled" } })));
+        let o = thinking_options("openai", Some("low")).unwrap();
+        assert!(matches!(o.reasoning_effort, Some(ReasoningEffort::Low)));
+        assert!(o.extra_body.is_none());
+    }
+
+    #[test]
+    fn thinking_off_elsewhere_is_effort_none_except_anthropic() {
+        let o = thinking_options("openai", Some("off")).unwrap();
+        assert!(matches!(o.reasoning_effort, Some(ReasoningEffort::None)));
+        let o = thinking_options("anthropic", Some("off")).unwrap();
+        assert!(o.reasoning_effort.is_none());
+        assert!(o.extra_body.is_none());
+    }
+
+    #[test]
+    fn no_thinking_setting_leaves_the_provider_default() {
+        let o = thinking_options("openai-compatible", None).unwrap();
+        assert!(o.reasoning_effort.is_none());
+        assert!(o.extra_body.is_none());
+    }
+
+    #[test]
+    fn an_unknown_thinking_value_names_the_valid_ones() {
+        let err = thinking_options("openai", Some("medium")).unwrap_err().to_string();
+        assert!(err.contains("off, low, high or max"), "{err}");
     }
 
     #[test]

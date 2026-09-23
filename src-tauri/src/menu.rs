@@ -146,6 +146,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         ],
     )?;
 
+    // ⌃⌘S is the macOS key for a sidebar, as in Finder, Mail and Notes.
     // "+" is the macOS key equivalent for bigger text. It answers ⌘⇧= on a
     // US keyboard. ⌘0 returns to the base size.
     let view = Submenu::with_items(
@@ -153,6 +154,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         "View",
         true,
         &[
+            &MenuItem::with_id(app, "sidebar", "Show or hide the margin", true, Some("Ctrl+Cmd+S"))?,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "bigger", "Bigger text", true, Some("CmdOrCtrl++"))?,
             &MenuItem::with_id(app, "smaller", "Smaller text", true, Some("CmdOrCtrl+-"))?,
             &MenuItem::with_id(app, "actual-size", "Actual size", true, Some("CmdOrCtrl+0"))?,

@@ -245,8 +245,9 @@
     { id: "actual-size", label: "actual size", hint: "⌘0", run: () => resize(0) },
     {
       id: "sidebar",
-      label: "toggle the margin",
-      run: () => (app.sidebarForced = !app.sidebarForced),
+      label: "show or hide the margin",
+      hint: "⌃⌘S",
+      run: () => app.toggleMargin(),
     },
     { id: "help", label: "help", hint: "⌘?", run: () => app.openHelp() },
     {
@@ -325,6 +326,13 @@
     if (meta && e.key === "o") {
       e.preventDefault();
       void palette?.runCommand("open");
+      return;
+    }
+    // ⌃⌘S shows or hides the margin (SPEC §12.1). It has to come before the
+    // save keys, which count ⌃ as ⌘.
+    if (e.metaKey && e.ctrlKey && e.code === "KeyS") {
+      e.preventDefault();
+      void palette?.runCommand("sidebar");
       return;
     }
     if (meta && e.code === "KeyS") {
