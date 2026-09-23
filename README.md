@@ -37,6 +37,38 @@ design is in [`SPEC.md`](./SPEC.md). The known gaps are in
 
 You need [Bun](https://bun.sh) and a Rust toolchain.
 
+<details>
+<summary>Installing Bun and Rust</summary>
+
+Install Bun with [mise](https://mise.jdx.dev). First install mise:
+
+```
+curl https://mise.run | sh
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc
+```
+
+With Homebrew, run `brew install mise` instead. Then the activation line is
+`eval "$(mise activate zsh)"`. Open a new shell after either one.
+
+Then install Bun and check it:
+
+```
+mise use -g bun@latest
+bun --version
+```
+
+Install Rust with [rustup](https://rustup.rs). The project needs Rust 1.82 or
+later.
+
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup default stable
+rustc --version
+cargo --version
+```
+
+</details>
+
 ```
 bun install
 bun run app         # dev build
