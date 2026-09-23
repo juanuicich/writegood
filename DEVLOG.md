@@ -696,3 +696,26 @@ sentence.
 
 **UNVERIFIED — Jev in a release build.** The e2e test and the probe use a
 debug build.
+
+## 2026-09-23 — British English rules and a reworked topic flow
+
+The nine starter rules now use British English. The rules had one -ise word
+already and no other word that British spelling changes. Quoted examples now
+take single quotation marks. The frontmatter is unchanged.
+
+Topic flow had scored 30%, because DeepSeek flagged 2 to 18 false findings a
+run against 5 reference items. Most were openings the reader could already
+place. The rule now states the test as a question about the reader, names an
+aside as the clearest break, and lists the kinds of opening that are linked.
+The rule text is the whole definition. No code changed.
+
+Four runs of the current setup with rule set `2026-09-23-british` scored
+75.5% F1, against 69.6% for the baseline. Topic flow rose from 30.0% to
+40.8%, and its false findings fell from 44 to 7 over four runs. Without topic
+flow, the other passes gained 2.8 points, which is noise. Length fell 12.8
+points on 6 items, with only the quotation marks changed; it keeps the
+change. `bench/results/2026-09-23-british.md` has the numbers.
+
+**UNVERIFIED — topic flow on other drafts.** It has 5 reference items. The
+new rule also missed the `on-writing.md` items in all four runs.
+

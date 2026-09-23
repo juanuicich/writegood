@@ -87,6 +87,7 @@ to a new name and change the copy.
 | `2026-09-23-rewrite` | The rules the app shipped at commit fcf6ec4. Topic flow at paragraph scope; paragraph order sets `thinking = "high"`. Results X3, R and the smoke test used it. |
 | `2026-09-23-jev-openings` | `rewrite` with the clearer sentence-openings rule. The Jev tests used it. |
 | `2026-09-23-shipped` | The rules the app ships at commit b5746ab: `jev-openings` with the `[jev]` table in filler words. The prompts equal `jev-openings`. The tests in `2026-09-23-gaps.md` used it. |
+| `2026-09-23-british` | `shipped` in British English, with single quotation marks, and a reworked topic-flow rule. Results `british-1` to `-4` used it. |
 
 `2026-09-23-rewrite-docflow` is reconstructed. The rules at the time of those
 runs were not saved. The reconstruction is `2026-09-23-rewrite` with topic
@@ -180,6 +181,8 @@ The composed wall is the slower part, and first findings are the base run's.
 - `results/2026-09-23-gaps.md`: paragraph order on OpenRouter through the
   app's client, quality with windows, and the run-to-run noise of the
   current setup.
+- `results/2026-09-23-british.md`: the rules in British English and a
+  reworked topic flow, against the four-run baseline.
 
 ## Adding a model
 
