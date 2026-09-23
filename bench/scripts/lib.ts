@@ -51,13 +51,13 @@ export const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 // ---------------------------------------------------------------- rules
 
-export type Thinking = "off" | "none" | "on" | "low" | "medium" | "high" | "max" | "default";
+export type Thinking = "off" | "none" | "on" | "minimal" | "low" | "medium" | "high" | "max" | "default";
 
-/** The thinking levels each provider can take. `none` and `on` are
- *  OpenRouter's. DeepSeek has an on and off switch and effort levels. agy
- *  takes the app's levels, which its `thinking_names` map to a model. */
+/** The thinking levels each provider can take. `none`, `on` and `minimal`
+ *  are OpenRouter's. DeepSeek has an on and off switch and effort levels.
+ *  agy takes the app's levels, which its `thinking_names` map to a model. */
 export const LEVELS_FOR: Record<Provider["name"], Thinking[]> = {
-  openrouter: ["off", "none", "on", "low", "medium", "high", "max", "default"],
+  openrouter: ["off", "none", "on", "minimal", "low", "medium", "high", "max", "default"],
   deepseek: ["off", "low", "medium", "high", "max", "default"],
   agy: ["off", "low", "medium", "high", "max", "default"],
 };
@@ -485,6 +485,8 @@ export interface Result {
     rules: string;
     scope: "native" | "document";
     limit: number;
+    /** Seconds between drafts when they ran one at a time. */
+    serialSecs?: number;
     votes: number | null;
     need: number | null;
     ceilingSecs: number;

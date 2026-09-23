@@ -11,8 +11,8 @@
  *  positive. A draft with no reference file is not scored.
  *
  *  As a command: bun bench/scripts/score.ts <result.json> [--by-pass]
- *  [--dump unmatched.json]. It prints the scores and, with --dump, writes the
- *  unmatched findings for a judge. */
+ *  [--skip a,b] [--dump unmatched.json]. It prints the scores and, with
+ *  --dump, writes the unmatched findings for a judge. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CORPUS, draftPath, stem, type Finding, type Result, type Tally } from "./lib";
@@ -135,7 +135,13 @@ if (import.meta.main) {
   const file = process.argv[2];
   if (!file) throw new Error("usage: bun bench/scripts/score.ts <result.json> [--by-pass] [--dump file]");
   const r: Result = JSON.parse(readFileSync(file, "utf8"));
-  const { scores, unmatched } = score(r.findings, passesRun(r));
+  // --skip a,b scores the other passes only, to compare with a run that
+  // did not have them.
+  const si = process.argv.indexOf("--skip");
+  const skip = si >= 0 ? process.argv[si + 1]!.split(",") : [];
+  const run = passesRun(r);
+  for (const set of run.values()) for (const p of skip) set.delete(p);
+  const { scores, unmatched } = score(r.findings, run);
   if (!scores) console.log(`${r.label}: no draft with reference findings`);
   else console.log(describe(r.label, scores, process.argv.includes("--by-pass")));
   const di = process.argv.indexOf("--dump");

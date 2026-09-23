@@ -19,6 +19,7 @@ providers the app does not have yet.
 | `rules/<name>/` | A snapshot of each rule set a result used |
 | `scripts/run.ts` | Runs, scores and writes one result |
 | `scripts/score.ts` | The scorer; also scores one result file on its own |
+| `scripts/stages.ts` | Scores a run's candidates before the verifier and its findings after it |
 | `scripts/table.ts` | Prints the comparison table and writes `RESULTS.md` |
 | `scripts/merge.ts` | Composes a hybrid result from two runs |
 | `scripts/convert.ts` | Converted the runs made before this folder existed |
@@ -130,6 +131,14 @@ To score one result again, or to list its unmatched findings for a judge:
 bun bench/scripts/score.ts bench/results/2026-09-23-R-1.json --by-pass --dump /tmp/unmatched.json
 ```
 
+`--skip paragraph-order` scores the other passes only, so a hybrid run
+compares with a fast-pass run.
+
+`--serial 60` runs the drafts one at a time, 60 seconds apart, as a writer
+would. Use it for a provider with a requests-per-minute limit. On 23 September
+2026, OpenRouter limited `google/gemini-3.8-flash` to 300 requests per minute.
+Four drafts at once send about 340 calls in 15 seconds.
+
 To measure one model for the fast passes and another for paragraph order,
 run each part on its own, then compose them:
 
@@ -149,6 +158,8 @@ The composed wall is the slower part, and first findings are the base run's.
 
 - `results/2026-09-23-openrouter.md`: nine OpenRouter models for the fast
   passes and for paragraph order, and the hybrids they make.
+- `results/2026-09-23-followup.md`: GPT-6 Luna at effort low, DeepSeek direct
+  through `run.ts`, Gemini 3.8 Flash for the fast passes, and Jev Method 2.
 
 ## Adding a model
 
@@ -170,12 +181,13 @@ bun bench/scripts/run.ts --provider openrouter --model openai/gpt-5-mini \
   On 23 September 2026, `deepseek/deepseek-v4-flash` had no DeepSeek
   endpoint on OpenRouter; `deepseek/deepseek-v4.1-flash` had one.
 - `--thinking` maps to OpenRouter's `reasoning` parameter. `off` sends
-  `{"enabled": false}`. `low`, `medium`, `high` and `max` send
+  `{"enabled": false}`. `minimal`, `low`, `medium`, `high` and `max` send
   `{"effort": <level>}`. `default` sends nothing. `none` sends
   `{"effort": "none"}`, which turns reasoning off on OpenAI and Inception
-  models. `on` sends `{"enabled": true}`, for models with no effort levels.
-  `none` and `on` are OpenRouter's. With DeepSeek or agy, `run.ts` refuses
-  them before any call.
+  models. Gemini 3.8 Flash rejects `off` and `none`, and accepts `minimal`.
+  `on` sends `{"enabled": true}`, for models with no effort levels. `none`,
+  `on` and `minimal` are OpenRouter's. With DeepSeek or agy, `run.ts`
+  refuses them before any call.
 - `--cache-control` marks the system prompt and the shared head of each
   prompt with `cache_control` breakpoints. Alibaba caches only what a
   breakpoint marks.

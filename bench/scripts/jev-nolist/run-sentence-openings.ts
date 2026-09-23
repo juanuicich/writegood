@@ -26,7 +26,7 @@
  *      numeric severity bands (11–15 / 16–25 / >25) is Intl.Segmenter
  *      counting a span Jev already chose, not a decision about content.
  *
- *  bun bench/scripts/jev-nolist/run-sentence-openings.ts --label so-v1 [--drafts a.md,b.md]
+ *  bun bench/scripts/jev-nolist/run-sentence-openings.ts --label so-v1 [--drafts a.md,b.md] [--rules NAME]
  */
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -49,7 +49,8 @@ const date = new Date().toISOString().slice(0, 10);
 const outFile = join(RESULTS, `${date}-${label}.json`);
 if (existsSync(outFile) && !process.argv.includes("--force")) throw new Error(`${outFile} exists; pick another --label or pass --force`);
 
-const RULE = ruleText("sentence-openings");
+const ruleSet = flag("--rules", "2026-09-23-rewrite")!;
+const RULE = ruleText("sentence-openings", ruleSet);
 const SLUG = "sentence-openings";
 
 interface Ctx {
@@ -270,7 +271,7 @@ const result = {
     thinking: "default" as const,
     thinkingPasses: {},
     pipeline: "plain" as const,
-    rules: "2026-09-23-rewrite (verbatim) via Choice-located spans",
+    rules: `${ruleSet} (verbatim) via Choice-located spans`,
     scope: "native" as const,
     limit: 8,
     votes: null,
