@@ -65,9 +65,19 @@ create table if not exists findings (
     suffix     text    not null default '',
     status     text    not null default 'open',
     created_at text    not null default (datetime('now')),
-    superseded_at text
+    superseded_at text,
+    chunk_key  text
 );
 create index if not exists findings_doc on findings(doc_id, status);
+
+create table if not exists reviews (
+    doc_id     integer not null references documents(id) on delete cascade,
+    pass_slug  text    not null,
+    chunk_key  text    not null,
+    run_id     integer not null references runs(id) on delete cascade,
+    created_at text    not null default (datetime('now')),
+    primary key (doc_id, pass_slug, chunk_key)
+);
 
 create table if not exists duels (
     id             integer primary key,
@@ -112,6 +122,7 @@ const ADDED: &[(&str, &str, &str)] = &[
     ("duels", "output_tokens", "integer"),
     ("duels", "cost_usd", "real"),
     ("findings", "superseded_at", "text"),
+    ("findings", "chunk_key", "text"),
 ];
 
 fn migrate(conn: &Connection) -> AppResult<()> {
@@ -545,6 +556,8 @@ pub struct Finding {
     pub suffix: String,
     pub status: String,
     pub created_at: String,
+    /// The answer this finding came from (SPEC §8.3). None before keys.
+    pub chunk_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -573,32 +586,68 @@ fn finding_from_row(row: &Row) -> rusqlite::Result<Finding> {
         suffix: row.get("suffix")?,
         status: row.get("status")?,
         created_at: row.get("created_at")?,
+        chunk_key: row.get("chunk_key")?,
     })
 }
 
-/// Store a run's findings, and supersede every finding from an earlier run of
-/// the same pass on the same document (SPEC §8.3). An empty `items` still
-/// supersedes: a pass that found nothing replaces what it found before.
+/// Findings of the same pass as `run_id`, on the same document, from an
+/// earlier run. Used in the `where` clause of every supersede below.
+const EARLIER_SAME_PASS: &str = "run_id in (select id from runs
+                    where doc_id = ?1 and id <= ?2
+                      and pass_slug = (select pass_slug from runs where id = ?2))";
+
+/// Store one answer's findings (SPEC §8.3).
+///
+/// With a key, the findings of any earlier answer with the same key are
+/// superseded and the key is recorded in `reviews`, so the question is not
+/// asked again. An empty `items` still records the answer: a paragraph with no
+/// findings is reviewed. Without a key, every earlier finding of the pass is
+/// superseded, which is how runs worked before keys.
 pub fn add_findings(
     conn: &mut Connection,
     run_id: i64,
     doc_id: i64,
+    key: Option<&str>,
     items: &[NewFinding],
 ) -> AppResult<Vec<Finding>> {
     let tx = conn.transaction()?;
-    tx.execute(
-        "update findings set superseded_at = datetime('now')
-         where doc_id = ?1 and superseded_at is null
-           and run_id in (select id from runs
-                          where doc_id = ?1 and id < ?2
-                            and pass_slug = (select pass_slug from runs where id = ?2))",
-        params![doc_id, run_id],
-    )?;
+    match key {
+        Some(key) => {
+            tx.execute(
+                &format!(
+                    "update findings set superseded_at = datetime('now')
+                     where doc_id = ?1 and superseded_at is null and run_id < ?2
+                       and chunk_key = ?3 and {EARLIER_SAME_PASS}"
+                ),
+                params![doc_id, run_id, key],
+            )?;
+            // A later run's review stays: an older run finishing late must
+            // not take the key back.
+            tx.execute(
+                "insert into reviews (doc_id, pass_slug, chunk_key, run_id)
+                 values (?1, (select pass_slug from runs where id = ?2), ?3, ?2)
+                 on conflict (doc_id, pass_slug, chunk_key)
+                 do update set run_id = excluded.run_id, created_at = datetime('now')
+                 where excluded.run_id > reviews.run_id",
+                params![doc_id, run_id, key],
+            )?;
+        }
+        None => {
+            tx.execute(
+                &format!(
+                    "update findings set superseded_at = datetime('now')
+                     where doc_id = ?1 and superseded_at is null and run_id < ?2
+                       and {EARLIER_SAME_PASS}"
+                ),
+                params![doc_id, run_id],
+            )?;
+        }
+    }
     let mut ids = Vec::with_capacity(items.len());
     {
         let mut stmt = tx.prepare(
-            "insert into findings (run_id, doc_id, category, severity, note, quote, prefix, suffix)
-             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "insert into findings (run_id, doc_id, category, severity, note, quote, prefix, suffix, chunk_key)
+             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         )?;
         for f in items {
             stmt.execute(params![
@@ -609,7 +658,8 @@ pub fn add_findings(
                 f.note,
                 f.quote,
                 f.prefix,
-                f.suffix
+                f.suffix,
+                key
             ])?;
             ids.push(tx.last_insert_rowid());
         }
@@ -638,8 +688,44 @@ pub fn set_finding_status(conn: &Connection, id: i64, status: &str) -> AppResult
     Ok(())
 }
 
-/// Clear the margin. The rows stay, superseded, as a rerun leaves them.
+/// At the end of a pass that did not fail: supersede the pass's findings
+/// whose key is not among the draft's current keys, and forget those keys
+/// (SPEC §8.3). Findings with no key predate keys and go too. Only findings
+/// from this run or earlier are touched.
+pub fn retain_findings(conn: &mut Connection, run_id: i64, keys: &[String]) -> AppResult<()> {
+    let doc_id: i64 = conn.query_row("select doc_id from runs where id = ?1", params![run_id], |r| r.get(0))?;
+    let keys = serde_json::to_string(keys)?;
+    let tx = conn.transaction()?;
+    tx.execute(
+        &format!(
+            "update findings set superseded_at = datetime('now')
+             where doc_id = ?1 and superseded_at is null and {EARLIER_SAME_PASS}
+               and (chunk_key is null or chunk_key not in (select value from json_each(?3)))"
+        ),
+        params![doc_id, run_id, keys],
+    )?;
+    tx.execute(
+        "delete from reviews
+         where doc_id = ?1 and run_id <= ?2
+           and pass_slug = (select pass_slug from runs where id = ?2)
+           and chunk_key not in (select value from json_each(?3))",
+        params![doc_id, run_id, keys],
+    )?;
+    tx.commit()?;
+    Ok(())
+}
+
+/// The keys a pass already has answers for on a document.
+pub fn reviewed_keys(conn: &Connection, doc_id: i64, pass_slug: &str) -> AppResult<Vec<String>> {
+    let mut stmt = conn.prepare("select chunk_key from reviews where doc_id = ?1 and pass_slug = ?2")?;
+    let rows = stmt.query_map(params![doc_id, pass_slug], |r| r.get::<_, String>(0))?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Clear the margin. The rows stay, superseded, as a rerun leaves them. The
+/// saved answers go, so the next run asks every question again.
 pub fn clear_findings(conn: &Connection, doc_id: i64) -> AppResult<()> {
+    conn.execute("delete from reviews where doc_id = ?1", params![doc_id])?;
     conn.execute(
         "update findings set superseded_at = datetime('now')
          where doc_id = ?1 and superseded_at is null",
@@ -891,7 +977,7 @@ mod tests {
         let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let run = start_run(&conn, doc.id, rev.id, "passive", "Passive voice", "anthropic", Some("claude-opus-5")).unwrap();
-        let saved = add_findings(&mut conn, run.id, doc.id, &[new_finding("was decided"), new_finding("were made")]).unwrap();
+        let saved = add_findings(&mut conn, run.id, doc.id, None, &[new_finding("was decided"), new_finding("were made")]).unwrap();
         assert_eq!(saved.len(), 2);
         assert_eq!(list_findings(&conn, doc.id).unwrap().len(), 2);
 
@@ -910,14 +996,14 @@ mod tests {
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let first = start_run(&conn, doc.id, rev.id, "passive", "Passive", "fake", None).unwrap();
         let other = start_run(&conn, doc.id, rev.id, "hedges", "Hedges", "fake", None).unwrap();
-        let old = add_findings(&mut conn, first.id, doc.id, &[new_finding("a"), new_finding("b")]).unwrap();
-        add_findings(&mut conn, other.id, doc.id, &[new_finding("c")]).unwrap();
+        let old = add_findings(&mut conn, first.id, doc.id, None, &[new_finding("a"), new_finding("b")]).unwrap();
+        add_findings(&mut conn, other.id, doc.id, None, &[new_finding("c")]).unwrap();
         set_finding_status(&conn, old[0].id, "dismissed").unwrap();
 
         let second = start_run(&conn, doc.id, rev.id, "passive", "Passive", "fake", None).unwrap();
-        add_findings(&mut conn, second.id, doc.id, &[new_finding("d")]).unwrap();
+        add_findings(&mut conn, second.id, doc.id, None, &[new_finding("d")]).unwrap();
         // A later call of the same run adds to it rather than replacing it.
-        add_findings(&mut conn, second.id, doc.id, &[new_finding("e")]).unwrap();
+        add_findings(&mut conn, second.id, doc.id, None, &[new_finding("e")]).unwrap();
 
         let mut quotes: Vec<_> = list_findings(&conn, doc.id).unwrap().into_iter().map(|f| f.quote).collect();
         quotes.sort();
@@ -937,14 +1023,98 @@ mod tests {
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let older = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
         let newer = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
-        add_findings(&mut conn, newer.id, doc.id, &[new_finding("new")]).unwrap();
+        add_findings(&mut conn, newer.id, doc.id, None, &[new_finding("new")]).unwrap();
         // The older run finishes last. It must not hide the newer run's work.
-        add_findings(&mut conn, older.id, doc.id, &[new_finding("old")]).unwrap();
+        add_findings(&mut conn, older.id, doc.id, None, &[new_finding("old")]).unwrap();
         assert_eq!(list_findings(&conn, doc.id).unwrap().len(), 2);
 
         let latest = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
-        add_findings(&mut conn, latest.id, doc.id, &[]).unwrap();
+        add_findings(&mut conn, latest.id, doc.id, None, &[]).unwrap();
         assert!(list_findings(&conn, doc.id).unwrap().is_empty());
+    }
+
+    fn keys(list: &[&str]) -> Vec<String> {
+        list.iter().map(|k| k.to_string()).collect()
+    }
+
+    #[test]
+    fn an_answer_replaces_only_the_same_key() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let first = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        let kept = add_findings(&mut conn, first.id, doc.id, Some("k1"), &[new_finding("one")]).unwrap();
+        add_findings(&mut conn, first.id, doc.id, Some("k2"), &[new_finding("two")]).unwrap();
+        set_finding_status(&conn, kept[0].id, "dismissed").unwrap();
+
+        // The next run asks only about k2, whose paragraph changed.
+        let second = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, second.id, doc.id, Some("k2"), &[new_finding("two again")]).unwrap();
+        let mut quotes: Vec<_> = list_findings(&conn, doc.id).unwrap().into_iter().map(|f| (f.quote, f.status)).collect();
+        quotes.sort();
+        assert_eq!(quotes, [("one".to_string(), "dismissed".to_string()), ("two again".to_string(), "open".to_string())]);
+        let mut reviewed = reviewed_keys(&conn, doc.id, "p").unwrap();
+        reviewed.sort();
+        assert_eq!(reviewed, ["k1", "k2"]);
+    }
+
+    #[test]
+    fn an_empty_answer_is_still_reviewed() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let run = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, run.id, doc.id, Some("clean"), &[]).unwrap();
+        assert_eq!(reviewed_keys(&conn, doc.id, "p").unwrap(), ["clean"]);
+        assert!(reviewed_keys(&conn, doc.id, "other").unwrap().is_empty());
+    }
+
+    #[test]
+    fn retaining_drops_keys_that_are_gone_and_findings_without_keys() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let old = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, old.id, doc.id, None, &[new_finding("before keys")]).unwrap();
+        let run = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, run.id, doc.id, Some("stays"), &[new_finding("a")]).unwrap();
+        add_findings(&mut conn, run.id, doc.id, Some("gone"), &[new_finding("b")]).unwrap();
+        let other = start_run(&conn, doc.id, rev.id, "q", "Q", "fake", None).unwrap();
+        add_findings(&mut conn, other.id, doc.id, Some("gone"), &[new_finding("other pass")]).unwrap();
+
+        retain_findings(&mut conn, run.id, &keys(&["stays"])).unwrap();
+
+        let mut quotes: Vec<_> = list_findings(&conn, doc.id).unwrap().into_iter().map(|f| f.quote).collect();
+        quotes.sort();
+        assert_eq!(quotes, ["a", "other pass"]);
+        assert_eq!(reviewed_keys(&conn, doc.id, "p").unwrap(), ["stays"]);
+        assert_eq!(reviewed_keys(&conn, doc.id, "q").unwrap(), ["gone"]);
+    }
+
+    #[test]
+    fn an_older_run_neither_replaces_nor_retains_over_a_newer_one() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let older = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        let newer = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, newer.id, doc.id, Some("k"), &[new_finding("new")]).unwrap();
+        add_findings(&mut conn, older.id, doc.id, Some("k"), &[new_finding("old")]).unwrap();
+        retain_findings(&mut conn, older.id, &keys(&[])).unwrap();
+        let quotes: Vec<_> = list_findings(&conn, doc.id).unwrap().into_iter().map(|f| f.quote).collect();
+        assert!(quotes.contains(&"new".to_string()), "{quotes:?}");
+        assert_eq!(reviewed_keys(&conn, doc.id, "p").unwrap(), ["k"]);
+    }
+
+    #[test]
+    fn clearing_forgets_the_saved_answers() {
+        let mut conn = mem();
+        let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
+        let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
+        let run = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
+        add_findings(&mut conn, run.id, doc.id, Some("k"), &[new_finding("x")]).unwrap();
+        clear_findings(&conn, doc.id).unwrap();
+        assert!(reviewed_keys(&conn, doc.id, "p").unwrap().is_empty());
     }
 
     #[test]
@@ -953,7 +1123,7 @@ mod tests {
         let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let run = start_run(&conn, doc.id, rev.id, "p", "P", "fake", None).unwrap();
-        add_findings(&mut conn, run.id, doc.id, &[new_finding("x")]).unwrap();
+        add_findings(&mut conn, run.id, doc.id, None, &[new_finding("x")]).unwrap();
         clear_findings(&conn, doc.id).unwrap();
         assert!(list_findings(&conn, doc.id).unwrap().is_empty());
         let rows: i64 = conn.query_row("select count(*) from findings", [], |r| r.get(0)).unwrap();
@@ -966,7 +1136,7 @@ mod tests {
         let doc = upsert_document(&conn, &format!("/tmp/{}.md", line!()), "d").unwrap();
         let rev = save_revision(&conn, doc.id, "{}", "text", false, None).unwrap();
         let run = start_run(&conn, doc.id, rev.id, "p", "P", "anthropic", None).unwrap();
-        add_findings(&mut conn, run.id, doc.id, &[new_finding("x")]).unwrap();
+        add_findings(&mut conn, run.id, doc.id, None, &[new_finding("x")]).unwrap();
         delete_document(&conn, doc.id).unwrap();
         assert!(list_findings(&conn, doc.id).unwrap().is_empty());
         assert!(list_revisions(&conn, doc.id).unwrap().is_empty());

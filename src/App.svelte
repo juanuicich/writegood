@@ -96,7 +96,9 @@
     return `asking about ${p.active.join(", ")}${count}`;
   }
 
-  async function run(only?: string) {
+  /** Run the enabled passes, or one. `fresh` ignores the saved answers and
+   *  asks every question again (SPEC §8.3). */
+  async function run(only?: string, fresh = false) {
     const passes = app.passes.filter(
       (p) => p.enabled && (only === undefined || p.slug === only),
     );
@@ -106,7 +108,7 @@
     app.progress = { done: 0, total: passes.length, active: [] };
     await app.withBusy(`running ${passes.length} pass${passes.length === 1 ? "" : "es"}…`, async () => {
       try {
-        app.say(summarise(await runPasses(passes, { override })));
+        app.say(summarise(await runPasses(passes, { override, fresh })));
       } catch (e) {
         app.say(e instanceof Error ? e.message : String(e));
       } finally {
@@ -151,6 +153,7 @@
     },
     { id: "new", label: "new document", hint: "⌘N", run: () => app.create() },
     { id: "run", label: "run all passes", hint: "⌘R", run: () => run() },
+    { id: "run-fresh", label: "run all passes afresh", run: () => run(undefined, true) },
     {
       id: "run-one",
       label: "run one pass",

@@ -515,3 +515,62 @@ file falls back to `ui-serif` until the line is removed or changed.
 **UNVERIFIED — the new View items by hand.** The tests cannot reach the menu
 bar. Needs checking: View shows Actual size with `⌘0`, and both theme items
 work.
+
+## 2026-09-23 — fast passes (fcf6ec4)
+
+**DECISION — thinking off, with a verifier, for eight of the nine passes.**
+Measured on four drafts against 82 reference findings written by Opus, with
+an Opus judge for the findings the reference missed. Thinking on for every
+pass scored F1 67–71% and took two to three minutes a draft. Thinking off
+alone scored 43%: it finds nearly everything and flags twice as much that is
+wrong. Code filters and a three-vote verifier bring it to 64–65%. Paragraph
+order with thinking on brings the whole run to 71–72%, with first findings in
+about six seconds. SPEC §8.3 has the design.
+
+**DECISION — the starter passes are rewritten.** Each states a test, what not
+to flag, the span to quote, the severity scale and what a note may say. They
+live in `src-tauri/passes/`. Topic flow runs at paragraph scope.
+
+**NOTE — `reasoning_effort = "low"` does not help DeepSeek Flash.** It spent
+11,000 to 16,000 reasoning tokens on one paragraph, as many as `high`. Only
+`thinking: {"type": "disabled"}` is fast.
+
+**ASSUMPTION — the reference findings are right often enough to rank
+configurations.** Repeat runs of one configuration differed by up to five F1
+points. The document passes have five or six reference items each.
+
+## 2026-09-23 — windows and saved answers
+
+**DECISION — long drafts are sent in windows.** A draft over 16,000
+characters is split into cores of 4,000 to 12,000 characters, each with three
+paragraphs of context either side. Boundaries fall after a paragraph whose
+FNV-1a hash is divisible by four, so an edit moves only nearby boundaries and
+the other windows stay in the provider's prompt cache.
+
+**DECISION — every answer is saved and not asked again.** The key covers the
+pass's settings, the paragraph and the paragraph before it. The rest of the
+window is context and is not in the key, so a finding that depends on distant
+text can go stale; *run all passes afresh* asks everything again. Findings on
+unchanged paragraphs keep their status, so a dismissed finding stays
+dismissed.
+
+**MEASURED — a 5,000-word chapter in the real app.** 112 paragraphs, about
+790 calls. First run: the fast passes in about 25 seconds, paragraph order in
+110 to 145 seconds, ten to seventeen cents. After editing one paragraph: the fast
+passes in about three seconds, paragraph order again in about two minutes.
+With no edit: 1.5 seconds and no calls.
+
+**FIXED — one unreadable reply no longer fails a pass.** With thinking off, 11
+of about 790 replies were prose or a refusal. Each now fails only its own
+call, which the next run asks again.
+
+**CHANGED — paragraph order's ceiling is 300 seconds.** It took 145 seconds on
+the chapter, against the old 150.
+
+**DEFERRED — paragraph order reruns on every edit.** Its key is the whole
+draft, so any edit sends it again, and it is the slowest call.
+
+**UNVERIFIED — windowed quality.** Every measured draft fits one window, so
+the reference scores say nothing about windows. Measuring needs a long draft
+with reference findings.
+

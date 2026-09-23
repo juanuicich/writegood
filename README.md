@@ -51,6 +51,12 @@ environment variable or a `.env` file. Then press `⌘R` to run the passes.
 It works with Anthropic, OpenAI, Google and anything OpenAI-compatible. It can
 also run passes through the `claude` or `codex` CLIs.
 
+With DeepSeek Flash and thinking off, the starter passes review a 500-word
+draft in about four seconds, except paragraph order, which thinks and takes
+about a minute. A run costs about three cents. A 5,000-word chapter takes
+about 25 seconds, two minutes for paragraph order, and ten to twenty cents. The
+app saves every answer, so a rerun asks only about the paragraphs you changed.
+
 ## Tests
 
 ```

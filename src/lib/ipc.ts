@@ -285,8 +285,15 @@ export const store = {
     invoke<void>("run_finish", { id, status, error, usage }),
   runs: (docId: number, limit?: number) => invoke<Run[]>("run_list", { docId, limit }),
 
-  addFindings: (runId: number, docId: number, items: NewFinding[]) =>
-    invoke<Finding[]>("findings_add", { runId, docId, items }),
+  /** Store one answer. With a key, it replaces the earlier answer with that
+   *  key and is recorded as reviewed (SPEC §8.3). */
+  addFindings: (runId: number, docId: number, key: string | null, items: NewFinding[]) =>
+    invoke<Finding[]>("findings_add", { runId, docId, key, items }),
+  /** At the end of a pass: supersede the findings whose key is not listed. */
+  retainFindings: (runId: number, keys: string[]) => invoke<void>("findings_retain", { runId, keys }),
+  /** The keys a pass already has answers for. */
+  reviewedKeys: (docId: number, passSlug: string) =>
+    invoke<string[]>("findings_reviewed", { docId, passSlug }),
   findings: (docId: number) => invoke<Finding[]>("findings_list", { docId }),
   setFindingStatus: (id: number, status: FindingStatus) =>
     invoke<void>("findings_status", { id, status }),

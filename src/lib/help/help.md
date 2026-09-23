@@ -38,7 +38,11 @@ Type. The app saves as you go. `⌘S` saves now.
 
 Findings appear as underlines in the text and as notes in the margin. They appear as each reply arrives, before the run ends. A heavier underline is a more serious finding. Click an underline to light its notes.
 
-A pass replaces the findings from its last run. When you run all passes, the old findings of every pass go. When you run one pass, only the old findings of that pass go. A pass that fails keeps its old findings.
+The app saves every answer. A rerun asks only about the paragraphs you changed and the paragraph after each. Findings on unchanged paragraphs stay as they are, and a finding you dismissed stays dismissed. The findings on a changed paragraph are replaced. A pass that fails keeps its old findings.
+
+*run all passes afresh*, in the command bar, asks about every paragraph again.
+
+A long draft is sent in parts of a few thousand words, each with a few paragraphs of context either side. This keeps a chapter fast and cheap to review.
 
 `⌃⌘S` hides or shows the margin. The underlines stay. Review mode and a new finding show the margin again.
 

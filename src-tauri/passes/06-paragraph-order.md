@@ -6,7 +6,7 @@ scope = "document"
 enabled = true
 # Order needs reasoning over the whole draft; the other passes run without it.
 thinking = "high"
-timeout_secs = 150
+timeout_secs = 300
 +++
 
 Read the draft as a sequence of paragraphs. For each paragraph, ask what the

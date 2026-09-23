@@ -20,8 +20,10 @@ export function paragraphs(text: string): string[] {
  *  tokens, the preamble and the draft, and a provider's prompt cache serves
  *  that prefix to every pass and every paragraph (SPEC §8.3). What differs
  *  between calls, the pass prompt and the paragraph, comes after it. */
-export function buildPrompt(pass: Pass, draft: string, chunk: string | null): string {
-  const parts = ["--- the draft ---", draft, "", "--- the task ---", pass.prompt.trim(), outputNote()];
+export function buildPrompt(pass: Pass, draft: string, chunk: string | null, excerpt = false): string {
+  // A long draft is sent a window at a time (SPEC §8.3), and says so.
+  const header = excerpt ? "--- an excerpt of the draft ---" : "--- the draft ---";
+  const parts = [header, draft, "", "--- the task ---", pass.prompt.trim(), outputNote()];
   if (chunk !== null) {
     parts.push(
       "",

@@ -1,7 +1,9 @@
 /** Running editing passes over a draft (SPEC 8.3).
  *
  *  A pass is one prompt, sent once for the draft or once per paragraph. Every
- *  call of every pass shares one bound on how many run at once.
+ *  call of every pass shares one bound on how many run at once. A paragraph
+ *  call sends its window of the draft, not the whole draft, and a question
+ *  whose answer is saved is not asked again.
  *
  *  A pass with thinking off runs in two stages: its calls give candidates,
  *  code filters drop the impossible ones, and three verifiers vote on the
@@ -17,6 +19,8 @@ import { deadline } from "./deadline";
 import { limiter } from "./limit";
 import { inParagraph, Repeats } from "./filter";
 import { buildVerifyPrompt, parseVerdicts, tally, VERIFY_SYSTEM, VOTES } from "./verify";
+import { windowOf, windows, type Window } from "./windows";
+import { documentKey, fingerprint, paragraphKey } from "./keys";
 import { NONE, total, UNREPORTED, type Call } from "../usage";
 
 /** Model calls in flight at once, across every pass in a run. DeepSeek allows
@@ -60,8 +64,20 @@ async function ask(
 
 export interface RunReport {
   pass: string;
+  /** New findings stored by this run. */
   findings: number;
+  /** Answers taken from earlier runs instead of asked again (SPEC §8.3). */
+  reused?: number;
+  /** Replies that could not be read; those questions are asked next run. */
+  unreadable?: number;
   error?: string;
+}
+
+/** One question a pass asks: a paragraph, or the whole draft. */
+interface Question {
+  key: string;
+  chunk: string | null;
+  window: Window | null;
 }
 
 /**
@@ -70,7 +86,7 @@ export interface RunReport {
  */
 export async function runPasses(
   passes: Pass[],
-  options: { override?: string | null } = {},
+  options: { override?: string | null; fresh?: boolean } = {},
 ): Promise<RunReport[]> {
   const config = app.config;
   if (!config) throw new Error("config not loaded");
@@ -86,6 +102,8 @@ export async function runPasses(
   if (revisionId === undefined) throw new Error("no revision to run against");
 
   const system = preamble(config.rules);
+  const paras = paragraphs(draft);
+  const wins = windows(paras, draft);
 
   // What the status bar reports while this runs. "working" said nothing; the
   // names of the passes with a call in flight say what the app is waiting for.
@@ -123,29 +141,66 @@ export async function runPasses(
       resolved.provider.model ?? null,
     );
 
-    const collected: NewFinding[] = [];
     const calls: Call[] = [];
     let failure: string | null = null;
     const verified = verifies(resolved);
     const priority = verified ? 1 : 0;
-    const candidates: NewFinding[] = [];
     const repeats = new Repeats(draft);
     // Items the schema rejected, over the whole pass. One bad item in one
     // reply is dropped; a pass where every item was bad has failed.
     let fit = 0;
     let rejected = 0;
     let why: string | null = null;
+    let stored = 0;
+    // Replies with no readable array. Each fails its own call, which is not
+    // saved and is asked again next run; the pass goes on (SPEC §8.3).
+    let unreadable = 0;
+    let unread: string | null = null;
 
-    const save = async (found: NewFinding[]) => {
-      await store.addFindings(run.id, docId, found);
-      collected.push(...found);
+    // The questions this pass asks, each with the key of its answer.
+    const fp = await fingerprint({
+      system,
+      builder: buildPrompt(pass, "", pass.scope === "paragraph" ? "" : null),
+      scope: pass.scope,
+      provider: name,
+      model: resolved.provider.model,
+      thinking: resolved.provider.thinking,
+      verifier: verified ? `${VERIFY_SYSTEM}\n${buildVerifyPrompt("", "", [])}` : null,
+    });
+    const questions: Question[] =
+      pass.scope === "paragraph"
+        ? await Promise.all(
+            paras.map(async (p, i) => ({
+              key: await paragraphKey(fp, p, i > 0 ? paras[i - 1]! : null),
+              chunk: p,
+              window: windowOf(wins, i),
+            })),
+          )
+        : [{ key: await documentKey(fp, draft), chunk: null, window: null }];
+
+    // Skip what is already answered, and ask a repeated question once.
+    const saved = options.fresh ? new Set<string>() : new Set(await store.reviewedKeys(docId, pass.slug));
+    const asked = new Map<string, Question>();
+    for (const q of questions) if (!saved.has(q.key) && !asked.has(q.key)) asked.set(q.key, q);
+    const reused = questions.length - asked.size;
+    void log.write(
+      "info",
+      `${pass.name}: ${asked.size} call(s), ${reused} answer(s) reused, ${pass.scope} scope, ` +
+        `thinking ${resolved.provider.thinking ?? "default"}`,
+    );
+
+    /** Store one answer. `reload` puts it in the margin at once. */
+    const save = async (key: string, found: NewFinding[], reload = true) => {
+      await store.addFindings(run.id, docId, key, found);
+      stored += found.length;
       if (found.length > 0) app.showMargin();
-      await app.loadFindings();
+      if (reload) await app.loadFindings();
     };
 
-    // One call per paragraph, all queued at once. The limit decides how many
-    // run. A verified pass gathers candidates; any other stores as it goes.
-    const call = async (chunk: string | null) => {
+    // A verified pass gathers each answer's candidates, then verifies them a
+    // window at a time. Any other pass stores each answer as it comes.
+    const pending: { q: Question; found: NewFinding[] }[] = [];
+    const call = async (q: Question) => {
       try {
         const text = await limit(async () => {
           // After a failure the pass asks nothing more. Calls already in
@@ -153,65 +208,78 @@ export async function runPasses(
           if (failure !== null) return null;
           asking(pass.name, 1);
           try {
-            return await ask(resolved, system, buildPrompt(pass, draft, chunk), calls);
+            const context = q.window?.text ?? draft;
+            return await ask(resolved, system, buildPrompt(pass, context, q.chunk, q.window?.excerpt), calls);
           } finally {
             asking(pass.name, -1);
           }
         }, priority);
         if (text === null) return;
-        const read = readFindings(text, resolved.name);
-        const found = read.found;
-        fit += found.length;
+        let read: ReturnType<typeof readFindings>;
+        try {
+          read = readFindings(text, resolved.name);
+        } catch (e) {
+          unreadable += 1;
+          unread ??= e instanceof Error ? e.message : String(e);
+          void log.write("error", `${pass.name}: ${unread}; asked again next run`);
+          return;
+        }
+        fit += read.found.length;
         if (read.rejected > 0) {
           rejected += read.rejected;
           why ??= read.why;
           void log.write("error", `${pass.name}: dropped ${read.rejected} finding(s): ${read.why}`);
         }
-        if (verified) {
-          candidates.push(...repeats.take(chunk === null ? found : inParagraph(found, chunk)));
-        } else if (found.length > 0) {
-          await save(found);
-        }
+        if (!verified) return await save(q.key, read.found);
+        const found = repeats.take(q.chunk === null ? read.found : inParagraph(read.found, q.chunk));
+        // Nothing to verify: the answer is saved as it is.
+        if (found.length === 0) await save(q.key, [], false);
+        else pending.push({ q, found });
       } catch (e) {
         failure ??= e instanceof Error ? e.message : String(e);
       }
     };
-
-    const chunks = pass.scope === "paragraph" ? paragraphs(draft) : [null];
-    void log.write(
-      "info",
-      `${pass.name}: ${chunks.length} call(s), ${pass.scope} scope, thinking ${resolved.provider.thinking ?? "default"}`,
-    );
-    await Promise.all(chunks.map(call));
+    await Promise.all([...asked.values()].map(call));
     if (fit === 0 && rejected > 0) failure ??= unfit(resolved.name, rejected, why);
+    if (asked.size > 0 && unreadable === asked.size) failure ??= unread;
 
-    if (verified && candidates.length > 0) {
-      try {
-        const kept = await verify(pass, resolved, draft, candidates, calls, limit, asking);
-        void log.write("info", `${pass.name}: kept ${kept.length} of ${candidates.length} candidate(s)`);
-        // After a failure, store only what survived; an empty list would
-        // replace the pass's earlier findings with nothing.
-        if (failure === null || kept.length > 0) await save(kept);
-      } catch (e) {
-        failure ??= e instanceof Error ? e.message : String(e);
-      }
+    // Verify a window's candidates together, as the measured design did.
+    const groups = new Map<string, { context: string; items: typeof pending }>();
+    for (const item of pending) {
+      const context = item.q.window?.text ?? draft;
+      const group = groups.get(context) ?? { context, items: [] };
+      group.items.push(item);
+      groups.set(context, group);
     }
+    await Promise.all(
+      [...groups.values()].map(async ({ context, items }) => {
+        const flat = items.flatMap((item) => item.found.map((finding) => ({ key: item.q.key, finding })));
+        const kept = new Set(
+          await verify(pass, resolved, context, flat.map((x) => x.finding), calls, limit, asking),
+        );
+        void log.write("info", `${pass.name}: kept ${kept.size} of ${flat.length} candidate(s)`);
+        try {
+          for (const item of items) await save(item.q.key, item.found.filter((f) => kept.has(f)), false);
+          await app.loadFindings();
+        } catch (e) {
+          failure ??= e instanceof Error ? e.message : String(e);
+        }
+      }),
+    );
 
     if (failure !== null) {
-      // What arrived before the failure is already stored. Keep what was
-      // spent on it too.
+      // What arrived before the failure is stored. Nothing is superseded, so
+      // a failed run does not empty the margin. Keep what was spent too.
       await store.finishRun(run.id, "error", failure, total(calls));
       void log.write("error", `${pass.name}: ${failure}`);
-      return { pass: pass.name, findings: collected.length, error: failure };
+      return { pass: pass.name, findings: stored, reused, unreadable, error: failure };
     }
-    // A pass that found nothing still replaces what it found before.
-    if (collected.length === 0) {
-      await store.addFindings(run.id, docId, []);
-      await app.loadFindings();
-    }
+    // Findings on paragraphs that changed or went away are replaced now.
+    await store.retainFindings(run.id, questions.map((q) => q.key));
+    await app.loadFindings();
     await store.finishRun(run.id, "done", null, total(calls));
-    void log.write("info", `${pass.name}: done, ${collected.length} finding(s)`);
-    return { pass: pass.name, findings: collected.length };
+    void log.write("info", `${pass.name}: done, ${stored} new finding(s)`);
+    return { pass: pass.name, findings: stored, reused, unreadable };
   };
 
   report();
@@ -286,8 +354,15 @@ async function verify(
 
 export function summarise(reports: RunReport[]): string {
   const total = reports.reduce((n, r) => n + r.findings, 0);
+  const reused = reports.reduce((n, r) => n + (r.reused ?? 0), 0);
   const failed = reports.filter((r) => r.error);
-  const found = total === 0 ? "no findings" : `${total} finding${total === 1 ? "" : "s"}`;
+  // With reused answers, the margin holds more than this run found, so the
+  // count says "new".
+  const kind = reused > 0 ? "new finding" : "finding";
+  let found = total === 0 ? `no ${kind}s` : `${total} ${kind}${total === 1 ? "" : "s"}`;
+  if (reused > 0) found += ` · ${reused} answer${reused === 1 ? "" : "s"} reused`;
+  const unreadable = reports.reduce((n, r) => n + (r.error ? 0 : (r.unreadable ?? 0)), 0);
+  if (unreadable > 0) found += ` · ${unreadable} unreadable repl${unreadable === 1 ? "y" : "ies"} asked again next run`;
   if (failed.length === 0) return found;
   return `${found} · ${failed.length} pass${failed.length === 1 ? "" : "es"} failed: ${failed[0].error}`;
 }

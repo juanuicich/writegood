@@ -357,6 +357,12 @@ describe('buildPrompt', () => {
 		for (const p of prompts) expect(p.startsWith(prefix)).toBe(true)
 	})
 
+	test('names a window as an excerpt', () => {
+		const out = buildPrompt(pass, 'Part of it.', 'Part of it.', true)
+		expect(out.startsWith('--- an excerpt of the draft ---\nPart of it.\n')).toBe(true)
+		expect(buildPrompt(pass, draft, null)).not.toContain('excerpt')
+	})
+
 	test('puts the paragraph after the pass prompt', () => {
 		const out = buildPrompt(pass, draft, 'The second paragraph.')
 		expect(out.indexOf('Find stock phrases.')).toBeLessThan(out.indexOf('--- examine only this paragraph ---'))

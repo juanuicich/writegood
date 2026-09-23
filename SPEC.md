@@ -176,6 +176,11 @@ writegood/
 │   │   │   ├── run.ts            orchestration, fan-out, progress
 │   │   │   ├── parse.ts          prompt builder, reply parser
 │   │   │   ├── deadline.ts       a second timeout behind Rust's
+│   │   │   ├── limit.ts          calls in flight, thinking passes first
+│   │   │   ├── windows.ts        a long draft split into windows (§8.3)
+│   │   │   ├── keys.ts           keys for saved answers (§8.3)
+│   │   │   ├── filter.ts         code filters on candidates (§8.3)
+│   │   │   ├── verify.ts         the verifier's prompt and vote (§8.3)
 │   │   │   └── schema.ts         Zod finding schema + system preamble
 │   │   ├── providers/index.ts    resolve a provider name (the call is Rust's)
 │   │   ├── history/History.svelte  revisions sheet and word diff
@@ -248,7 +253,9 @@ runs(id, doc_id, revision_id, pass_slug, pass_name,
      input_tokens, output_tokens, cost_usd)
 
 findings(id, run_id→runs, doc_id, category, severity, note,
-         quote, prefix, suffix, status, created_at, superseded_at)
+         quote, prefix, suffix, status, created_at, superseded_at, chunk_key)
+
+reviews(doc_id→documents, pass_slug, chunk_key, run_id→runs, created_at)
 
 duels(id, doc_id, finding_id→findings, a_text, b_text, a_is_original,
       judge_provider, judge_model, verdict, original_won, reason, created_at,
@@ -269,11 +276,18 @@ new row and freezes the previous one. `label` is your note on why it is major.
 `findings.status` is one of `open`, `addressed`, `dismissed`, `stale`. Nothing
 is ever deleted by the app; `stale` is set by anchoring, not by you.
 
-`findings.superseded_at` is set when a newer run of the same pass replaces the
-finding (§8.3), or when *clear findings* clears it. The app does not list or
+`findings.superseded_at` is set when a newer answer replaces the finding
+(§8.3), or when *clear findings* clears it. The app does not list or
 show a superseded finding. The row keeps its status, so a later look at the
 database still shows what you addressed and what you dismissed. A database
 made before this column existed gains it at startup, with every row null.
+
+`findings.chunk_key` names the answer the finding came from: one paragraph of
+one pass, or one document pass over one draft (§8.3). `reviews` records every
+answer the runner has saved, including the answers with no findings, so an
+unchanged paragraph is not sent again. Its key is `(doc_id, pass_slug,
+chunk_key)`. A review row is a cache entry, not a record: the app deletes the
+ones that no longer match the draft, and *clear findings* deletes them all.
 
 `duels.original_won` is derived at write time from `verdict` and
 `a_is_original`, so the A/B shuffle never has to be unpicked later.
@@ -467,7 +481,7 @@ scope = "paragraph"     # or "document"
 provider = "anthropic"  # optional; falls back to the default provider
 enabled = true
 thinking = "high"       # optional; overrides the provider's thinking (§9.1)
-timeout_secs = 150      # optional; overrides the provider's ceiling
+timeout_secs = 300      # optional; overrides the provider's ceiling
 +++
 
 Find sentences where the action has been turned into a noun instead of being
@@ -503,13 +517,15 @@ what each severity means, and what the note may say. A fast model over-flags,
 so the "do not flag" lists carry most of the weight. `topic-flow` checks links
 inside each paragraph, so it runs at paragraph scope. `paragraph-order` is the
 one starter with `thinking = "high"`: without reasoning over the whole draft,
-it missed most misplaced paragraphs (§8.3).
+it missed most misplaced paragraphs (§8.3). Its ceiling is 300 seconds: on a 5,000-word
+chapter it took 145.
 
 ### 8.3 Running
 
 The runner queues every call of every enabled pass at once: one call for a
-document-scope pass, one per paragraph for a paragraph-scope pass. One limit
-bounds the calls in flight across the whole run, at 32. A pass takes about
+document-scope pass, one per paragraph for a paragraph-scope pass, less the
+calls whose answers are saved (below). One limit bounds the calls in flight
+across the whole run, at 32. A pass takes about
 as long as its slowest call, not the sum of its calls. Passes that think are
 queued first, because their calls are the slowest.
 
@@ -523,9 +539,10 @@ two stages:
    whose quote lies in the paragraph it examined. Within a pass, a finding
    whose quote repeats an earlier one is dropped, unless the quote occurs more
    than once in the draft.
-2. **Verification.** Three calls, with thinking off, each get the draft, the
-   pass's rule and the numbered candidates, and answer keep or drop for each
-   one. A candidate stays when two of the three keep it. The verifier answers
+2. **Verification.** Three calls, with thinking off, each get the window
+   the candidates came from, the pass's rule and the numbered candidates, and
+   answer keep or drop for each one. A draft with several windows has one
+   verification per window. A candidate stays when two of the three keep it. The verifier answers
    only with candidate numbers and keep flags, so no model wording can reach
    the draft by this path (§2). If no verifier answers, every candidate stays.
 
@@ -543,9 +560,41 @@ failure, and leaves the other passes alone. After its first failed call it
 starts no more calls. Its calls already in flight finish, and their findings
 are kept, because they are paid for.
 
-**Prompt order.** Each prompt is the system preamble, then the draft, then the
-pass prompt, then the paragraph to examine. Every call in a run therefore
-starts with the same tokens. DeepSeek caches a repeated prefix without being
+**Windows.** A paragraph-scope call does not send the whole draft. It sends
+the window its paragraph belongs to.
+
+- A draft of up to 16,000 characters is one window: the whole draft, as
+  before. The measurements above were all made in this case.
+- A longer draft is split into windows of whole paragraphs. Each window has a
+  core of 4,000 to 12,000 characters, and every paragraph is in the core of
+  exactly one window. A call examines a paragraph of its window's core.
+- Each window also carries up to three paragraphs on either side of its core,
+  as context. They overlap the next window's core, and no call in this window
+  examines them. The first window has no context before it, and the last has
+  none after it.
+- A core ends after a paragraph whose FNV-1a hash is divisible by four, once
+  the core holds at least 4,000 characters. It also ends before a paragraph
+  that would take it past 12,000 characters. A paragraph longer than that is
+  a core of its own.
+
+The boundaries depend on the paragraphs' text, not on their positions. An edit
+can move only the boundaries near it: the windows before it are unchanged, and
+the windows after it usually return to the same boundaries within a few
+paragraphs.
+Unchanged windows send the same text on the next run, so the provider's prompt
+cache still holds them.
+
+Windows bound the input of a call. With the whole draft in every call, a run's
+input grows with the square of the draft's length: a 5,000-word chapter with
+60 paragraphs sent about 3.4 million tokens. With windows it grows in line
+with the length.
+
+A window's text carries the header `--- an excerpt of the draft ---` in place
+of `--- the draft ---`. Document-scope passes always send the whole draft.
+
+**Prompt order.** Each prompt is the system preamble, then the draft or the
+window, then the pass prompt, then the paragraph to examine. Every call of a
+window therefore starts with the same tokens. DeepSeek caches a repeated prefix without being
 asked, and charges about a tenth of the input price for the cached part. The
 cache holds a prefix only after a call that sent it has finished, so the
 first calls of a run all miss it. The pass prompt comes after the draft, as Anthropic's
@@ -572,6 +621,15 @@ paragraph, and with dozens of calls one reply whose only item is bad is
 likely; it must not fail the pass. A genuinely empty array stays silent,
 because finding nothing is a normal result.
 
+A reply with no readable array fails only its own call. With thinking off, a
+few replies are prose, such as "No problems found.", or a refusal: 11 of
+about 790 in one run over a 5,000-word chapter. The call's answer is not saved, so the next run asks it again, and
+the pass goes on with its other calls. The status bar counts these replies.
+The pass fails only when every reply it got was unreadable. A call that gets
+no reply at all, such as a network error or a missing key, still fails the
+pass and stops its remaining calls, because the next call would fail the
+same way.
+
 A reply that cannot be read says which of four things went wrong, because each
 implies a different remedy:
 
@@ -596,24 +654,55 @@ it so it cannot be edited away.
 Every run records which revision it ran against. Findings from an older revision
 stay visible, marked with the revision they came from.
 
-**A rerun replaces.** Each pass replaces its own findings. When a run of a pass
-stores its first findings, Rust marks as superseded every finding from an
-earlier run of the same pass on the same document (§6.2). The mark and the
-insert are one transaction. So:
+**Saved answers.** The runner saves every answer it gets and does not ask the
+same question twice. An answer is the findings of one call, after the code
+filters and verification, and it is saved even when it holds no findings.
 
-- Running all passes replaces the findings of every pass in the run.
-- Running one pass replaces the findings of that pass only.
+Each answer has a key, a SHA-256 hash:
+
+- A paragraph-scope answer: the pass's fingerprint, the paragraph, and the
+  paragraph before it. The previous paragraph is in the key because repeated
+  phrasing looks back one paragraph.
+- A document-scope answer: the pass's fingerprint and the whole draft.
+- The fingerprint covers everything else that can change an answer: the
+  system preamble (which carries the rules), the output note, the pass's
+  prompt and scope, the provider's name and model, the thinking setting, and
+  for a verified pass the verifier's prompt.
+
+The rest of a window is context and is not in the key. An edit two paragraphs
+away does not send a paragraph again. A finding that depends on distant text
+can go stale this way; that is rare for the paragraph checks, and *run all
+passes afresh* asks every question again.
+
+Before a pass runs, the runner reads the keys the document already has
+answers for (`reviews`, §6.2) and skips those calls. A rerun with no edits
+makes no calls for any pass and finishes at once. A rerun after editing three
+paragraphs of a chapter asks each paragraph pass about those three and the
+paragraph after each, and asks each document pass again.
+
+**A rerun replaces, one answer at a time.** Each finding records the key of
+the answer it came from (`findings.chunk_key`).
+
+- Storing an answer supersedes the findings of any earlier answer with the
+  same key, and records the key in `reviews`. The two are one transaction.
+- When a pass ends without a failure, Rust supersedes the pass's findings
+  whose key is not among the draft's current keys, and deletes their
+  `reviews` rows. These are findings on paragraphs that changed or went away.
+- A pass that fails supersedes nothing at the end. A failed run does not empty
+  the margin, and its failed calls are asked again next time.
+- Findings from an unchanged paragraph stay as they are, with their status.
+  A finding you dismissed stays dismissed until its paragraph changes.
 - Findings from a pass that is not in the run stay. A disabled pass keeps its
   findings.
-- A pass that succeeds with no findings still replaces the old ones. The
-  runner stores an empty list for it, and the status bar says "no findings".
-- A pass that fails before it stores anything replaces nothing. A failed run
-  does not empty the margin.
-- A run never supersedes the findings of a later run of the same pass, so two
-  overlapping runs cannot hide each other's results.
+- A finding stored before keys existed has no key. The pass's first keyed run
+  supersedes it.
+- A run never supersedes the findings of a later answer, so two overlapping
+  runs cannot hide each other's results.
 
-Addressed and dismissed findings are superseded too, and keep their status.
-If a rerun finds the words you dismissed again, the new finding is open.
+The status bar says how many answers were reused, for example "3 new findings
+· 41 answers reused". With reused answers the margin holds more than the run
+found, so the count says "new". *run all passes afresh*, in the command bar, ignores the
+saved answers and asks every question again.
 
 ---
 

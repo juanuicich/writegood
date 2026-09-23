@@ -108,10 +108,23 @@ fn findings_add(
     db: State<db::Db>,
     run_id: i64,
     doc_id: i64,
+    key: Option<String>,
     items: Vec<db::NewFinding>,
 ) -> AppResult<Vec<db::Finding>> {
     let mut conn = db.0.lock().unwrap();
-    db::add_findings(&mut conn, run_id, doc_id, &items)
+    db::add_findings(&mut conn, run_id, doc_id, key.as_deref(), &items)
+}
+
+#[tauri::command]
+fn findings_retain(db: State<db::Db>, run_id: i64, keys: Vec<String>) -> AppResult<()> {
+    let mut conn = db.0.lock().unwrap();
+    db::retain_findings(&mut conn, run_id, &keys)
+}
+
+#[tauri::command]
+fn findings_reviewed(db: State<db::Db>, doc_id: i64, pass_slug: String) -> AppResult<Vec<String>> {
+    let conn = db.0.lock().unwrap();
+    db::reviewed_keys(&conn, doc_id, &pass_slug)
 }
 
 #[tauri::command]
@@ -272,6 +285,8 @@ pub fn run() {
             findings_list,
             findings_status,
             findings_clear,
+            findings_retain,
+            findings_reviewed,
             duel_record,
             duel_list,
             anchors_resolve,
