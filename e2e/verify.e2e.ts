@@ -39,7 +39,7 @@ e2e("the test pass asks for thinking off, and three verifiers vote", async () =>
 
 e2e("the paragraph-order starter turns thinking on for itself", async () => {
   // Its frontmatter says thinking = "high" (SPEC §8.1, §8.2).
-  const order = app.model.calls.filter((c) => c.prompt.includes("category to \"paragraph-order\""));
+  const order = app.model.calls.filter((c) => c.prompt.includes("category to 'paragraph-order'"));
   expect(order.length).toBe(1);
   expect(order[0]!.thinking).toEqual({ type: "enabled" });
 }, () => app);
