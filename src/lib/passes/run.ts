@@ -30,6 +30,7 @@ import {
   type Ask,
   type JevSettings,
 } from "./jev";
+import { CallError, Failures, Unreadable } from "./failures";
 import { NONE, total, UNREPORTED, type Call } from "../usage";
 
 /** Model calls in flight at once, across every pass in a run. DeepSeek allows
@@ -79,7 +80,7 @@ export interface RunReport {
   reused?: number;
   /** Replies that could not be read; those questions are asked next run. */
   unreadable?: number;
-  /** Jev requests that got no reply; those paragraphs are asked next run. */
+  /** Calls that got no reply; those questions are asked next run. */
   unanswered?: number;
   error?: string;
 }
@@ -249,7 +250,9 @@ export async function runPasses(
     );
 
     const calls: Call[] = [];
-    let failure: string | null = null;
+    // A call whose reply cannot be read, or that gets no reply, fails alone:
+    // its answer is not saved and is asked again next run (SPEC §8.3).
+    const failures = new Failures((message) => void log.write("error", `${pass.name}: ${message}; asked again next run`));
     const verified = verifies(resolved);
     const priority = verified ? 1 : 0;
     const repeats = new Repeats(draft);
@@ -259,10 +262,6 @@ export async function runPasses(
     let rejected = 0;
     let why: string | null = null;
     let stored = 0;
-    // Replies with no readable array. Each fails its own call, which is not
-    // saved and is asked again next run; the pass goes on (SPEC §8.3).
-    let unreadable = 0;
-    let unread: string | null = null;
 
     // The questions this pass asks, each with the key of its answer.
     const keys = await passKeys(pass, name, resolved, system, paras, draft);
@@ -294,11 +293,12 @@ export async function runPasses(
     // window at a time. Any other pass stores each answer as it comes.
     const pending: { q: Question; found: NewFinding[] }[] = [];
     const call = async (q: Question) => {
+      let text: string | null;
       try {
-        const text = await limit(async () => {
-          // After a failure the pass asks nothing more. Calls already in
+        text = await limit(async () => {
+          // After the pass fails it asks nothing more. Calls already in
           // flight finish, and what they find is kept.
-          if (failure !== null) return null;
+          if (failures.stopped) return null;
           asking(pass.name, 1);
           try {
             const context = q.window?.text ?? draft;
@@ -307,34 +307,37 @@ export async function runPasses(
             asking(pass.name, -1);
           }
         }, priority);
-        if (text === null) return;
-        let read: ReturnType<typeof readFindings>;
-        try {
-          read = readFindings(text, resolved.name);
-        } catch (e) {
-          unreadable += 1;
-          unread ??= e instanceof Error ? e.message : String(e);
-          void log.write("error", `${pass.name}: ${unread}; asked again next run`);
-          return;
-        }
-        fit += read.found.length;
-        if (read.rejected > 0) {
-          rejected += read.rejected;
-          why ??= read.why;
-          void log.write("error", `${pass.name}: dropped ${read.rejected} finding(s): ${read.why}`);
-        }
+      } catch (e) {
+        failures.call(e);
+        return;
+      }
+      if (text === null) return;
+      let read: ReturnType<typeof readFindings>;
+      try {
+        read = readFindings(text, resolved.name);
+      } catch (e) {
+        failures.call(new Unreadable(e instanceof Error ? e.message : String(e)));
+        return;
+      }
+      fit += read.found.length;
+      if (read.rejected > 0) {
+        rejected += read.rejected;
+        why ??= read.why;
+        void log.write("error", `${pass.name}: dropped ${read.rejected} finding(s): ${read.why}`);
+      }
+      try {
         if (!verified) return await save(q.key, read.found);
         const found = repeats.take(q.chunk === null ? read.found : inParagraph(read.found, q.chunk));
         // Nothing to verify: the answer is saved as it is.
         if (found.length === 0) await save(q.key, [], false);
         else pending.push({ q, found });
       } catch (e) {
-        failure ??= e instanceof Error ? e.message : String(e);
+        failures.fail(e);
       }
     };
     await Promise.all([...asked.values()].map(call));
-    if (fit === 0 && rejected > 0) failure ??= unfit(resolved.name, rejected, why);
-    if (asked.size > 0 && unreadable === asked.size) failure ??= unread;
+    if (fit === 0 && rejected > 0) failures.fail(unfit(resolved.name, rejected, why));
+    failures.settle(asked.size);
 
     // Verify a window's candidates together, as the measured design did.
     const groups = new Map<string, { context: string; items: typeof pending }>();
@@ -346,33 +349,38 @@ export async function runPasses(
     }
     await Promise.all(
       [...groups.values()].map(async ({ context, items }) => {
+        if (failures.stopped) return;
         const flat = items.flatMap((item) => item.found.map((finding) => ({ key: item.q.key, finding })));
         const kept = new Set(
-          await verify(pass, resolved, context, flat.map((x) => x.finding), calls, limit, asking),
+          await verify(pass, resolved, context, flat.map((x) => x.finding), calls, limit, asking, failures),
         );
+        // A pass that failed saves no unverified candidates. Their calls are
+        // asked again next run.
+        if (failures.stopped) return;
         void log.write("info", `${pass.name}: kept ${kept.size} of ${flat.length} candidate(s)`);
         try {
           for (const item of items) await save(item.q.key, item.found.filter((f) => kept.has(f)), false);
           await app.loadFindings();
         } catch (e) {
-          failure ??= e instanceof Error ? e.message : String(e);
+          failures.fail(e);
         }
       }),
     );
 
+    const { failure, unreadable, unanswered } = failures;
     if (failure !== null) {
       // What arrived before the failure is stored. Nothing is superseded, so
       // a failed run does not empty the margin. Keep what was spent too.
       await store.finishRun(run.id, "error", failure, total(calls));
       void log.write("error", `${pass.name}: ${failure}`);
-      return { pass: pass.name, findings: stored, reused, unreadable, error: failure };
+      return { pass: pass.name, findings: stored, reused, unreadable, unanswered, error: failure };
     }
     // Findings on paragraphs that changed or went away are replaced now.
     await store.retainFindings(run.id, questions.map((q) => q.key));
     await app.loadFindings();
     await store.finishRun(run.id, "done", null, total(calls));
     void log.write("info", `${pass.name}: done, ${stored} new finding(s)`);
-    return { pass: pass.name, findings: stored, reused, unreadable };
+    return { pass: pass.name, findings: stored, reused, unreadable, unanswered };
   };
 
   report();
@@ -465,7 +473,9 @@ function verifies(resolved: Resolved): boolean {
 }
 
 /** Three verifiers vote on a pass's candidates; the ones two keep survive.
- *  Their calls count towards the pass's usage. */
+ *  Their calls count towards the pass's usage. A verifier call with no reply
+ *  is a vote that cannot be read, which `tally` leaves out (SPEC §8.3). One
+ *  that every call would share, such as a refused key, also fails the pass. */
 async function verify(
   pass: Pass,
   resolved: Resolved,
@@ -474,15 +484,18 @@ async function verify(
   calls: Call[],
   limit: Limit,
   asking: (pass: string, delta: 1 | -1) => void,
+  failures: Failures,
 ): Promise<NewFinding[]> {
   const prompt = buildVerifyPrompt(pass.prompt, draft, candidates);
   const votes = await Promise.all(
     Array.from({ length: VOTES }, () =>
       limit(async () => {
+        if (failures.stopped) return null;
         asking(pass.name, 1);
         try {
           return parseVerdicts(await ask(resolved, VERIFY_SYSTEM, prompt, calls), candidates.length);
         } catch (e) {
+          if (e instanceof CallError && e.wholePass) failures.fail(e);
           void log.write("error", `${pass.name}: a verifier failed: ${e instanceof Error ? e.message : String(e)}`);
           return null;
         } finally {

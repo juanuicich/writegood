@@ -696,3 +696,32 @@ sentence.
 
 **UNVERIFIED — Jev in a release build.** The e2e test and the probe use a
 debug build.
+
+## 2026-09-23 — a failed call fails only its call
+
+A pass on a language model now follows the rule a pass on Jev follows
+(SPEC §8.3). A call with no reply, such as a network error, a timeout or
+HTTP 503, fails only its own call. Its answer is not saved, the next run
+asks it again, and the status bar counts it as a failed call. This covers
+paragraph-scope and document-scope calls. `failures.ts` counts the failed
+calls of both kinds of pass, and `summarise` already wrote the status text.
+
+**DECISION — a refused key stops the pass at once.** HTTP 401 or 403 would
+fail every other call the same way, so it fails the whole pass and the pass
+starts no more calls. A missing key or model, a bad config and a `cli`
+command that is not there do the same. Rust decides, because Rust makes the
+call: `llm_chat` and `cli_run` now reject with `{ message, wholePass }`
+(`CallError` in error.rs), and `ipc.ts` turns that into a `CallError` in
+TypeScript. `jev_ask` does not, so a pass on Jev still sends every request
+when its key is refused, and fails because every request failed.
+
+**DECISION — a verifier call with no reply is a vote that cannot be read.**
+`verify` already caught every error and returned a null vote, and `tally`
+leaves null votes out. It is not counted as a failed call, because the
+answer is still saved. A verifier call that every call would share, such as
+a refused key, fails the pass, and the pass then saves no unverified
+candidates.
+
+**DECISION — `cli_run` keeps its name as the command; the work moved to
+`runner::run`.** The examples and the Rust tests call `run`, which still
+returns `AppError`.

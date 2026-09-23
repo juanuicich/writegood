@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::AsyncWriteExt;
 
 use crate::config::Provider;
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, CallError};
 
 /// Replace the literal `{prompt}` in every argument. The flag says whether any
 /// argument mentioned it; if none did, the prompt goes to stdin instead.
@@ -148,8 +148,14 @@ fn tail(text: &str, n: usize) -> String {
     text.chars().skip(count - n).collect()
 }
 
+/// Run a cli provider's command once (SPEC §9.3).
 #[tauri::command]
-pub async fn cli_run(provider: Provider, prompt: String) -> AppResult<String> {
+pub async fn cli_run(provider: Provider, prompt: String) -> Result<String, CallError> {
+    Ok(run(provider, prompt).await?)
+}
+
+/// The work of `cli_run`, with the error that says why a call failed.
+pub async fn run(provider: Provider, prompt: String) -> AppResult<String> {
     if provider.kind != "cli" {
         return Err(AppError::invalid(format!(
             "cli_run needs a provider of kind \"cli\", got \"{}\"",
@@ -191,9 +197,16 @@ pub async fn cli_run(provider: Provider, prompt: String) -> AppResult<String> {
         // drop into a kill.
         .kill_on_drop(true);
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| AppError::other(format!("cannot run {command}: {e}")))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        let message = format!("cannot run {command}: {e}");
+        // A command that is not there would fail every call.
+        match e.kind() {
+            std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied => {
+                AppError::invalid(message)
+            }
+            _ => AppError::other(message),
+        }
+    })?;
 
     let stdin = if prompt_in_args {
         None
@@ -442,7 +455,7 @@ mod tests {
     async fn a_wrong_kind_is_rejected() {
         let mut p = sh("echo hi", &[]);
         p.kind = "anthropic".into();
-        let err = cli_run(p, "x".into()).await.unwrap_err();
+        let err = run(p, "x".into()).await.unwrap_err();
         assert!(err.to_string().contains("kind \"cli\""));
     }
 
@@ -452,28 +465,44 @@ mod tests {
             kind: "cli".into(),
             ..Provider::default()
         };
-        let err = cli_run(p, "x".into()).await.unwrap_err();
+        let err = run(p, "x".into()).await.unwrap_err();
         assert!(err.to_string().contains("needs a command"));
+    }
+
+    #[tokio::test]
+    async fn a_command_that_is_not_there_fails_every_call() {
+        let mut p = sh("echo hi", &[]);
+        p.command = Some("writegood-no-such-command".into());
+        let err = cli_run(p, "x".into()).await.unwrap_err();
+        assert!(err.whole_pass, "{}", err.message);
+        assert!(err.message.contains("cannot run"), "{}", err.message);
+    }
+
+    #[tokio::test]
+    async fn a_command_that_fails_fails_only_its_call() {
+        let err = cli_run(sh("exit 3", &[]), "x".into()).await.unwrap_err();
+        assert!(!err.whole_pass, "{}", err.message);
+        assert!(err.message.contains("exited with 3"), "{}", err.message);
     }
 
     #[tokio::test]
     async fn the_prompt_reaches_the_argument() {
         let p = sh("printf '%s' \"$1\"", &["sh", "{prompt}"]);
-        let out = cli_run(p, "buried verbs".into()).await.unwrap();
+        let out = run(p, "buried verbs".into()).await.unwrap();
         assert_eq!(out, "buried verbs");
     }
 
     #[tokio::test]
     async fn the_prompt_reaches_stdin_when_no_argument_takes_it() {
         let p = sh("cat", &[]);
-        let out = cli_run(p, "buried verbs".into()).await.unwrap();
+        let out = run(p, "buried verbs".into()).await.unwrap();
         assert_eq!(out, "buried verbs");
     }
 
     #[tokio::test]
     async fn a_non_zero_exit_reports_the_code_and_stderr() {
         let p = sh("echo 'no such model' >&2; exit 3", &[]);
-        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        let err = run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("exited with 3"), "{err}");
         assert!(err.contains("no such model"), "{err}");
     }
@@ -482,7 +511,7 @@ mod tests {
     async fn a_slow_command_times_out() {
         let mut p = sh("sleep 30", &[]);
         p.timeout_secs = 1;
-        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        let err = run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("did not finish within 1 seconds"), "{err}");
     }
 
@@ -490,14 +519,14 @@ mod tests {
     async fn json_path_takes_the_named_field() {
         let mut p = sh(r#"printf '{"result": "the text", "cost": 1}'"#, &[]);
         p.json_path = Some("result".into());
-        assert_eq!(cli_run(p, "x".into()).await.unwrap(), "the text");
+        assert_eq!(run(p, "x".into()).await.unwrap(), "the text");
     }
 
     #[tokio::test]
     async fn a_missing_json_field_is_an_error_naming_it() {
         let mut p = sh(r#"printf '{"cost": 1}'"#, &[]);
         p.json_path = Some("result".into());
-        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        let err = run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("\"result\" field"), "{err}");
     }
 
@@ -505,14 +534,14 @@ mod tests {
     async fn output_that_is_not_json_is_an_error() {
         let mut p = sh("printf 'plain text'", &[]);
         p.json_path = Some("result".into());
-        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        let err = run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("did not print JSON"), "{err}");
     }
 
     #[tokio::test]
     async fn the_command_runs_in_an_empty_directory_that_is_deleted_after() {
         let p = sh("pwd -P; ls -A | wc -l", &[]);
-        let out = cli_run(p, "x".into()).await.unwrap();
+        let out = run(p, "x".into()).await.unwrap();
         let mut lines = out.lines();
         let dir = lines.next().unwrap().to_string();
         assert!(dir.contains("writegood-cli-"), "{dir}");
@@ -522,8 +551,8 @@ mod tests {
 
     #[tokio::test]
     async fn two_calls_get_two_directories() {
-        let a = cli_run(sh("pwd", &[]), "x".into()).await.unwrap();
-        let b = cli_run(sh("pwd", &[]), "x".into()).await.unwrap();
+        let a = run(sh("pwd", &[]), "x".into()).await.unwrap();
+        let b = run(sh("pwd", &[]), "x".into()).await.unwrap();
         assert_ne!(a, b);
     }
 
@@ -538,7 +567,7 @@ mod tests {
             "tools: []\n".into(),
         );
         p.files.insert(".agents/hooks.json".into(), "{}".into());
-        assert_eq!(cli_run(p, "x".into()).await.unwrap(), "tools: []\n{}");
+        assert_eq!(run(p, "x".into()).await.unwrap(), "tools: []\n{}");
     }
 
     #[tokio::test]
@@ -546,7 +575,7 @@ mod tests {
         for bad in ["../escape", "/tmp/escape", "a/../../escape", ""] {
             let mut p = sh("true", &[]);
             p.files.insert(bad.into(), "x".into());
-            let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+            let err = run(p, "x".into()).await.unwrap_err().to_string();
             assert!(err.contains("relative path inside"), "{bad}: {err}");
         }
     }
@@ -559,7 +588,7 @@ mod tests {
         );
         p.model = Some("gemini-3.8-flash".into());
         p.thinking = Some("high".into());
-        let out = cli_run(p, "the prompt".into()).await.unwrap();
+        let out = run(p, "the prompt".into()).await.unwrap();
         assert_eq!(out, "--model=gemini-3.8-flash-high the prompt");
     }
 
@@ -576,7 +605,7 @@ mod tests {
             p.thinking = Some(level.into());
             p.thinking_names.insert("off".into(), "low".into());
             p.thinking_names.insert("max".into(), "high".into());
-            let out = cli_run(p, "x".into()).await.unwrap();
+            let out = run(p, "x".into()).await.unwrap();
             assert_eq!(
                 out,
                 format!("--model=gemini-3.8-flash-{expected}"),
@@ -589,7 +618,7 @@ mod tests {
     async fn a_placeholder_without_a_value_names_the_missing_key() {
         let mut p = sh("true", &["sh", "--model={model}-{thinking}"]);
         p.model = Some("gemini-3.8-flash".into());
-        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        let err = run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("{thinking}"), "{err}");
         assert!(err.contains("no thinking"), "{err}");
     }
@@ -612,7 +641,7 @@ mod tests {
         );
         p.json_path = Some("response".into());
         p.json_error = Some("error".into());
-        let err = cli_run(p, "x".into()).await.unwrap_err().to_string();
+        let err = run(p, "x".into()).await.unwrap_err().to_string();
         assert!(err.contains("reported an error"), "{err}");
         assert!(err.contains("RESOURCE_EXHAUSTED"), "{err}");
     }
@@ -628,7 +657,7 @@ mod tests {
             let mut p = sh(&format!("printf '%s' '{body}'"), &[]);
             p.json_path = Some("response".into());
             p.json_error = Some("error".into());
-            assert_eq!(cli_run(p, "x".into()).await.unwrap(), "[]", "{body}");
+            assert_eq!(run(p, "x".into()).await.unwrap(), "[]", "{body}");
         }
     }
 

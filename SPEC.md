@@ -566,7 +566,9 @@ two stages. This holds for every provider kind, `cli` included, except
    answer keep or drop for each one. A draft with several windows has one
    verification per window. A candidate stays when two of the three keep it. The verifier answers
    only with candidate numbers and keep flags, so no model wording can reach
-   the draft by this path (§2). If no verifier answers, every candidate stays.
+   the draft by this path (§2). A verifier call with no reply counts as a
+   vote that cannot be read, and the tally leaves it out. If no verifier
+   answers, every candidate stays.
 
 A pass with thinking on skips both stages. It has already checked its own
 work, and it stores each call's findings as the call returns.
@@ -578,9 +580,11 @@ for every pass (67–71%). The first findings came after about six seconds
 instead of two to three minutes, and a run cost about a sixth as much.
 
 A pass that fails marks its run `error`, keeps whatever arrived before the
-failure, and leaves the other passes alone. After its first failed call it
-starts no more calls. Its calls already in flight finish, and their findings
-are kept, because they are paid for.
+failure, and leaves the other passes alone. It starts no more calls. Its
+calls already in flight finish, and their findings are kept, because they are
+paid for. Candidates still waiting for verification are not saved, and
+their calls are asked again next run. A single failed call does not fail
+the pass (below).
 
 **Windows.** A paragraph-scope call does not send the whole draft. It sends
 the window its paragraph belongs to.
@@ -647,11 +651,34 @@ A reply with no readable array fails only its own call. With thinking off, a
 few replies are prose, such as "No problems found.", or a refusal: 11 of
 about 790 in one run over a 5,000-word chapter. The call's answer is not saved, so the next run asks it again, and
 the pass goes on with its other calls. The status bar counts these replies.
-The pass fails only when every reply it got was unreadable. A call that gets
-no reply at all, such as a network error or a missing key, still fails the
-pass and stops its remaining calls, because the next call would fail the
-same way. A pass on Jev is different: a request with no reply fails only its
-paragraph (§8.4).
+The pass fails only when every reply it got was unreadable.
+
+A call that gets no reply also fails only its own call. This covers a
+network error, a timeout, an HTTP error such as 500 or 503, and a `cli`
+command that exits with an error or reports one in its JSON (§9.3). The
+call's answer is not saved, so the next run asks it again, and the pass goes
+on with its other calls. The status bar counts these as failed calls, for
+example "1 failed call asked again next run". Paragraph-scope and
+document-scope calls follow this rule. A document-scope pass makes one call,
+so its failed call fails the pass. A pass on Jev follows the same rule
+(§8.4), and one piece of code counts the failed calls of both
+(`failures.ts`).
+
+The pass fails when every call it made failed, by either rule. Some failures
+would fail every other call the same way. These fail the pass at once, and
+it starts no more calls:
+
+- a provider that names no model, or has no key;
+- a config the call cannot use, such as an unknown `kind`, a `thinking`
+  value that is not a level, or an `openai-compatible` provider with no
+  `base_url`;
+- a key the keychain will not give;
+- HTTP 401 or 403, which says the provider refused the key;
+- a `cli` command that is not there or cannot be run.
+
+Rust decides which failures these are, because Rust makes the call. It
+rejects `llm_chat` and `cli_run` with a message and a `wholePass` flag. An
+answer that cannot be saved also fails the pass.
 
 A reply that cannot be read says which of four things went wrong, because each
 implies a different remedy:
@@ -921,7 +948,7 @@ in the fingerprint. A change to anything in it asks every paragraph again. A
 rerun replaces one answer at a time, as in §8.3. *run all passes afresh*
 asks every question again.
 
-**Failures** follow §8.3, except for a request with no reply.
+**Failures** follow §8.3, with the code that counts them there.
 
 - A reply that cannot be read fails only the answer of its paragraph. This
   covers a body that is not JSON, a body with no `answers`, a missing
@@ -935,7 +962,9 @@ asks every question again.
   counts these as failed calls.
 - The pass fails only when every paragraph it asked about failed, by either
   rule. It then keeps the answers already complete. A missing key fails
-  every request, so it still fails the pass.
+  every request, so it still fails the pass. Unlike a pass on a language
+  model, a pass on Jev does not stop at the first missing or refused key:
+  `jev_ask` does not mark which failures every request would share.
 - An answer that the runner cannot save fails the pass. The pass then starts
   no more requests.
 
@@ -2091,6 +2120,10 @@ The first set of tests covers:
   edits asks Jev nothing. When the fake answers HTTP 503 for one paragraph,
   only that paragraph goes without notes, the pass does not fail, and the
   next run asks Jev about that paragraph alone.
+- **A failed call.** The test pass runs once per paragraph, and the fake
+  model answers HTTP 503 for one paragraph. The pass keeps its findings in
+  the other paragraphs and does not fail. The status bar counts one failed
+  call. The next run asks the model about that paragraph alone.
 
 A test fails with the app's own log attached, read from the test home.
 

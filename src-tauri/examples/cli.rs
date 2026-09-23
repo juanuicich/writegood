@@ -2,7 +2,7 @@
 //!
 //! The benchmark calls agy through this example, so the command line, the
 //! empty working directory, the files written into it and the timeout are the
-//! ones `runner::cli_run` makes in the app (SPEC §9.3). Nothing here builds a
+//! ones `runner::run` makes in the app (SPEC §9.3). Nothing here builds a
 //! command line.
 //!
 //! Usage:
@@ -77,7 +77,7 @@ async fn main() {
         provider.json_path = None;
     }
 
-    match runner::cli_run(provider, prompt).await {
+    match runner::run(provider, prompt).await {
         // Only the answer goes to stdout, so the caller can parse it.
         Ok(out) => print!("{out}"),
         Err(e) => {

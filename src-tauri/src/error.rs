@@ -28,6 +28,10 @@ pub enum AppError {
     #[error("keychain: {0}")]
     Keyring(#[from] keyring::Error),
 
+    /// The provider refused the call's credentials: HTTP 401 or 403.
+    #[error("{0}")]
+    Refused(String),
+
     #[error("{0}")]
     Other(String),
 }
@@ -45,5 +49,38 @@ impl AppError {
 
     pub fn other(msg: impl Into<String>) -> Self {
         AppError::Other(msg.into())
+    }
+
+    /// Whether every call of a pass would fail the same way (SPEC §8.3): a
+    /// bad config, a missing key or model, a key the keychain will not give,
+    /// or a key the provider refused. Any other failure belongs to its call.
+    pub fn fails_every_call(&self) -> bool {
+        matches!(
+            self,
+            AppError::NotFound(_)
+                | AppError::Invalid(_)
+                | AppError::Toml(_)
+                | AppError::Keyring(_)
+                | AppError::Refused(_)
+        )
+    }
+}
+
+/// A failed model call, as the frontend receives it (SPEC §8.3). A pass
+/// stops when `whole_pass` is set. Otherwise only this call fails, and the
+/// next run asks it again.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallError {
+    pub message: String,
+    pub whole_pass: bool,
+}
+
+impl From<AppError> for CallError {
+    fn from(e: AppError) -> Self {
+        CallError {
+            whole_pass: e.fails_every_call(),
+            message: e.to_string(),
+        }
     }
 }

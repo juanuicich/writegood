@@ -15,6 +15,9 @@
  *  No word list, pattern or language-specific rule decides anything here.
  *  Rust makes the request (`jev.rs`). */
 import type { JevReply, NewFinding, Pass, Provider, Severity } from "../ipc";
+import { Failures, Unreadable } from "./failures";
+
+export { Unreadable };
 
 // ------------------------------------------------------------- constants
 
@@ -227,10 +230,6 @@ export function locateQuestion(
 
 // ---------------------------------------------------------------- answers
 
-/** A reply that cannot be read. It fails only its paragraph's answer, which
- *  is asked again next run (SPEC §8.4). */
-export class Unreadable extends Error {}
-
 function answersOf(reply: JevReply): Record<string, unknown> {
   if (reply.unreadable) throw new Unreadable(reply.unreadable);
   const a = reply.answers;
@@ -385,10 +384,10 @@ export interface Answered {
 }
 
 /** Ask about each paragraph and save each answer (SPEC §8.4). A paragraph
- *  whose reply cannot be read, or whose request gets no reply, fails alone.
- *  Its answer is not saved, so the next run asks it again. The pass fails
- *  when every paragraph failed, or when `save` fails. `note` receives the
- *  message of each paragraph that failed. */
+ *  whose reply cannot be read, or whose request gets no reply, fails alone
+ *  (`Failures`). Its answer is not saved, so the next run asks it again. The
+ *  pass fails when every paragraph failed, or when `save` fails. `note`
+ *  receives the message of each paragraph that failed. */
 export async function answerParagraphs(
   pass: Pass,
   settings: JevSettings,
@@ -397,31 +396,24 @@ export async function answerParagraphs(
   save: (key: string, found: NewFinding[]) => Promise<void>,
   note: (message: string) => void,
 ): Promise<Answered> {
-  let unreadable = 0;
-  let unanswered = 0;
-  let first: string | null = null;
-  let failure: string | null = null;
+  const failures = new Failures(note);
   await Promise.all(
     asked.map(async ({ key, paragraph, place }) => {
       let found: NewFinding[] | null;
       try {
         found = await paragraphFindings(pass, settings, paragraph, place, ask);
       } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        if (e instanceof Unreadable) unreadable += 1;
-        else unanswered += 1;
-        first ??= message;
-        note(message);
+        failures.call(e);
         return;
       }
       if (found === STOPPED) return;
       try {
         await save(key, found);
       } catch (e) {
-        failure ??= e instanceof Error ? e.message : String(e);
+        failures.fail(e);
       }
     }),
   );
-  if (asked.length > 0 && unreadable + unanswered === asked.length) failure ??= first;
-  return { unreadable, unanswered, failure };
+  const failure = failures.settle(asked.length);
+  return { unreadable: failures.unreadable, unanswered: failures.unanswered, failure };
 }

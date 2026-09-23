@@ -74,10 +74,10 @@ export const FINDINGS: {
   { quote: "It is a feeling that recurs.", category: "repetition", severity: "medium", note: "The same frame as the sentence before it." },
 ];
 
-const PASS = `+++
+const pass = (scope: "document" | "paragraph") => `+++
 name = "End to end"
 category = "e2e"
-scope = "document"
+scope = "${scope}"
 enabled = true
 +++
 
@@ -96,6 +96,9 @@ export interface Call {
 export interface FakeModel {
   url: string;
   calls: Call[];
+  /** A call of the test pass whose paragraph contains this text gets HTTP
+   *  503. Null answers every call. */
+  failOn: string | null;
   stop(): void;
 }
 
@@ -109,10 +112,24 @@ function draftIn(prompt: string): string {
   return end < 0 ? rest : rest.slice(0, end);
 }
 
+const EXAMINE = "--- examine only this paragraph ---\n";
+
+/** The paragraph a paragraph-scope call examines, or null for a
+ *  document-scope call. */
+export function examined(prompt: string): string | null {
+  const at = prompt.indexOf(EXAMINE);
+  if (at < 0) return null;
+  const rest = prompt.slice(at + EXAMINE.length);
+  const end = rest.indexOf("\n\nReport problems in that paragraph only.");
+  return end < 0 ? rest : rest.slice(0, end);
+}
+
 function findingsFor(prompt: string): string {
   if (!prompt.includes(MARKER)) return "[]";
   const draft = draftIn(prompt);
+  const paragraph = examined(prompt);
   const found = FINDINGS.flatMap((f) => {
+    if (paragraph !== null && !paragraph.includes(f.quote)) return [];
     const at = draft.indexOf(f.quote);
     if (at < 0) return [];
     const prefix = draft.slice(Math.max(0, at - 32), at);
@@ -146,6 +163,7 @@ function verdictFor(prompt: string): string {
 /** An OpenAI-compatible endpoint on 127.0.0.1 that answers without a model. */
 export function fakeModel(): FakeModel {
   const calls: Call[] = [];
+  const model: FakeModel = { url: "", calls, failOn: null, stop: () => {} };
   const server = Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
@@ -166,6 +184,15 @@ export function fakeModel(): FakeModel {
           .join("\n");
       const call = { system: text("system"), prompt: text("user"), thinking: body.thinking };
       calls.push(call);
+      const paragraph = examined(call.prompt);
+      if (
+        model.failOn !== null &&
+        call.prompt.includes(MARKER) &&
+        paragraph !== null &&
+        paragraph.includes(model.failOn)
+      ) {
+        return new Response("service unavailable", { status: 503 });
+      }
 
       const content = call.prompt.startsWith("Passage A:")
         ? verdictFor(call.prompt)
@@ -182,7 +209,9 @@ export function fakeModel(): FakeModel {
       });
     },
   });
-  return { url: `http://127.0.0.1:${server.port}/v1`, calls, stop: () => server.stop(true) };
+  model.url = `http://127.0.0.1:${server.port}/v1`;
+  model.stop = () => server.stop(true);
+  return model;
 }
 
 // ------------------------------------------------------------- the fake Jev
@@ -285,7 +314,7 @@ export function makeHome(modelUrl: string, options: LaunchOptions = {}, jevUrl?:
   // The answer the open and save dialogs give (SPEC §6.3). The app starts on
   // an untitled draft, and launch() opens the draft with ⌘O through this.
   writeFileSync(join(home, "pick.txt"), join(home, "documents", "committee.md"));
-  writeFileSync(join(home, "passes", "00-e2e.md"), PASS);
+  writeFileSync(join(home, "passes", "00-e2e.md"), pass(options.scope ?? "document"));
   if (jevUrl) writeFileSync(join(home, "passes", "00-e2e-jev.md"), JEV_PASS);
   writeFileSync(
     join(home, "config.toml"),
@@ -379,6 +408,8 @@ export interface LaunchOptions {
   thinking?: "off" | "low" | "high" | "max";
   /** Add a fake Jev, a jev provider and a pass written for it. */
   jev?: boolean;
+  /** The test pass's scope. Document scope when left out. */
+  scope?: "document" | "paragraph";
 }
 
 export async function launch(options: LaunchOptions = {}): Promise<App> {

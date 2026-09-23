@@ -1,6 +1,7 @@
 /** Typed wrappers over the Rust command surface in `src-tauri/src/lib.rs`.
  *  Nothing else in the frontend calls `invoke` directly. */
 import { invoke } from "@tauri-apps/api/core";
+import { CallError } from "./passes/failures";
 
 // ------------------------------------------------------------------ types
 
@@ -377,9 +378,13 @@ export const diff = {
   words: (before: string, after: string) => invoke<Chunk[]>("diff_words", { before, after }),
 };
 
+/** A failed call rejects with a `CallError`, which says whether every call
+ *  of the pass would fail the same way (SPEC §8.3). */
 export const cli = {
   run: (provider: Provider, prompt: string) =>
-    invoke<string>("cli_run", { provider, prompt }),
+    invoke<string>("cli_run", { provider, prompt }).catch((e: unknown) => {
+      throw CallError.from(e);
+    }),
 };
 
 /** The network provider call. It runs in Rust: a webview whose window is not
@@ -387,7 +392,9 @@ export const cli = {
  *  in the frontend. Keys never reach the webview either. */
 export const llm = {
   chat: (name: string, provider: Provider, system: string, prompt: string) =>
-    invoke<Reply>("llm_chat", { name, provider, system, prompt }),
+    invoke<Reply>("llm_chat", { name, provider, system, prompt }).catch((e: unknown) => {
+      throw CallError.from(e);
+    }),
 };
 
 /** A request to Jev, TypeSafe's decision model (SPEC §9.5). Rust makes it,

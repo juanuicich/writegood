@@ -20,7 +20,7 @@ use genai::{Client, ModelIden, ServiceTarget};
 use serde::Serialize;
 
 use crate::config::Provider;
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, CallError};
 use crate::prices::{self, Tokens};
 use crate::secrets;
 
@@ -179,7 +179,14 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
     let response = tokio::time::timeout(std::time::Duration::from_secs(seconds), call)
         .await
         .map_err(|_| AppError::other(format!("{model} did not answer within {seconds}s")))?
-        .map_err(|e| AppError::other(format!("{model}: {e}")))?;
+        .map_err(|e| {
+            let message = format!("{model}: {e}");
+            if refused(&e) {
+                AppError::Refused(message)
+            } else {
+                AppError::other(message)
+            }
+        })?;
 
     let text = response
         .first_text()
@@ -199,14 +206,39 @@ pub async fn chat(name: &str, provider: &Provider, system: &str, prompt: &str) -
     })
 }
 
+/// The HTTP status of a failed call, when the provider sent one.
+fn status_of(e: &genai::Error) -> Option<u16> {
+    match e {
+        genai::Error::HttpError { status, .. } => Some(status.as_u16()),
+        genai::Error::WebAdapterCall { webc_error, .. }
+        | genai::Error::WebModelCall { webc_error, .. } => match webc_error {
+            genai::webc::Error::ResponseFailedStatus { status, .. } => Some(status.as_u16()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Whether the provider refused the key: HTTP 401 or 403, or no key at all.
+/// Every other call of the pass would be refused the same way (SPEC §8.3).
+fn refused(e: &genai::Error) -> bool {
+    matches!(status_of(e), Some(401 | 403))
+        || matches!(
+            e,
+            genai::Error::RequiresApiKey { .. }
+                | genai::Error::NoAuthResolver { .. }
+                | genai::Error::NoAuthData { .. }
+        )
+}
+
 #[tauri::command]
 pub async fn llm_chat(
     name: String,
     provider: Provider,
     system: String,
     prompt: String,
-) -> AppResult<Reply> {
-    chat(&name, &provider, &system, &prompt).await
+) -> Result<Reply, CallError> {
+    Ok(chat(&name, &provider, &system, &prompt).await?)
 }
 
 #[cfg(test)]
@@ -311,6 +343,80 @@ mod tests {
         p.key_ref = Some("env:PATH".into()); // set, so the check reaches base_url
         let err = chat("test", &p, "s", "p").await.unwrap_err().to_string();
         assert!(err.contains("base_url"), "{err}");
+    }
+
+    /// An endpoint on 127.0.0.1 that answers every request with `status`
+    /// and an empty JSON body. Returns its base URL.
+    fn answering(status: u16) -> String {
+        use std::io::{BufRead, BufReader, Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/v1/", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { return };
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut length = 0;
+                loop {
+                    let mut line = String::new();
+                    if reader.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+                        break;
+                    }
+                    let lower = line.to_ascii_lowercase();
+                    if let Some(v) = lower.strip_prefix("content-length:") {
+                        length = v.trim().parse().unwrap_or(0);
+                    }
+                }
+                let mut body = vec![0; length];
+                let _ = reader.read_exact(&mut body);
+                let reply = format!(
+                    "HTTP/1.1 {status} X\r\ncontent-type: application/json\r\ncontent-length: 2\r\nconnection: close\r\n\r\n{{}}"
+                );
+                let _ = stream.write_all(reply.as_bytes());
+            }
+        });
+        url
+    }
+
+    fn served(status: u16) -> Provider {
+        let mut p = provider("openai-compatible");
+        p.model = Some("any-model".into());
+        p.key_ref = Some("env:PATH".into());
+        p.base_url = Some(answering(status));
+        p
+    }
+
+    async fn failed(p: Provider) -> CallError {
+        llm_chat("test".into(), p, "s".into(), "p".into())
+            .await
+            .unwrap_err()
+    }
+
+    #[tokio::test]
+    async fn a_refused_key_fails_every_call() {
+        for status in [401, 403] {
+            let err = failed(served(status)).await;
+            assert!(err.whole_pass, "{status}: {}", err.message);
+            assert!(err.message.contains(&status.to_string()), "{}", err.message);
+        }
+    }
+
+    #[tokio::test]
+    async fn any_other_http_error_fails_only_its_call() {
+        for status in [429, 500, 503] {
+            let err = failed(served(status)).await;
+            assert!(!err.whole_pass, "{status}: {}", err.message);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_missing_key_or_model_fails_every_call() {
+        let mut p = provider("openai");
+        p.model = Some("any-model".into());
+        p.key_ref = Some("env:WRITEGOOD_KEY_THAT_IS_NOT_SET".into());
+        assert!(failed(p).await.whole_pass);
+        let mut p = provider("openai");
+        p.model = None;
+        assert!(failed(p).await.whole_pass);
     }
 
     #[test]
