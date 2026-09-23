@@ -62,6 +62,15 @@
     if (selected >= options.length) selected = Math.max(0, options.length - 1);
   });
 
+  // Keep the selected row in view as the arrows or the filter move it.
+  // "nearest" leaves the list alone while the row is already visible.
+  let list = $state<HTMLUListElement | null>(null);
+  $effect(() => {
+    void selected;
+    void options;
+    void tick().then(() => list?.querySelector("li.on")?.scrollIntoView({ block: "nearest" }));
+  });
+
   function close() {
     app.paletteOpen = false;
     pending = null;
@@ -170,7 +179,7 @@
       autocomplete="off"
     />
     {#if options.length > 0}
-      <ul>
+      <ul bind:this={list}>
         {#each options as o, i (o.key)}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -227,6 +236,8 @@
     flex: 1 1 auto;
     /* Fade the last row rather than slicing it in half. */
     mask-image: linear-gradient(to bottom, #000 calc(100% - 1.2rem), transparent);
+    /* A row scrolled into view stops above the fade, not under it. */
+    scroll-padding-bottom: 1.2rem;
   }
 
   li {
