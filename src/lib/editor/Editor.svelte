@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, untrack } from "svelte";
-  import { Editor } from "@tiptap/core";
+  import { Editor, Extension } from "@tiptap/core";
   import StarterKit from "@tiptap/starter-kit";
   import { Placeholder } from "@tiptap/extensions";
   import { app } from "../state.svelte";
@@ -14,10 +14,20 @@
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let anchorTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // ⌘Y opens the revisions (SPEC §12.4). TipTap also binds Mod-y to redo, so
+  // the key did both. This claims the key before TipTap does. The key still
+  // reaches the window, which opens the revisions. Redo stays on ⇧⌘Z.
+  const RevisionsKey = Extension.create({
+    name: "revisionsKey",
+    priority: 1000,
+    addKeyboardShortcuts: () => ({ "Mod-y": () => true }),
+  });
+
   onMount(() => {
     editor = new Editor({
       element: host,
       extensions: [
+        RevisionsKey,
         StarterKit.configure({ link: { openOnClick: false } }),
         Placeholder.configure({ placeholder: "Start writing good" }),
         Findings.configure({ onSelect: (ids) => app.selectInText(ids) }),

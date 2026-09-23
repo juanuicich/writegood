@@ -30,3 +30,17 @@ e2e("typed text reaches the editor and a save writes it to disk", async () => {
   expect(onDisk()).toStartWith(`# ${TITLE}\n`);
   expect(onDisk()).toContain("really quite unproductive. Typed by a test.\n");
 }, () => app);
+
+e2e("⌘Y opens the revisions and does not redo", async () => {
+  const { browser } = app;
+  await typeAtEnd(browser, ".ProseMirror p", " Undone by a test.");
+  await browser.keys([Key.Command, "s"]);
+  await until(app, "the save", async () => onDisk().includes("Undone by a test."));
+  await browser.keys([Key.Command, "z"]);
+  await until(app, "the undo", async () => !(await editorText(browser)).includes("Undone by a test."));
+
+  await browser.keys([Key.Command, "y"]);
+  await until(app, "the revisions sheet", async () => browser.execute(() => !!document.querySelector(".sheet .list")));
+  expect(await editorText(browser)).not.toContain("Undone by a test.");
+  await browser.keys([Key.Escape]);
+}, () => app);
