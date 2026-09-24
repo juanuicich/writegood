@@ -448,7 +448,6 @@ lit, and the margin aligns by editor position rather than by that element.
 
 **FOUND — an element click in the WebDriver plugin sends only `click`, at
 0,0.** ProseMirror ignores it. Tests click with pointer actions instead.
-||||||| aced302
 
 ## 2026-09-23 — text size, and the palette keeps its row in view
 
