@@ -793,3 +793,24 @@ and 9.7 seconds on the chapter. No call failed, and agy reported no rate
 limit. One call took 20 seconds: the model checked its answer in plain text
 after the JSON. `bench/results/2026-09-24-agy-po-low.md` has the numbers.
 No code changed. The shipped rule still sets `thinking = "high"`.
+
+## 2026-09-24 — five free models on OpenCode Zen
+
+**MEASURED — Space Bunny is below the setup in use; Jev 1.13 Free matches
+the paid Jev.** Zen was called directly, as an `openai-compatible` provider
+through the app's client and as the app's `jev` provider with a `base_url`.
+Space Bunny scored 68.1% and 66.7% on all nine passes, against a baseline
+mean of 75.5%. Its fast passes took 45 to 161 seconds a draft. Jev 1.13 Free
+scored 81.8% twice on filler words, as `jev-1.13.0` does, at $0.
+`bench/results/2026-09-24-opencode-zen.md` has the numbers. No code changed.
+`bench/scripts/opencode-zen.toml` holds the blocks.
+
+**FOUND — Zen serves most of its free tier only to OpenCode.** MiMo V2.6
+Flash, Nemotron 3.5 Lightning and Muse Spark 1.3 Contributor returned
+`FreeTierError` to a direct call. They were not measured. Muse Spark also
+takes only the `responses` API, which the app's `openai-compatible` kind
+does not send.
+
+**FOUND — Space Bunny rejects the app's `thinking = "off"`.** The app sends
+`thinking: {"type": "disabled"}`, and Zen answers "invalid request". `low`
+works.

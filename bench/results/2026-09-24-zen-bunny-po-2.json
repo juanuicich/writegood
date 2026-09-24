@@ -1,0 +1,300 @@
+{
+ "schema": 1,
+ "label": "zen-bunny-po-2",
+ "date": "2026-09-24",
+ "source": "bench/scripts/run.ts",
+ "config": {
+  "provider": "app",
+  "orProvider": null,
+  "model": "space-bunny-free",
+  "thinking": "off",
+  "thinkingPasses": {
+   "paragraph-order": "high"
+  },
+  "pipeline": "hybrid",
+  "rules": "2026-09-23-british",
+  "scope": "native",
+  "limit": 32,
+  "votes": 3,
+  "need": 2,
+  "ceilingSecs": 100,
+  "drafts": [
+   "draft-essay.md",
+   "draft-memo.md",
+   "draft-story.md",
+   "on-writing.md"
+  ],
+  "block": "opencode-zen.toml [providers.zen-bunny]",
+  "appLimit": 8
+ },
+ "rules": "2026-09-23-british",
+ "drafts": [
+  {
+   "draft": "draft-essay.md",
+   "words": 545,
+   "paragraphs": 9,
+   "wall": 24.362140208,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1441,
+   "cacheRead": 125,
+   "output": 2513,
+   "reasoning": 0,
+   "cost": 0,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 24.360732666999997,
+    "p90": 24.360732666999997,
+    "max": 24.360732666999997
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 0,
+   "kept": 0
+  },
+  {
+   "draft": "draft-memo.md",
+   "words": 541,
+   "paragraphs": 9,
+   "wall": 88.12851095799999,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1434,
+   "cacheRead": 125,
+   "output": 9867,
+   "reasoning": 0,
+   "cost": 0,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 88.128217417,
+    "p90": 88.128217417,
+    "max": 88.128217417
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 2,
+   "kept": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "words": 499,
+   "paragraphs": 10,
+   "wall": 28.781791625,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1405,
+   "cacheRead": 125,
+   "output": 3348,
+   "reasoning": 0,
+   "cost": 0,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 28.781577916999996,
+    "p90": 28.781577916999996,
+    "max": 28.781577916999996
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 0,
+   "kept": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "words": 208,
+   "paragraphs": 8,
+   "wall": 20.945099332999998,
+   "firstFindings": null,
+   "calls": 1,
+   "input": 1065,
+   "cacheRead": 125,
+   "output": 2503,
+   "reasoning": 0,
+   "cost": 0,
+   "verifyCost": 0,
+   "latency": {
+    "p50": 20.940871667,
+    "p90": 20.940871667,
+    "max": 20.940871667
+   },
+   "errors": 0,
+   "unreadable": 0,
+   "candidates": 3,
+   "kept": 3
+  }
+ ],
+ "scores": {
+  "overall": {
+   "tp": 4,
+   "fp": 1,
+   "fn": 2,
+   "unanchored": 0,
+   "decoy": 0,
+   "precision": 0.8,
+   "recall": 0.6666666666666666,
+   "f1": 0.7272727272727272
+  },
+  "byPass": {
+   "paragraph-order": {
+    "tp": 4,
+    "fp": 1,
+    "fn": 2,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.8,
+    "recall": 0.6666666666666666,
+    "f1": 0.7272727272727272
+   }
+  },
+  "byDraft": {
+   "draft-essay.md": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "draft-memo.md": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0.5,
+    "recall": 1,
+    "f1": 0.6666666666666666
+   },
+   "draft-story.md": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 1,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+   },
+   "on-writing.md": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 0,
+    "unanchored": 0,
+    "decoy": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+   }
+  }
+ },
+ "findings": [
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "Under the pilot",
+   "severity": "medium",
+   "note": "The phrase depends on a pilot and two teams that are first identified in “In March and April, the Payments and Search teams ran a pilot.”",
+   "chunk": null
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "quote": "In March and April,",
+   "severity": "medium",
+   "note": "The paragraph beginning “Under the pilot” introduces the pilot, then this paragraph returns to it after intervening paragraphs on current approvals, delays, and oversight.",
+   "chunk": null
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "It was decided by the committee that a decision",
+   "severity": "medium",
+   "note": "This repeats the point in the earlier paragraph beginning \"It was decided by the committee thxt x determination\" and adds no new information.",
+   "chunk": null
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "There was an expectation that a resolution",
+   "severity": "medium",
+   "note": "This repeats the point in the earlier paragraph beginning \"There was an expectation that\" and adds no new information.",
+   "chunk": null
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "quote": "Some of us left the room with",
+   "severity": "medium",
+   "note": "This repeats the point in the earlier paragraph beginning \"Some of us left the room with the feeling\" and adds no new information.",
+   "chunk": null
+  }
+ ],
+ "calls": [
+  {
+   "draft": "draft-essay.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.0011903329999995548,
+   "secs": 24.360732666999997,
+   "input": 1441,
+   "cacheRead": 125,
+   "output": 2513,
+   "reasoning": 0,
+   "cost": 0,
+   "costSource": "rates",
+   "candidates": 0
+  },
+  {
+   "draft": "draft-memo.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.00003591599999981554,
+   "secs": 88.128217417,
+   "input": 1434,
+   "cacheRead": 125,
+   "output": 9867,
+   "reasoning": 0,
+   "cost": 0,
+   "costSource": "rates",
+   "candidates": 2
+  },
+  {
+   "draft": "draft-story.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000021999999999934517,
+   "secs": 28.781577916999996,
+   "input": 1405,
+   "cacheRead": 125,
+   "output": 3348,
+   "reasoning": 0,
+   "cost": 0,
+   "costSource": "rates",
+   "candidates": 0
+  },
+  {
+   "draft": "on-writing.md",
+   "pass": "paragraph-order",
+   "stage": "pass",
+   "chunk": null,
+   "thinking": "high",
+   "start": 0.000021291000000019268,
+   "secs": 20.940871667,
+   "input": 1065,
+   "cacheRead": 125,
+   "output": 2503,
+   "reasoning": 0,
+   "cost": 0,
+   "costSource": "rates",
+   "candidates": 3
+  }
+ ],
+ "errors": []
+}

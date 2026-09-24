@@ -28,6 +28,7 @@ providers the app does not have yet.
 | `scripts/agy.toml` | agy's provider block from SPEC §9.3 |
 | `scripts/jev.toml` | The jev provider block from `BENCHMARKS.md` |
 | `scripts/openrouter-app.toml` | OpenRouter as an openai-compatible provider block, for `--provider app` |
+| `scripts/opencode-zen.toml` | OpenCode Zen blocks: Space Bunny for `--provider app`, Jev Free for `--provider jev` |
 | `scripts/agy.test.ts` | Checks the block and the command line the runner builds from it |
 | `results/<date>-<label>.json` | One result per run |
 | `results/raw/` | Model replies of new runs, and the original scratch runs and scripts |
@@ -185,6 +186,9 @@ The composed wall is the slower part, and first findings are the base run's.
   reworked topic flow, against the four-run baseline.
 - `results/2026-09-24-agy-po-low.md`: paragraph order on agy at thinking
   low.
+- `results/2026-09-24-opencode-zen.md`: five free models on OpenCode Zen.
+  Space Bunny and Jev 1.13 Free ran; Zen refused the other three outside
+  OpenCode.
 
 ## Adding a model
 

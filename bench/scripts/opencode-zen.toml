@@ -1,0 +1,32 @@
+# OpenCode Zen (https://opencode.ai/docs/zen/) as provider blocks in the
+# shape of the app's config.toml. `run.ts --provider app --block
+# bench/scripts/opencode-zen.toml --block-name zen-bunny` calls the chat model
+# through the app's own client. `run.ts --provider jev --block
+# bench/scripts/opencode-zen.toml --block-name zen-jev` sends filler words to
+# Jev through Zen, by way of the app's jev::ask.
+#
+# On 24 September 2026, Zen refused mimo-v2.6-flash-free,
+# muse-spark-1.3-contributor-free and nemotron-3.5-lightning-free from outside
+# OpenCode: "OpenCode's free tier can only be used from within OpenCode".
+# space-bunny-free and jev-1.13-free answered. See
+# results/2026-09-24-opencode-zen.md.
+
+[providers.zen-bunny]
+kind         = "openai-compatible"
+base_url     = "https://opencode.ai/zen/v1/"
+model        = "space-bunny-free"
+key_ref      = "env:OPENCODE_ZEN_API_KEY"
+# Space Bunny rejects `thinking = "off"`: the app sends
+# thinking: {"type": "disabled"}, and Zen answers "invalid request".
+# `low` is the lowest level it takes.
+thinking     = "low"
+timeout_secs = 300
+price        = { input = 0, output = 0 }
+
+[providers.zen-jev]
+kind          = "jev"
+base_url      = "https://opencode.ai/zen/v1"
+model         = "jev-1.13-free"
+key_ref       = "env:OPENCODE_ZEN_API_KEY"
+max_in_flight = 8
+price         = { input = 0, output = 0 }

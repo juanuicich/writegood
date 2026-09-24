@@ -446,6 +446,25 @@ DeepSeek Flash at high, the shipped setting, scores 83% and 86%, takes 30 to
 `reasoning_effort = "low"` does not help DeepSeek Flash. It spent 11,000 to
 16,000 reasoning tokens on one paragraph, as many as `high`.
 
+### OpenCode Zen, free tier
+
+Five free models on OpenCode Zen, called directly with the rules in
+`2026-09-23-british` (`bench/results/2026-09-24-opencode-zen.md`). Zen
+refused three of them outside OpenCode: MiMo V2.6 Flash, Nemotron 3.5
+Lightning and Muse Spark 1.3 Contributor. "OpenCode's free tier can only be
+used from within OpenCode."
+
+| Model | What ran | F1 | Per draft | Why it is not the default |
+|---|---|---|---|---|
+| Space Bunny, low | All nine passes (`zen-bunny-1`, `-2`) | 68.1%, 66.7% | 64 to 340 s | 8 points below the setup in use, which scores 75.5%. Recall 60%. Fast passes take 45 to 161 s a draft with 32 calls in flight. |
+| Space Bunny, high | Paragraph order (`zen-bunny-po-1`, `-2`) | PO 80.0%, 72.7% | 17 s, 41 s mean | No better than DeepSeek high, agy low or Gemini low, and slower than the last two. |
+| Jev 1.13 Free | Filler words (`zen-jev-fw-1`, `-2`) | FW 81.8%, 81.8% | 6.6 to 9.9 s | Same score and time as `jev-1.13.0`, at $0. Free for a limited time. |
+
+Space Bunny is a stealth model. It always reasons, and rejects the app's
+`off`. Zen's terms say its provider keeps no data. Jev 1.13 Free runs on the
+app's `jev` provider with `base_url = "https://opencode.ai/zen/v1"`. No call
+hit a rate limit.
+
 ## Jev
 
 Jev is TypeSafe's decision model. It answers three kinds of question with
