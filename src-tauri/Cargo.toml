@@ -3,6 +3,7 @@ name = "writegood"
 version = "0.1.0"
 description = "A writing workshopping tool"
 authors = ["Juan"]
+license = "MIT"
 edition = "2021"
 rust-version = "1.82"
 # `src-tauri/examples/probe.rs` is a second target; without this `cargo run`

@@ -135,6 +135,27 @@ starter passes. Point `config.toml` at an API key in the keychain, an
 environment variable or a `.env` file. Then press `⌘R` to run the passes.
 `⌘K` opens everything else.
 
+### Keys
+
+Each provider in `config.toml` has a `key_ref`. It takes one of two forms:
+
+- `keychain:<service>/<account>` reads the key from the macOS Keychain.
+- `env:NAME` reads the environment variable `NAME`.
+
+If the variable is not set, an `env:` reference falls back to a `.env` file.
+The app looks in `$WRITEGOOD_HOME` (by default `~/.writegood`), then in the
+working directory and its parents.
+
+An app opened from Finder or the Dock inherits almost nothing from a shell.
+For a built app, put the keys in `~/.writegood/.env`:
+
+```
+DEEPSEEK_API_KEY=...
+TYPESAFE_API_KEY=...
+```
+
+Never commit a `.env` file.
+
 It works with Anthropic, OpenAI, Google and anything OpenAI-compatible. It can
 also run passes through the `claude` or `codex` CLIs. The filler-words pass can
 run on Jev, TypeSafe's decision model, which answers questions about the text
@@ -160,6 +181,6 @@ bun run e2e
 None of them need a network or an API key. They pass, which is more than most
 of the features can say.
 
-## License
+## Licence
 
-Not decided yet.
+MIT. See [`LICENSE`](./LICENSE).
