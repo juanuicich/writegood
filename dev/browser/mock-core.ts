@@ -10,9 +10,9 @@ const DRAFT = `# The Determination of the Committee
 
 It was decided by the committee that a determination would be made regarding the proposal. Very few of the members had actually read it. Unfortunately, the meeting was conducted in a manner that was really quite unproductive.
 
-There was an expectation that a resolution would be arrived at. No resolution was arrived at. The chair made the observation that time had expired, and the matter was tabled for a subsequent session.
+There was an expectation that **a resolution would be arrived at**. No resolution was arrived at. The chair made the observation that time had expired, and the matter was tabled for a subsequent session.
 
-Some of us left the room with the feeling that nothing had been accomplished. It is a feeling that is familiar. It is a feeling that recurs.
+Some of us left the room with the feeling that *nothing had been accomplished*, and that the whole of the afternoon had gone to a procedure nobody would defend. It is a feeling that is familiar. It is a feeling that recurs.
 `;
 
 const FINDINGS = [
@@ -79,6 +79,34 @@ const FINDINGS = [
     quote: "a paragraph that was removed some time ago",
     prefix: "",
     suffix: "",
+    status: "open",
+    createdAt: "2026-09-22 00:10",
+  },
+  {
+    id: 6,
+    runId: 1,
+    docId: 1,
+    category: "nominalization",
+    severity: "medium",
+    // Spans a bold run, to check the current finding's wash joins across it.
+    note: "Two nouns carry the action. Nobody resolves anything.",
+    quote: "There was an expectation that a resolution would be arrived at.",
+    prefix: "",
+    suffix: " No resolution",
+    status: "open",
+    createdAt: "2026-09-22 00:10",
+  },
+  {
+    id: 7,
+    runId: 1,
+    docId: 1,
+    category: "filler-words",
+    severity: "low",
+    // Wraps onto a second line and crosses an italic run.
+    note: "The sentence trails on after its point.",
+    quote: "the feeling that nothing had been accomplished, and that the whole of the afternoon had gone to a procedure nobody would defend.",
+    prefix: "the room with ",
+    suffix: " It is a",
     status: "open",
     createdAt: "2026-09-22 00:10",
   },

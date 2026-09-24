@@ -323,20 +323,24 @@ input {
 /* --- search matches (SPEC §12.6) -----------------------------------
    A wash under every match, and a bar under the selected one. Neither is
    an underline or the selected finding's wash, so a match on a finding
-   reads as both. */
+   reads as both. Square corners, so a match that crosses bold or italic
+   text, and so is drawn as several spans, shows no notch at the joins. */
 .ProseMirror-search-match,
 .ProseMirror-active-search-match {
   background: var(--match);
-  border-radius: 1px;
 }
 .ProseMirror-active-search-match {
   box-shadow: inset 0 -2px 0 var(--tertiary);
 }
 
-/* Where you are. */
+/* Where you are. The wash reaches a little above and below the line, and
+   not at all to the sides. ProseMirror draws a finding that crosses bold or
+   italic text as several spans, and each span paints over the one before
+   it. A sideways spread or a rounded corner would cut into the neighbour's
+   underline and last letter, so the pieces meet square and join into one
+   wash. */
 .finding-current {
   background: var(--accent-wash);
-  box-shadow: 0 0 0 0.18em var(--accent-wash);
-  border-radius: 1px;
+  box-shadow: 0 -0.18em 0 var(--accent-wash), 0 0.18em 0 var(--accent-wash);
   text-decoration-color: var(--accent);
 }
