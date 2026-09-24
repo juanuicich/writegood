@@ -29,6 +29,7 @@ providers the app does not have yet.
 | `scripts/jev.toml` | The jev provider block from `BENCHMARKS.md` |
 | `scripts/openrouter-app.toml` | OpenRouter as an openai-compatible provider block, for `--provider app` |
 | `scripts/opencode-zen.toml` | OpenCode Zen blocks: Space Bunny for `--provider app`, Jev Free for `--provider jev` |
+| `scripts/opencode.toml` | The `opencode` CLI as a `cli` block, for `--provider cli`: Zen's free models that Zen serves only to OpenCode |
 | `scripts/agy.test.ts` | Checks the block and the command line the runner builds from it |
 | `results/<date>-<label>.json` | One result per run |
 | `results/raw/` | Model replies of new runs, and the original scratch runs and scripts |
@@ -288,6 +289,25 @@ bun bench/scripts/run.ts --provider jev --rules 2026-09-23-shipped \
 - Each request starts a new probe process, which the app does not do. Wall
   times through this route are longer than the app's, so compare its scores,
   not its times.
+
+Any other `cli` block, through the same runner as agy:
+
+```
+bun bench/scripts/run.ts --provider cli --block bench/scripts/opencode.toml --block-name opencode \
+  --model muse-spark-1.3-contributor-free --thinking off --pipeline fast --skip paragraph-order \
+  --rules 2026-09-23-british --cli-limit 4 --label zen-muse-fast-1
+```
+
+- `--model` replaces the block's `model`, and the thinking level goes to the
+  block's `{thinking}` through its `thinking_names`.
+- The command prints the reply as plain text, so the result records no
+  tokens. A call fails when the command exits with an error, prints nothing,
+  or says on stderr that the model tried a tool.
+- `--cli-limit` bounds the calls in flight across all four drafts. Default 4.
+- `scripts/opencode.toml` explains its guards. Every call runs `opencode run`
+  in the runner's empty directory, with config, data and state pointed there,
+  every permission set to "ask", which `opencode run` rejects, and a plugin
+  that throws before any tool runs.
 
 `--single-window CHARS` sends a draft up to CHARS characters long as one
 window. The app's limit is 16,000. `--single-window 20000` sends all of

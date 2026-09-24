@@ -60,6 +60,8 @@ export const LEVELS_FOR: Record<Provider["name"] | "jev", Thinking[]> = {
   openrouter: ["off", "none", "on", "minimal", "low", "medium", "high", "max", "default"],
   deepseek: ["off", "low", "medium", "high", "max", "default"],
   agy: ["off", "low", "medium", "high", "max", "default"],
+  // A cli block passes the level to its command through `thinking_names`.
+  cli: ["off", "low", "medium", "high", "max", "default"],
   // The app's own client takes the levels of SPEC §9.1.
   app: ["off", "low", "high", "max", "default"],
   // Jev does not think. It has no level to set.
@@ -125,13 +127,13 @@ export interface Usage {
   costSource: "reported" | "rates";
   /** The upstream provider that served the call, when the API says. */
   servedBy?: string;
-  /** agy: seconds from spawning the process to its exit, without the wait
-   *  for a slot. */
+  /** agy and cli: seconds from spawning the process to its exit, without
+   *  the wait for a slot. */
   serviceSecs?: number;
 }
 
 export interface Provider {
-  name: "deepseek" | "openrouter" | "agy" | "app";
+  name: "deepseek" | "openrouter" | "agy" | "app" | "cli";
   model: string;
   /** OpenRouter only: the one upstream provider allowed to serve the call. */
   pinned?: string;
@@ -401,6 +403,51 @@ export function agy(model: string, maxInFlight: number): Provider {
           cost: 0,
           costSource: "rates",
           servedBy: `agy ${model}-${agyVariant(thinking)}`,
+          serviceSecs: secs,
+        },
+      };
+    }),
+  };
+}
+
+/** Any `cli` provider block, such as `scripts/opencode.toml`, through the
+ *  app's runner as `agy` above. The command prints the reply as plain text,
+ *  so the block sets no `json_path` and the result records no tokens.
+ *  `model` replaces the block's `model`, and the thinking level its
+ *  `thinking`, as a pass's settings do in the app.
+ *
+ *  A reply is an error when the command exits with an error, prints nothing,
+ *  or reports on stderr that the model tried a tool. opencode prints its tool
+ *  calls and its errors to stderr and the reply to stdout. */
+export function cliBlock(blockFile: string, name: string, model: string | undefined, maxInFlight: number): Provider {
+  const block = readBlock(blockFile, name) as { model?: string; thinking?: string; thinking_names?: Record<string, string> };
+  const lim = limiter(maxInFlight);
+  const plain = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "").trim();
+  const variant = (t: Thinking) => {
+    const level = t === "default" ? block.thinking ?? "default" : t;
+    return block.thinking_names?.[level] ?? level;
+  };
+  const m = model ?? String(block.model);
+  return {
+    name: "cli",
+    model: m,
+    chat: (system, prompt, thinking, ceilingSecs) => lim(async () => {
+      const { stdout, stderr, code, secs } = await runCli(blockFile, name, `${system}\n\n${prompt}`, {
+        model: m,
+        thinking: thinking === "default" ? undefined : thinking,
+        timeoutSecs: ceilingSecs,
+      });
+      const err = plain(stderr);
+      if (code !== 0) throw new Error(err.slice(-300));
+      if (/Tools are off|permission requested|rejected permission/.test(err)) {
+        throw new Error(`${name} tried a tool: ${err.slice(-300)}`);
+      }
+      if (!stdout.trim()) throw new Error(`${name} printed no reply: ${err.slice(-300)}`);
+      return {
+        text: stdout,
+        usage: {
+          input: 0, cacheRead: 0, output: 0, reasoning: 0, cost: 0, costSource: "rates",
+          servedBy: `${name} ${m} ${variant(thinking)}`,
           serviceSecs: secs,
         },
       };
@@ -683,6 +730,8 @@ export interface Result {
     drafts: string[];
     /** agy: calls in flight across all drafts. */
     agyLimit?: number;
+    /** cli: calls in flight across all drafts. */
+    cliLimit?: number;
     /** app and jev: the provider block the calls used. */
     block?: string;
     /** app: calls in flight across all drafts. */

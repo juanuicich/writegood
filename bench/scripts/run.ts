@@ -15,6 +15,10 @@
  *                                      through the app's own client (probe.rs, llm::chat).
  *                                      A pass's thinking level replaces the block's.
  *                                      --app-limit N bounds its calls across drafts. Default 32
+ *  --provider cli --block FILE --block-name NAME [--model M]
+ *                                      a `cli` block, such as scripts/opencode.toml, through
+ *                                      the app's runner (cli.rs). --model replaces the block's.
+ *                                      --cli-limit N bounds its calls across drafts. Default 4
  *  --provider jev [--block FILE]       Jev, through the app's jev.ts and jev::ask. Default
  *                                      block: scripts/jev.toml. The pass's [jev] table applies
  *  --single-window CHARS               a draft up to CHARS long is one window. Default 16000,
@@ -59,7 +63,7 @@ import { SINGLE, windowOf, windows } from "../../src/lib/passes/windows";
 import { jevSettings, paragraphFindings, Unreadable, type Ask } from "../../src/lib/passes/jev";
 import type { NewFinding, Pass } from "../../src/lib/ipc";
 import {
-  agy, app, deepseek, draftPath, jevClient, quick, firstParty, flag, loadRules, openrouter, quantiles, refuseLevels, RESULTS, SCORED, words,
+  agy, app, cliBlock, deepseek, draftPath, jevClient, quick, firstParty, flag, loadRules, openrouter, quantiles, refuseLevels, RESULTS, SCORED, words,
   type CallRecord, type DraftRecord, type Finding, type Provider, type Result, type Thinking,
 } from "./lib";
 import { describe, scoreResult } from "./score";
@@ -72,9 +76,11 @@ const appLimit = Number(flag("--app-limit", "32"));
 const singleWindow = Number(flag("--single-window", String(SINGLE)));
 const jevC = providerName === "jev" ? jevClient(blockFile!, blockName!) : null;
 const appP = providerName === "app" ? app(blockFile ?? "", blockName ?? "", appLimit) : null;
+const cliLimit = Number(flag("--cli-limit", "4"));
+const cliP = providerName === "cli" ? cliBlock(blockFile ?? "", blockName ?? "", flag("--model"), cliLimit) : null;
 const model = flag("--model",
   providerName === "deepseek" ? "deepseek-flash" : providerName === "agy" ? "gemini-3.8-flash"
-  : jevC?.model ?? appP?.model);
+  : jevC?.model ?? appP?.model ?? cliP?.model);
 const agyLimit = Number(flag("--agy-limit", "4"));
 const thinking = flag("--thinking", "off") as Thinking;
 const rulesName = flag("--rules", "2026-09-23-rewrite")!;
@@ -94,8 +100,8 @@ if (!model) throw new Error("--model is required");
 if (!label || !/^[\w.-]+$/.test(label)) throw new Error("--label is required: letters, digits, dot, dash, underscore");
 if (!LEVELS.includes(thinking)) throw new Error(`--thinking is one of ${LEVELS.join(", ")}`);
 if (!["plain", "fast", "hybrid"].includes(pipeline)) throw new Error("--pipeline is plain, fast or hybrid");
-if (!["deepseek", "openrouter", "agy", "app", "jev"].includes(providerName)) throw new Error("--provider is deepseek, openrouter, agy, app or jev");
-if (providerName === "app" && (!blockFile || !blockName)) throw new Error("--provider app needs --block FILE and --block-name NAME");
+if (!["deepseek", "openrouter", "agy", "app", "cli", "jev"].includes(providerName)) throw new Error("--provider is deepseek, openrouter, agy, app, cli or jev");
+if ((providerName === "app" || providerName === "cli") && (!blockFile || !blockName)) throw new Error(`--provider ${providerName} needs --block FILE and --block-name NAME`);
 if (appP && flag("--model") && flag("--model") !== appP.model) throw new Error("--provider app takes the model from its block");
 
 const outFile = join(RESULTS, `${date}-${label}.json`);
@@ -132,6 +138,7 @@ const provider: Provider | null =
   providerName === "deepseek" ? deepseek(model)
   : providerName === "agy" ? agy(model, agyLimit)
   : providerName === "app" ? appP
+  : providerName === "cli" ? cliP
   : providerName === "jev" ? null
   : openrouter(model, orProvider!, cacheControl);
 
@@ -321,7 +328,8 @@ const result: Result = {
     limit, ...(serial !== undefined ? { serialSecs: Number(serial) } : {}), votes: pipeline === "plain" ? null : votes, need: pipeline === "plain" ? null : need, ceilingSecs: ceiling, drafts,
     ...(providerName === "openrouter" ? { cacheControl } : {}),
     ...(providerName === "agy" ? { agyLimit } : {}),
-    ...(blockFile && (providerName === "app" || providerName === "jev") ? { block: `${basename(blockFile)} [providers.${blockName}]` } : {}),
+    ...(providerName === "cli" ? { cliLimit } : {}),
+    ...(blockFile && (providerName === "app" || providerName === "cli" || providerName === "jev") ? { block: `${basename(blockFile)} [providers.${blockName}]` } : {}),
     ...(providerName === "app" ? { appLimit } : {}),
     ...(singleWindow !== SINGLE ? { singleWindow } : {}),
     ...(note ? { note } : {}),

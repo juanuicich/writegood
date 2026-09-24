@@ -814,3 +814,30 @@ does not send.
 **FOUND — Space Bunny rejects the app's `thinking = "off"`.** The app sends
 `thinking: {"type": "disabled"}`, and Zen answers "invalid request". `low`
 works.
+
+## 2026-09-24 — the refused Zen models, through the opencode CLI
+
+**MEASURED — none of the three is worth using.** MiMo V2.6 Flash, Nemotron
+3.5 Lightning and Muse Spark 1.3 Contributor ran through `opencode run`, as
+a `cli` provider through the app's runner. Muse Spark scored 68.8% on the
+eight fast passes in one run, against 74.5% for the setup in use, at 12
+seconds a call. Zen then rate-limited Muse and MiMo for more than two hours,
+so Muse's second run, MiMo's second run and their paragraph order were not
+made. MiMo's one run lost most calls to rate limits. Nemotron scored 0.0% in
+four runs: most calls ran past the ceiling, and its replies rarely parse.
+`bench/results/2026-09-24-opencode-zen.md` has the numbers. The app is
+unchanged. The benchmark gained `--provider cli` for any `cli` block, and
+`bench/scripts/opencode.toml` holds the block.
+
+**FOUND — Zen's free tier needs the tool list in the request.** A request
+with every tool denied got `FreeTierError`. The block keeps the tools and
+blocks every call twice: every permission is `ask`, which `opencode run`
+rejects, and a plugin throws before any tool runs. A prompt that asked for a
+shell command, a file write and a file read ran none of them on all three
+models. The tool definitions add about 5,600 input tokens to every call, and
+the CLI adds about 3 seconds.
+
+**FOUND — the runner does not set `PWD`.** `runner.rs` sets the child's
+working directory but leaves `PWD` as the app's. opencode read `PWD` and
+failed every call until the block set `PWD={workdir}` through `env`. agy
+may read it too. Not changed; say if the runner should set it.

@@ -1,0 +1,62 @@
+# OpenCode's CLI as a `cli` provider block, in the shape of the app's
+# config.toml. The benchmark runs it through the app's own runner
+# (src-tauri/examples/cli.rs), so the command line, the empty directory, the
+# files and the timeout are the app's. It is for the benchmark only; the app's
+# default config does not name it.
+#
+# Zen serves its free models only to OpenCode. It refuses a request that
+# carries no tools, so the tools stay in the request and two guards stop
+# every call:
+#
+# - opencode.json sets every permission to "ask". `opencode run` rejects
+#   each ask without --auto, and the run ends.
+# - A plugin in .opencode/plugins throws before any tool runs, in case the
+#   permissions stop being read.
+#
+# `env` points opencode's config, data and state at the empty directory, so
+# it reads none of the author's config, plugins, MCP servers, sessions or
+# credentials, and keeps no session after the call. OPENCODE_DISABLE_CLAUDE_CODE
+# stops it reading ~/.claude. The skill tool is denied, so no skill list goes
+# out. --title skips the extra call that names the session.
+[providers.opencode]
+kind         = "cli"
+command      = "env"
+model        = "nemotron-3.5-lightning-free"
+thinking     = "off"
+# Only models with variants read --variant. Muse Spark has minimal to xhigh;
+# MiMo and Nemotron have none and ignore it.
+thinking_names = { off = "minimal", max = "xhigh" }
+args         = ["PWD={workdir}", "XDG_CONFIG_HOME={workdir}/.home/config", "XDG_DATA_HOME={workdir}/.home/data",
+                "XDG_STATE_HOME={workdir}/.home/state", "OPENCODE_DISABLE_CLAUDE_CODE=1",
+                "opencode", "run", "--model", "opencode/{model}", "--variant", "{thinking}",
+                "--agent", "writegood", "--title", "writegood", "--", "{prompt}"]
+timeout_secs = 180
+max_in_flight = 4
+
+[providers.opencode.files]
+"opencode.json" = '''
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "share": "disabled",
+  "permission": {"*": "ask", "skill": "deny"},
+  "agent": {
+    "writegood": {
+      "mode": "primary",
+      "description": "Answers one prompt from its text alone.",
+      "prompt": "Answer the user's message from its text alone. Do not call any tool.",
+      "permission": {"*": "ask", "skill": "deny"}
+    }
+  }
+}
+'''
+".opencode/plugins/writegood-no-tools.js" = '''
+export const WritegoodNoTools = async () => ({
+  "tool.execute.before": async () => {
+    throw new Error("Tools are off.");
+  },
+  "permission.ask": async (_input, output) => {
+    output.status = "deny";
+  },
+});
+'''

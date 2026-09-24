@@ -448,22 +448,28 @@ DeepSeek Flash at high, the shipped setting, scores 83% and 86%, takes 30 to
 
 ### OpenCode Zen, free tier
 
-Five free models on OpenCode Zen, called directly with the rules in
-`2026-09-23-british` (`bench/results/2026-09-24-opencode-zen.md`). Zen
-refused three of them outside OpenCode: MiMo V2.6 Flash, Nemotron 3.5
-Lightning and Muse Spark 1.3 Contributor. "OpenCode's free tier can only be
-used from within OpenCode."
+Five free models on OpenCode Zen, with the rules in `2026-09-23-british`
+(`bench/results/2026-09-24-opencode-zen.md`). Space Bunny and Jev Free were
+called directly. Zen refused the other three outside OpenCode ("OpenCode's
+free tier can only be used from within OpenCode"), so they ran through the
+`opencode` CLI as a `cli` provider, with its tools blocked
+(`bench/scripts/opencode.toml`).
 
 | Model | What ran | F1 | Per draft | Why it is not the default |
 |---|---|---|---|---|
 | Space Bunny, low | All nine passes (`zen-bunny-1`, `-2`) | 68.1%, 66.7% | 64 to 340 s | 8 points below the setup in use, which scores 75.5%. Recall 60%. Fast passes take 45 to 161 s a draft with 32 calls in flight. |
 | Space Bunny, high | Paragraph order (`zen-bunny-po-1`, `-2`) | PO 80.0%, 72.7% | 17 s, 41 s mean | No better than DeepSeek high, agy low or Gemini low, and slower than the last two. |
 | Jev 1.13 Free | Filler words (`zen-jev-fw-1`, `-2`) | FW 81.8%, 81.8% | 6.6 to 9.9 s | Same score and time as `jev-1.13.0`, at $0. Free for a limited time. |
+| Muse Spark 1.3, minimal, opencode CLI | Fast passes (`zen-muse-fast-1`) | Fast 68.8% (one run) | 1,187 to 1,430 s | 5.7 points below the setup in use, 74.5% on the same passes. A call takes 12 s. Zen rate-limited it at 8 in flight, then for over two hours, so run 2 and paragraph order were not made. Trains on prompts. |
+| MiMo V2.6 Flash, opencode CLI | Fast passes (`zen-mimo-fast-1`) | Fast 37.8% (one run) | 4,527 to 5,337 s | Rate limits failed more than half the calls and every verifier call. Not measured fairly. |
+| Nemotron 3.5 Lightning, opencode CLI | Fast passes and paragraph order (`zen-nemotron-fast-1`, `-2`, `-po-1`, `-2`) | 0.0% in all four | 3,761 to 5,994 s | 85% of calls ran past 100 s, and every paragraph-order call past 300 s. Its replies rarely parse. |
 
 Space Bunny is a stealth model. It always reasons, and rejects the app's
 `off`. Zen's terms say its provider keeps no data. Jev 1.13 Free runs on the
-app's `jev` provider with `base_url = "https://opencode.ai/zen/v1"`. No call
-hit a rate limit.
+app's `jev` provider with `base_url = "https://opencode.ai/zen/v1"`. No
+direct call hit a rate limit. Through the CLI, MiMo and Muse did. The CLI
+adds about 3 seconds and 5,600 input tokens of tool definitions to every
+call; Zen's free tier refuses a request without them.
 
 ## Jev
 
