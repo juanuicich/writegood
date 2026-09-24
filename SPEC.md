@@ -1302,9 +1302,10 @@ memo paragraphs, each against a version with its reference problems fixed by
 hand, ten calls per pair, each order five times. The judge chose the fixed
 version in 20 of 20 calls, in both orders. No reply was unreadable. A call took
 about 4.5 seconds (median; 3.8 to 8.2), and every call ended in one turn with
-no tool call. `dev/probe-duel.ts` cannot run a `cli` judge, because its probe
-binary calls `llm::chat` only. The test called the runner through
-`examples/cli.rs` with the same prompt `runDuel` builds.
+no tool call. The test called the runner through `examples/cli.rs` with the
+same prompt `runDuel` builds. `dev/probe-duel.ts` and `dev/probe.ts` now run a
+`cli` provider too: the probe binary sends it the system text and the prompt
+as one prompt through `runner::run`, as the app does.
 
 Both backends satisfy one interface:
 

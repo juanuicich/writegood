@@ -2,8 +2,9 @@
  *
  *  The prompt is built by the app's own preamble and prompt builder, then
  *  handed to the app's own network client — the Rust `probe` binary, which
- *  calls `llm::chat` exactly as the app does. The reply comes back through the
- *  app's parser. Every part of the path is the part that ships.
+ *  calls `llm::chat` exactly as the app does, or `runner::run` for a `cli`
+ *  provider. The reply comes back through the app's parser. Every part of the
+ *  path is the part that ships.
  *
  *  A pass on a `jev` provider runs through the app's own `jev.ts`, one
  *  paragraph at a time, and each request goes through `jev::ask` in the

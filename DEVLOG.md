@@ -748,7 +748,7 @@ change. `bench/results/2026-09-23-british.md` has the numbers.
 **UNVERIFIED — topic flow on other drafts.** It has 5 reference items. The
 new rule also missed the `on-writing.md` items in all four runs.
 
-## 2026-09-24 — a refused key stops a pass on Jev
+## 2026-09-24 — a refused key stops a pass on Jev; the probe runs cli providers
 
 **DONE — `jev_ask` marks the failures every request would share.** HTTP 401
 or 403 is now `AppError::Refused`, and `jev_ask` rejects with a `CallError`,
@@ -775,3 +775,10 @@ bar closes it and puts the caret back in the text" fails on `d37106c` too.
 TipTap moves the focus on the next animation frame. In this session the e2e
 window reports `visibilityState` hidden, and `requestAnimationFrame` did not
 fire within 2 seconds, so the focus never moves. The test is unchanged.
+
+**DONE — the probe binary runs a `cli` provider.** `examples/probe.rs`
+called `llm::chat` only, which refuses `cli`. It now calls `runner::run` for
+a `cli` provider, with the system text and the prompt as one prompt, as
+`run.ts` and the duel do. `dev/probe.ts` and `dev/probe-duel.ts` both use
+this binary, so both now work with agy. Checked with a local `cli` provider
+that runs `echo`; no agy call was made.

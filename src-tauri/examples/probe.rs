@@ -2,7 +2,10 @@
 //!
 //! The prompt is built by the app's own TypeScript, written to a file and
 //! handed here, so what this exercises is the real path: the app's preamble
-//! and prompt builder, then the app's network client. `dev/probe.ts` drives it.
+//! and prompt builder, then the app's network client. `dev/probe.ts` and
+//! `dev/probe-duel.ts` drive it. A `cli` provider goes through `runner::run`
+//! instead, with the system text and the prompt as one prompt, as the app
+//! sends them (SPEC §9.3).
 //!
 //! Run it with `cargo run --example probe --`. It lives in `examples/`
 //! rather than `src/bin/` because a second binary in `src/bin` makes Tauri
@@ -16,7 +19,7 @@
 //! `src/lib/passes/jev.ts` built them. The request goes through `jev::ask`,
 //! as the app sends it, and the reply goes to stdout as JSON.
 
-use writegood_lib::{config, jev, llm, prices};
+use writegood_lib::{config, jev, llm, prices, runner};
 
 fn arg(args: &[String], flag: &str) -> Option<String> {
     args.iter()
@@ -96,6 +99,21 @@ async fn main() {
     }
 
     let started = std::time::Instant::now();
+    if provider.kind == "cli" {
+        // The runner applies the guards of SPEC §9.3. A cli provider reports
+        // no usage.
+        match runner::run(provider.clone(), format!("{system}\n\n{prompt}")).await {
+            Ok(text) => {
+                eprintln!("probe: answered in {:.1}s", started.elapsed().as_secs_f64());
+                println!("{text}");
+            }
+            Err(e) => {
+                eprintln!("probe: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     match llm::chat(&name, provider, &system, &prompt).await {
         Ok(reply) => {
             eprintln!("probe: answered in {:.1}s", started.elapsed().as_secs_f64());
