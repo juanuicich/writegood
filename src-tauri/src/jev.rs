@@ -17,7 +17,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::config::Provider;
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, CallError};
 use crate::llm::vendor;
 use crate::prices::{self, Tokens};
 use crate::{log, secrets};
@@ -86,7 +86,8 @@ fn retry_after(headers: &reqwest::header::HeaderMap) -> Option<Duration> {
 /// Send the request, and send it again after a 429 or a 529, up to four
 /// attempts in all. Returns the body of the first reply that is neither.
 /// Any other HTTP error fails at once, with its status and the start of its
-/// body.
+/// body. A 401 or 403 says TypeSafe refused the key, which every request of
+/// the pass would share (SPEC §8.4).
 async fn send(url: &str, key: &str, request: &Value) -> AppResult<String> {
     let mut waits = BACKOFF.iter();
     loop {
@@ -117,10 +118,12 @@ async fn send(url: &str, key: &str, request: &Value) -> AppResult<String> {
             )));
         }
         if !status.is_success() {
-            return Err(AppError::other(format!(
-                "jev: HTTP {status}: {}",
-                start_of(&text)
-            )));
+            let message = format!("jev: HTTP {status}: {}", start_of(&text));
+            return Err(if matches!(status.as_u16(), 401 | 403) {
+                AppError::Refused(message)
+            } else {
+                AppError::other(message)
+            });
         }
         return Ok(text);
     }
@@ -225,14 +228,17 @@ pub async fn ask(
     Ok(reply)
 }
 
+/// A failed request rejects with a `CallError`, whose `wholePass` marks a
+/// failure every request of the pass would share: a refused key, a missing
+/// key or model, or a bad config (SPEC §8.4).
 #[tauri::command]
 pub async fn jev_ask(
     name: String,
     provider: Provider,
     state: Value,
     questions: Value,
-) -> AppResult<JevReply> {
-    ask(&name, &provider, &state, &questions).await
+) -> Result<JevReply, CallError> {
+    Ok(ask(&name, &provider, &state, &questions).await?)
 }
 
 #[cfg(test)]
@@ -429,6 +435,46 @@ mod tests {
         assert_eq!(seen.lock().unwrap().len(), 1);
         assert!(err.contains("422"), "{err}");
         assert!(err.contains("questions.q0.type"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn a_refused_key_fails_every_request_at_once() {
+        let _home = crate::config::testing::env_home("jev-401");
+        for status in [401, 403] {
+            let (base, seen) = fake(vec![(status, vec![], "{\"detail\":\"bad key\"}".into())]);
+            let err = jev_ask("jev".into(), provider(&base), Value::Null, questions())
+                .await
+                .unwrap_err();
+            assert_eq!(seen.lock().unwrap().len(), 1, "{status}");
+            assert!(err.whole_pass, "{status}: {}", err.message);
+            assert!(err.message.contains(&status.to_string()), "{}", err.message);
+        }
+    }
+
+    #[tokio::test]
+    async fn another_failure_fails_only_its_request() {
+        let _home = crate::config::testing::env_home("jev-500");
+        let (base, _) = fake(vec![(500, vec![], "{}".into())]);
+        let err = jev_ask("jev".into(), provider(&base), Value::Null, questions())
+            .await
+            .unwrap_err();
+        assert!(!err.whole_pass, "{}", err.message);
+    }
+
+    #[tokio::test]
+    async fn a_missing_key_or_model_fails_every_request() {
+        let mut p = provider("http://127.0.0.1:1/v1");
+        p.key_ref = Some("env:WRITEGOOD_KEY_THAT_IS_NOT_SET".into());
+        let err = jev_ask("jev".into(), p, Value::Null, questions())
+            .await
+            .unwrap_err();
+        assert!(err.whole_pass, "{}", err.message);
+        let mut p = provider("http://127.0.0.1:1/v1");
+        p.model = None;
+        let err = jev_ask("jev".into(), p, Value::Null, questions())
+            .await
+            .unwrap_err();
+        assert!(err.whole_pass, "{}", err.message);
     }
 
     #[tokio::test]

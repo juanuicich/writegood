@@ -712,7 +712,8 @@ command that is not there do the same. Rust decides, because Rust makes the
 call: `llm_chat` and `cli_run` now reject with `{ message, wholePass }`
 (`CallError` in error.rs), and `ipc.ts` turns that into a `CallError` in
 TypeScript. `jev_ask` does not, so a pass on Jev still sends every request
-when its key is refused, and fails because every request failed.
+when its key is refused, and fails because every request failed. (Changed on
+2026-09-24; see that entry.)
 
 **DECISION — a verifier call with no reply is a vote that cannot be read.**
 `verify` already caught every error and returned a null vote, and `tally`
@@ -747,3 +748,30 @@ change. `bench/results/2026-09-23-british.md` has the numbers.
 **UNVERIFIED — topic flow on other drafts.** It has 5 reference items. The
 new rule also missed the `on-writing.md` items in all four runs.
 
+## 2026-09-24 — a refused key stops a pass on Jev
+
+**DONE — `jev_ask` marks the failures every request would share.** HTTP 401
+or 403 is now `AppError::Refused`, and `jev_ask` rejects with a `CallError`,
+as `llm_chat` and `cli_run` do. A missing key or model and a bad config were
+already `Invalid`, so they carry `wholePass` too. `ipc.ts` turns the
+rejection into a `CallError`.
+
+**DONE — the Jev path in `run.ts` stops on it.** It now shares one
+`Failures` with `answerParagraphs`, and each request checks
+`failures.stopped` once it has a slot. A request that fails for the whole pass
+marks the failure before it gives up its slot. Otherwise the limiter hands
+the slot to the next request first, and that request starts. The LLM path
+marks the failure after the slot is released, so it can start one more call
+per slot freed.
+
+Tests: Rust answers 401 and 403 from a local server and checks `wholePass`,
+and checks that a 500 fails only its request. A unit test runs
+`answerParagraphs` behind a limiter of one and checks that one request is
+sent. The Jev e2e test refuses the key first and checks that at most 8
+requests went out, the provider's cap.
+
+**FOUND — `find.e2e.ts` fails in a window that is not visible.** "Esc in the
+bar closes it and puts the caret back in the text" fails on `d37106c` too.
+TipTap moves the focus on the next animation frame. In this session the e2e
+window reports `visibilityState` hidden, and `requestAnimationFrame` did not
+fire within 2 seconds, so the focus never moves. The test is unchanged.

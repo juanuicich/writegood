@@ -156,9 +156,9 @@ export async function runPasses(
 
     const calls: Call[] = [];
     let stored = 0;
-    // Set only when saving an answer fails. A paragraph whose request fails
-    // does not stop the pass (SPEC §8.4).
-    let stopped = false;
+    // A paragraph whose request fails does not stop the pass. A refused key,
+    // a missing key or an answer that cannot be saved does (SPEC §8.4).
+    const failures = new Failures((message) => void log.write("error", `${pass.name}: ${message}; asked again next run`));
 
     const keys = await passKeys(pass, name, resolved, system, paras, draft);
     const saved = options.fresh ? new Set<string>() : new Set(await store.reviewedKeys(docId, pass.slug));
@@ -176,11 +176,11 @@ export async function runPasses(
     const starts = paragraphStarts(draft);
     const seconds = Math.max(resolved.provider.timeoutSecs, 1);
     // Each request is one call. It waits for a slot of its provider, then
-    // for a slot of the run, as every call does. After an answer fails to
-    // save, the pass asks nothing more.
+    // for a slot of the run, as every call does. After the pass fails, it
+    // asks nothing more. Requests already in flight finish.
     const ask: Ask = (state, questions) =>
       limit(async () => {
-        if (stopped) return null;
+        if (failures.stopped) return null;
         asking(pass.name, 1);
         try {
           const reply = await deadline(
@@ -190,6 +190,11 @@ export async function runPasses(
           );
           calls.push({ tokens: reply.tokens, costUsd: reply.costUsd });
           return reply;
+        } catch (e) {
+          // Stop the pass before this request gives up its slot, so no
+          // request waiting for the slot starts.
+          if (e instanceof CallError && e.wholePass) failures.fail(e);
+          throw e;
         } finally {
           asking(pass.name, -1);
         }
@@ -201,17 +206,12 @@ export async function runPasses(
       [...asked].map(([key, i]) => ({ key, paragraph: paras[i]!, place: { points, start: starts[i]! } })),
       ask,
       async (key, found) => {
-        try {
-          await store.addFindings(run.id, docId, key, found);
-          stored += found.length;
-          if (found.length > 0) app.showMargin();
-          await app.loadFindings();
-        } catch (e) {
-          stopped = true;
-          throw e;
-        }
+        await store.addFindings(run.id, docId, key, found);
+        stored += found.length;
+        if (found.length > 0) app.showMargin();
+        await app.loadFindings();
       },
-      (message) => void log.write("error", `${pass.name}: ${message}; asked again next run`),
+      failures,
     );
 
     if (failure !== null) {

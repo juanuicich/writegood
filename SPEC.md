@@ -677,7 +677,8 @@ it starts no more calls:
 - a `cli` command that is not there or cannot be run.
 
 Rust decides which failures these are, because Rust makes the call. It
-rejects `llm_chat` and `cli_run` with a message and a `wholePass` flag. An
+rejects `llm_chat`, `cli_run` and `jev_ask` with a message and a `wholePass`
+flag. An
 answer that cannot be saved also fails the pass.
 
 A reply that cannot be read says which of four things went wrong, because each
@@ -956,15 +957,18 @@ asks every question again.
   answer, and the next run asks it again. The status bar counts it with the
   unreadable replies.
 - A request with no reply also fails only the answer of its paragraph. This
-  covers a network error, a missing key and an HTTP error that retries did
-  not clear (§9.5). The runner does not save the answer, and the next run
-  asks it again. The pass goes on with its other paragraphs. The status bar
-  counts these as failed calls.
-- The pass fails only when every paragraph it asked about failed, by either
-  rule. It then keeps the answers already complete. A missing key fails
-  every request, so it still fails the pass. Unlike a pass on a language
-  model, a pass on Jev does not stop at the first missing or refused key:
-  `jev_ask` does not mark which failures every request would share.
+  covers a network error and an HTTP error that retries did not clear
+  (§9.5). The runner does not save the answer, and the next run asks it
+  again. The pass goes on with its other paragraphs. The status bar counts
+  these as failed calls.
+- The pass fails when every paragraph it asked about failed, by either
+  rule. It then keeps the answers already complete.
+- Some failures would fail every other request the same way, as in §8.3:
+  HTTP 401 or 403, a missing key or model, a key the keychain will not give,
+  and a config the request cannot use. `jev_ask` rejects with a `CallError`
+  whose `wholePass` flag marks these. The pass then fails at once and starts
+  no more requests. Requests already in flight finish, and the answers they
+  complete are kept.
 - An answer that the runner cannot save fails the pass. The pass then starts
   no more requests.
 
@@ -1426,7 +1430,8 @@ benchmark used. `tokio::time::timeout` enforces it. On HTTP 429 or 529, Rust
 waits and tries again, up to four attempts in all. It waits 0.5 seconds,
 then 1, then 2, or the time a `retry-after` header gives. Every attempt falls
 inside the one ceiling. Any other HTTP error fails the call at once, with the
-status and the start of the error body. TypeSafe gives its limits as 1,200
+status and the start of the error body. HTTP 401 or 403 also fails the
+pass (§8.4). TypeSafe gives its limits as 1,200
 requests per minute and 250,000 tokens per second, and says they can change
 without notice. The benchmark used 8 requests in flight with no rate-limit
 error.

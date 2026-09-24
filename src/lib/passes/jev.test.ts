@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { JevReply, Pass, Provider } from "../ipc";
 import { paragraphs, paragraphStarts } from "./parse";
+import { CallError, Failures } from "./failures";
+import { limiter } from "./limit";
 import {
   answerParagraphs,
   cannotRun,
@@ -400,7 +402,7 @@ describe("answering paragraphs", () => {
         await save(key);
         saved.push(key);
       },
-      (m) => notes.push(m),
+      new Failures((m) => notes.push(m)),
     );
     return { ...result, saved: saved.sort(), notes };
   };
@@ -437,8 +439,38 @@ describe("answering paragraphs", () => {
     expect(r.saved).toEqual(["k0", "k2"]);
   });
 
+  test("a refused key fails the pass, and no request starts after it", async () => {
+    // One request at a time, as the run's limiter would allow. Each request
+    // checks the failures first and marks a whole-pass failure before it
+    // gives up its slot, as run.ts does.
+    const limit = limiter(1);
+    const failures = new Failures();
+    let sent = 0;
+    const ask: Ask = (_state, _q) =>
+      limit(async () => {
+        if (failures.stopped) return null;
+        sent += 1;
+        const e = new CallError("jev: HTTP 401 Unauthorized: bad key", true);
+        failures.fail(e);
+        throw e;
+      });
+    const saved: string[] = [];
+    const r = await answerParagraphs(
+      pass(),
+      jevSettings(pass(), provider()),
+      asked,
+      ask,
+      async (key) => void saved.push(key),
+      failures,
+    );
+    expect(sent).toBe(1);
+    expect(r.failure).toBe("jev: HTTP 401 Unauthorized: bad key");
+    expect(r.unanswered).toBe(0);
+    expect(saved).toEqual([]);
+  });
+
   test("no paragraphs to ask is not a failure", async () => {
-    const r = await answerParagraphs(pass(), jevSettings(pass(), provider()), [], jevWith([]), async () => {}, () => {});
+    const r = await answerParagraphs(pass(), jevSettings(pass(), provider()), [], jevWith([]), async () => {}, new Failures());
     expect(r).toEqual({ unreadable: 0, unanswered: 0, failure: null });
   });
 });

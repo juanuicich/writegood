@@ -258,9 +258,11 @@ export interface JevCall {
 export interface FakeJev {
   url: string;
   calls: JevCall[];
-  /** A request whose state contains this text gets HTTP 503. Null answers
-   *  every request. */
+  /** A request whose state contains this text gets HTTP `failStatus`. Null
+   *  answers every request. */
   failOn: string | null;
+  /** The status a failing request gets: 503 unless a test changes it. */
+  failStatus: number;
   stop(): void;
 }
 
@@ -269,7 +271,7 @@ export interface FakeJev {
  *  word and not yet quoted, else `none`. */
 export function fakeJev(): FakeJev {
   const calls: JevCall[] = [];
-  const jev: FakeJev = { url: "", calls, failOn: null, stop: () => {} };
+  const jev: FakeJev = { url: "", calls, failOn: null, failStatus: 503, stop: () => {} };
   const server = Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
@@ -279,7 +281,7 @@ export function fakeJev(): FakeJev {
       const body = (await req.json()) as JevCall["body"];
       calls.push({ authorization: req.headers.get("authorization"), body });
       if (jev.failOn !== null && String(body.state).includes(jev.failOn)) {
-        return new Response("service unavailable", { status: 503 });
+        return new Response("request failed", { status: jev.failStatus });
       }
       const answers: Record<string, unknown> = {};
       for (const [key, q] of Object.entries(body.questions)) {

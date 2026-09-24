@@ -1,7 +1,8 @@
-/** A Jev request with no reply, in the real window (SPEC §8.4). The fake Jev
- *  answers HTTP 503 for one paragraph. That paragraph gets no notes and the
- *  status bar counts the failed call, but the pass does not fail. The next
- *  run asks Jev about that paragraph alone. */
+/** A Jev request with no reply, in the real window (SPEC §8.4). First the
+ *  fake Jev refuses the key: the pass fails at once and starts no more
+ *  requests. Then it answers HTTP 503 for one paragraph. That paragraph gets
+ *  no notes and the status bar counts the failed call, but the pass does not
+ *  fail. The next run asks Jev about that paragraph alone. */
 import { afterAll, beforeAll, expect } from "bun:test";
 import { Key } from "webdriverio";
 import { e2e, FINDINGS, JEV_CATEGORY, JEV_WORDS, launch, statusText, until, type App } from "./harness";
@@ -28,6 +29,19 @@ const running = () => app.browser.execute(() => !!document.querySelector("footer
 
 /** Detect requests: one per paragraph asked. */
 const detects = () => app.jev!.calls.filter((c) => "s0" in c.body.questions);
+
+e2e("a refused key fails the pass and starts no more requests", async () => {
+  app.jev!.failOn = "";
+  app.jev!.failStatus = 401;
+  await app.browser.keys([Key.Command, "r"]);
+  await until(app, "the pass to fail", async () => !(await running()) && (await statusText(app.browser)).includes("401"), 30_000);
+  expect(await statusText(app.browser)).toContain("failed:");
+  // The provider allows 8 requests at once and the draft has more
+  // paragraphs. Only the requests already started were sent.
+  expect(app.jev!.calls.length).toBeGreaterThan(0);
+  expect(app.jev!.calls.length).toBeLessThanOrEqual(8);
+  app.jev!.failStatus = 503;
+}, () => app);
 
 e2e("a request with no reply fails only its paragraph", async () => {
   app.jev!.failOn = FAILING;

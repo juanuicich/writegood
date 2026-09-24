@@ -398,10 +398,13 @@ export const llm = {
 };
 
 /** A request to Jev, TypeSafe's decision model (SPEC §9.5). Rust makes it,
- *  for the same reasons as `llm.chat`. */
+ *  for the same reasons as `llm.chat`. A failed request rejects with a
+ *  `CallError`, as `llm.chat` does (SPEC §8.4). */
 export const jev = {
   ask: (name: string, provider: Provider, state: unknown, questions: unknown) =>
-    invoke<JevReply>("jev_ask", { name, provider, state, questions }),
+    invoke<JevReply>("jev_ask", { name, provider, state, questions }).catch((e: unknown) => {
+      throw CallError.from(e);
+    }),
 };
 
 /** Open a path with the system default application. Rust owns the filesystem,

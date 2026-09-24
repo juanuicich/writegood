@@ -386,17 +386,18 @@ export interface Answered {
 /** Ask about each paragraph and save each answer (SPEC §8.4). A paragraph
  *  whose reply cannot be read, or whose request gets no reply, fails alone
  *  (`Failures`). Its answer is not saved, so the next run asks it again. The
- *  pass fails when every paragraph failed, or when `save` fails. `note`
- *  receives the message of each paragraph that failed. */
+ *  pass fails when every paragraph failed, when `save` fails, or when a
+ *  request fails in a way every request would share, such as a refused key.
+ *  `failures` counts them; `ask` should start no request once
+ *  `failures.stopped` is set, and return null instead. */
 export async function answerParagraphs(
   pass: Pass,
   settings: JevSettings,
   asked: Asked[],
   ask: Ask,
   save: (key: string, found: NewFinding[]) => Promise<void>,
-  note: (message: string) => void,
+  failures: Failures,
 ): Promise<Answered> {
-  const failures = new Failures(note);
   await Promise.all(
     asked.map(async ({ key, paragraph, place }) => {
       let found: NewFinding[] | null;
