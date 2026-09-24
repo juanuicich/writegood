@@ -185,6 +185,11 @@ A pass's `provider` sends that pass to a different provider. The provider
 override in the header bar wins over it, and sends every pass to one
 provider.
 
+On a Google AI plan, agy at thinking low is a free, fast option for
+paragraph order. It scored 80.0% and 85.7% and took about 6 seconds a
+draft and 10 seconds on the chapter, at $0 (`2026-09-24-agy-po-low.md`).
+The config is under "agy, on a Google AI plan", below.
+
 ### Filler words on Jev
 
 Filler words scores higher on Jev than on DeepSeek: 83.7% and 85.7%
@@ -315,7 +320,8 @@ Measured on the four drafts, with paragraph order on `-high`
 - $0 per call.
 - A fast call takes about 4.6 seconds at the median, against one to two for
   DeepSeek. Each call starts a new agy process.
-- Paragraph order on `-high` takes 80 to 125 seconds.
+- Paragraph order on `-high` takes 80 to 125 seconds and about 40,000
+  thinking tokens a call.
 - 8 calls in flight gave no errors. 16 gave rate-limit errors.
 
 With 8 calls in flight, one draft's 75 to 95 fast calls, verifier included,
@@ -324,8 +330,43 @@ ran four drafts at once through the same 8 slots, so its times per draft (150
 and 265 seconds) are longer than one draft alone would take.
 
 So agy scores 6 to 7 points above the DeepSeek setup and costs nothing. It
-takes about ten times as long for the fast passes, and paragraph order takes
-about two minutes instead of three seconds.
+takes about ten times as long for the fast passes. Paragraph order on
+`-high` takes about two minutes.
+
+Paragraph order on `-low` is a free, fast option. Two runs on the four
+drafts, and one on the chapter (`2026-09-24-agy-po-low.md`):
+
+| | PO F1 | Per draft | Cost per draft |
+|---|---|---|---|
+| agy, low (`agy-po-low-1`, `-2`) | 80.0%, 85.7% | 6.2 s, 9.3 s | $0 |
+| agy, high (`agy-flash38-hybrid-1`, `-2`) | 92.3%, 92.3% | about 2 minutes | $0 |
+| Gemini low, OpenRouter (`app-or-po-gemini-low-1`, `-2`) | 80.0%, 80.0% | 4.2 s, 3.7 s | $0.0026, $0.0024 |
+| DeepSeek, high (`british-ds-1` to `-4`) | 76.9% to 92.3% | 36 to 49 s | $0.0055 to $0.0073 |
+
+- Per draft for agy is the runner's time for the call, which includes about
+  two seconds for agy to start.
+- On six items, one finding moves the score by 5 to 15 points. The four
+  routes score the same within noise.
+- On the chapter, the call took 9.7 seconds.
+- `-low` reported no thinking tokens. No call failed, and agy reported no
+  rate limit.
+- One call in eight took 20 seconds. The model checked its answer in plain
+  text after the JSON, and wrote 5,524 tokens.
+
+To use it, add the agy block above to `config.toml` and set the frontmatter
+of `~/.writegood/passes/06-paragraph-order.md`:
+
+```toml
++++
+name = "Paragraph order"
+category = "paragraph-order"
+scope = "document"
+enabled = true
+provider = "agy"
+thinking = "low"
+timeout_secs = 300
++++
+```
 
 agy also works as the duel judge. Set `judge_provider = "agy"` with a pass
 provider from another vendor, such as DeepSeek. The test used two memo

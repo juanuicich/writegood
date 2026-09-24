@@ -782,3 +782,14 @@ a `cli` provider, with the system text and the prompt as one prompt, as
 `run.ts` and the duel do. `dev/probe.ts` and `dev/probe-duel.ts` both use
 this binary, so both now work with agy. Checked with a local `cli` provider
 that runs `echo`; no agy call was made.
+
+## 2026-09-24 — paragraph order on agy at thinking low
+
+**MEASURED — agy at `-low` is a free, fast option for paragraph order.**
+Two runs on the four drafts with rule set `2026-09-23-british` scored 80.0%
+and 85.7%. Gemini low through OpenRouter scored 80.0% twice, and DeepSeek at
+high 76.9% to 92.3%. A call took about 6 seconds, including agy's start-up,
+and 9.7 seconds on the chapter. No call failed, and agy reported no rate
+limit. One call took 20 seconds: the model checked its answer in plain text
+after the JSON. `bench/results/2026-09-24-agy-po-low.md` has the numbers.
+No code changed. The shipped rule still sets `thinking = "high"`.

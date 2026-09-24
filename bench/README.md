@@ -183,6 +183,8 @@ The composed wall is the slower part, and first findings are the base run's.
   current setup.
 - `results/2026-09-23-british.md`: the rules in British English and a
   reworked topic flow, against the four-run baseline.
+- `results/2026-09-24-agy-po-low.md`: paragraph order on agy at thinking
+  low.
 
 ## Adding a model
 

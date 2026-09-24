@@ -1292,6 +1292,10 @@ Measured on the four scored drafts (bench, 23 September 2026), two runs:
   does for any other provider.
 - A fast call takes about 4.6 seconds (median), against one to two for
   DeepSeek. Paragraph order on `-high` takes 80 to 125 seconds.
+- Paragraph order on `-low` (bench, 24 September 2026, two runs) scored
+  80.0% and 85.7%, against 92.3% twice on `-high`. A call took about 6
+  seconds, and 9.7 seconds on a 5,000-word chapter. One call took 20
+  seconds. A pass that sets `provider = "agy"` and `thinking = "low"` uses it.
 - 8 calls in flight gave no errors. 16 gave five rate-limit errors in 347
   calls. The plan charges nothing per call.
 
